@@ -14,6 +14,7 @@ import GenreManagement from '../views/GenreManagement.vue'
 import ToolsLibrary from '../views/ToolsLibrary.vue'
 import ShortStory from '../views/ShortStory.vue'
 import BookAnalysis from '../views/BookAnalysis.vue'
+import NovelWizard from '../components/wizard/NovelWizard.vue'
 
 const routes = [
   {
@@ -84,6 +85,11 @@ const routes = [
         path: 'book-analysis',
         name: 'BookAnalysis',
         component: BookAnalysis
+      },
+      {
+        path: 'wizard',
+        name: 'NovelWizard',
+        component: NovelWizard
       }
     ]
   }

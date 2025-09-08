@@ -178,12 +178,113 @@
       width="600px"
       @close="resetCreateForm"
     >
-      <el-form 
-        ref="createFormRef" 
-        :model="createForm" 
-        :rules="createRules" 
-        label-width="80px"
-      >
+      <!-- 创建方式选择 -->
+      <div class="create-method-selector" v-if="!selectedCreateMethod">
+        <div class="method-title">选择创建方式</div>
+        <div class="method-options">
+          <div 
+            class="method-card"
+            @click="selectedCreateMethod = 'wizard'"
+          >
+            <div class="method-icon">🧙‍♂️</div>
+            <div class="method-name">向导式创建</div>
+            <div class="method-desc">跟随6步向导，完整构建小说世界</div>
+            <div class="method-features">
+              <el-tag size="small" type="success">推荐</el-tag>
+              <span>适合新手</span>
+            </div>
+          </div>
+          
+          <div 
+            class="method-card"
+            @click="selectedCreateMethod = 'manual'"
+          >
+            <div class="method-icon">✏️</div>
+            <div class="method-name">手动创建</div>
+            <div class="method-desc">快速填写基本信息开始创作</div>
+            <div class="method-features">
+              <el-tag size="small" type="info">快速</el-tag>
+              <span>适合有经验的作者</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="back-button">
+          <el-button @click="showCreateDialog = false">取消</el-button>
+        </div>
+      </div>
+      
+      <!-- 向导创建 -->
+      <div v-else-if="selectedCreateMethod === 'wizard'" class="wizard-container">
+        <div class="wizard-intro">
+          <h3>🎯 小说创作向导</h3>
+          <p>我们将引导您完成6个步骤，创建一个完整的小说架构：</p>
+          <ol class="wizard-steps-preview">
+            <li>创意构思 - 确定核心概念</li>
+            <li>世界构建 - 设计背景设定</li>
+            <li>角色设计 - 创建主要人物</li>
+            <li>情节架构 - 构建故事结构</li>
+            <li>开篇设计 - 创作精彩开头</li>
+            <li>简介撰写 - 撰写吸引人的简介</li>
+          </ol>
+          
+          <div class="wizard-benefits">
+            <div class="benefit-item">
+              <el-icon><MagicStick /></el-icon>
+              <span>AI辅助创作，提供专业建议</span>
+            </div>
+            <div class="benefit-item">
+              <el-icon><DocumentCopy /></el-icon>
+              <span>自动整合工具，数据一致性</span>
+            </div>
+            <div class="benefit-item">
+              <el-icon><Clock /></el-icon>
+              <span>进度保存，随时继续</span>
+            </div>
+          </div>
+          
+          <el-form :model="wizardForm" label-width="100px">
+            <el-form-item label="小说标题" required>
+              <el-input 
+                v-model="wizardForm.title"
+                placeholder="为您的小说起一个标题（可在向导中修改）"
+              />
+            </el-form-item>
+          </el-form>
+          
+          <div class="wizard-actions">
+            <el-button @click="selectedCreateMethod = null">返回</el-button>
+            <el-button 
+              type="primary" 
+              @click="startWizard"
+              :disabled="!wizardForm.title?.trim()"
+            >
+              开始向导之旅
+            </el-button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 手动创建表单 -->
+      <div v-else-if="selectedCreateMethod === 'manual'" class="manual-create-form">
+        <div class="manual-create-header">
+          <h3>✏️ 快速创建小说</h3>
+          <p>填写基本信息，快速开始创作</p>
+          <el-button 
+            text 
+            @click="selectedCreateMethod = null"
+            style="float: right; margin-top: -40px;"
+          >
+            返回选择
+          </el-button>
+        </div>
+        
+        <el-form 
+          ref="createFormRef" 
+          :model="createForm" 
+          :rules="createRules" 
+          label-width="80px"
+        >
         <el-form-item label="小说标题" prop="title">
           <el-input v-model="createForm.title" placeholder="请输入小说标题" />
         </el-form-item>
@@ -287,12 +388,13 @@
             </el-tag>
           </div>
         </el-form-item>
-      </el-form>
-      
-      <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="createNovel">创建</el-button>
-      </template>
+        </el-form>
+        
+        <template #footer>
+          <el-button @click="showCreateDialog = false">取消</el-button>
+          <el-button type="primary" @click="createNovel">创建</el-button>
+        </template>
+      </div>
     </el-dialog>
 
     <!-- 小说详情对话框 -->
@@ -540,11 +642,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { 
   Plus, Search, Document, EditPen, Calendar, Edit, View, 
-  MoreFilled, Star, Download, CopyDocument, Delete, Close
+  MoreFilled, Star, Download, CopyDocument, Delete, Close,
+  MagicStick, Clock
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import apiService from '@/services/api.js'
@@ -557,6 +660,10 @@ const genreFilter = ref('all')
 const sortBy = ref('updated')
 const searchKeyword = ref('')
 const showCreateDialog = ref(false)
+const selectedCreateMethod = ref(null)
+const wizardForm = reactive({
+  title: ''
+})
 const showDetailsDialog = ref(false)
 const showEditDialog = ref(false)
 const selectedNovel = ref(null)
@@ -1118,6 +1225,22 @@ const deleteNovel = async (novel) => {
   } catch (error) {
     // 用户取消删除
   }
+}
+
+// 启动向导
+const startWizard = () => {
+  showCreateDialog.value = false
+  // 导航到向导页面
+  router.push({
+    name: 'NovelWizard',
+    query: { title: wizardForm.title }
+  })
+}
+
+// 重置创建表单
+const resetCreateForm = () => {
+  selectedCreateMethod.value = null
+  wizardForm.title = ''
 }
 
 const addTag = () => {
@@ -2028,6 +2151,156 @@ onMounted(() => {
   
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 创建方式选择器样式 */
+.create-method-selector {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.method-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 24px;
+}
+
+.method-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.method-card {
+  padding: 24px;
+  border: 2px solid #e4e7ed;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.method-card:hover {
+  border-color: #409eff;
+  background: #f0f9ff;
+  transform: translateY(-2px);
+}
+
+.method-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.method-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.method-desc {
+  font-size: 14px;
+  color: #7f8c8d;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.method-features {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+
+/* 向导介绍样式 */
+.wizard-container {
+  padding: 20px 0;
+}
+
+.wizard-intro h3 {
+  color: #2c3e50;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.wizard-intro p {
+  color: #7f8c8d;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.wizard-steps-preview {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.wizard-steps-preview li {
+  margin-bottom: 8px;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.wizard-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #b3d8ff;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #409eff;
+  font-size: 14px;
+}
+
+.wizard-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.manual-create-header {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.manual-create-header h3 {
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.manual-create-header p {
+  color: #7f8c8d;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .method-options {
+    grid-template-columns: 1fr;
+  }
+  
+  .wizard-benefits {
+    padding: 12px;
+  }
+  
+  .wizard-actions {
+    flex-direction: column;
   }
 }
 </style>
