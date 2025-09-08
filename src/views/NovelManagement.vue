@@ -176,7 +176,7 @@
       v-model="showCreateDialog" 
       title="创建新小说" 
       width="600px"
-      @close="resetCreateForm"
+      @close="handleDialogClose"
     >
       <!-- 创建方式选择 -->
       <div class="create-method-selector" v-if="!selectedCreateMethod">
@@ -389,12 +389,12 @@
           </div>
         </el-form-item>
         </el-form>
-        
-        <template #footer>
-          <el-button @click="showCreateDialog = false">取消</el-button>
-          <el-button type="primary" @click="createNovel">创建</el-button>
-        </template>
       </div>
+      
+      <template #footer>
+        <el-button @click="showCreateDialog = false">取消</el-button>
+        <el-button type="primary" @click="createNovel">创建</el-button>
+      </template>
     </el-dialog>
 
     <!-- 小说详情对话框 -->
@@ -647,7 +647,7 @@ import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { 
   Plus, Search, Document, EditPen, Calendar, Edit, View, 
   MoreFilled, Star, Download, CopyDocument, Delete, Close,
-  MagicStick, Clock
+  MagicStick, Clock, DocumentCopy
 } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import apiService from '@/services/api.js'
@@ -1237,10 +1237,16 @@ const startWizard = () => {
   })
 }
 
-// 重置创建表单
-const resetCreateForm = () => {
+// 重置向导表单
+const resetWizardForm = () => {
   selectedCreateMethod.value = null
   wizardForm.title = ''
+}
+
+// 处理对话框关闭
+const handleDialogClose = () => {
+  resetWizardForm()
+  resetCreateForm()
 }
 
 const addTag = () => {
@@ -1340,7 +1346,7 @@ const createNovel = async () => {
       updatedAt: new Date(),
       chapterList: [],
       writingRecords: [],
-      genrePrompt: genrePresets[createForm.value.genre]?.prompt || '',
+      genrePrompt: genrePresets.value[createForm.value.genre]?.prompt || '',
       // 章节管理需要的数据结构
       characters: [],
       worldSettings: [],

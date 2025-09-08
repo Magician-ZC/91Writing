@@ -4,7 +4,7 @@
     <div class="assistant-header">
       <div class="assistant-info">
         <div class="assistant-avatar">
-          <el-icon class="avatar-icon"><Robot /></el-icon>
+          <el-icon class="avatar-icon"><User /></el-icon>
         </div>
         <div class="assistant-details">
           <h3 class="assistant-name">AI写作助手</h3>
@@ -81,7 +81,7 @@
           >
             <div class="message-avatar">
               <el-icon v-if="message.type === 'user'"><User /></el-icon>
-              <el-icon v-else><Robot /></el-icon>
+              <el-icon v-else><User /></el-icon>
             </div>
             
             <div class="message-content">
@@ -113,7 +113,7 @@
         <div v-if="isAssistantTyping" class="typing-indicator">
           <div class="message-item assistant">
             <div class="message-avatar">
-              <el-icon><Robot /></el-icon>
+              <el-icon><User /></el-icon>
             </div>
             <div class="message-content">
               <div class="typing-animation">
@@ -226,7 +226,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  Robot, User, Setting, Delete, InfoFilled, Close, 
+  User, Setting, Delete, InfoFilled, Close, 
   Paperclip, Document, Promotion 
 } from '@element-plus/icons-vue'
 import aiWritingAssistant from '@/services/aiWritingAssistant.js'

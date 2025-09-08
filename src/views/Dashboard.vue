@@ -133,7 +133,7 @@
             type="primary"
             size="small"
           >
-            <el-icon><Bell /></el-icon>
+            <el-icon><Notification /></el-icon>
             公告及教程
           </el-button>
 
@@ -176,7 +176,7 @@ import { useNovelStore } from '@/stores/novel'
 import { 
   House, Document, ChatLineSquare, Collection, Notebook, Aim, 
   CreditCard, Setting, Key, Tools, EditPen, DataAnalysis,
-  Expand, Fold, Bell 
+  Expand, Fold, Notification 
 } from '@element-plus/icons-vue'
 import ApiConfig from '@/components/ApiConfig.vue'
 import AnnouncementDialog from '@/components/AnnouncementDialog.vue'

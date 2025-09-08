@@ -9,7 +9,7 @@
       <!-- 世界类型选择 -->
       <div class="form-section">
         <h3>
-          <el-icon><Globe /></el-icon>
+            <el-icon><Location /></el-icon>
           世界类型
           <span class="required">*</span>
         </h3>
@@ -103,7 +103,7 @@
       <!-- 力量体系 -->
       <div class="form-section">
         <h3>
-          <el-icon><Lightning /></el-icon>
+                <el-icon><Star /></el-icon>
           力量体系
         </h3>
         <p class="section-desc">描述世界中的力量系统（如魔法、武功、科技等）</p>
@@ -120,7 +120,7 @@
       <!-- 社会结构 -->
       <div class="form-section">
         <h3>
-          <el-icon><Office /></el-icon>
+            <el-icon><OfficeBuilding /></el-icon>
           社会结构
         </h3>
         <p class="section-desc">描述社会的政治体制、阶层划分等</p>
@@ -188,7 +188,7 @@
           type="info" 
           @click="analyzeConsistency"
           :loading="analyzingConsistency"
-          icon="DocumentChecked"
+          icon="Checked"
         >
           检查设定一致性
         </el-button>
@@ -236,13 +236,13 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Globe,
+  Location,
   Expand,
   Document,
-  Lightning,
-  Office,
+  Star,
+  OfficeBuilding,
   MagicStick,
-  DocumentChecked,
+  Checked,
   Check,
   Close
 } from '@element-plus/icons-vue'

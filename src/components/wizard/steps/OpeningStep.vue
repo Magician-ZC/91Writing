@@ -9,7 +9,7 @@
       <!-- 开篇钩子 -->
       <div class="form-section">
         <h3>
-          <el-icon><Fish /></el-icon>
+          <el-icon><Pointer /></el-icon>
           开篇钩子
           <span class="required">*</span>
         </h3>
@@ -27,7 +27,7 @@
       <!-- 氛围设定 -->
       <div class="form-section">
         <h3>
-          <el-icon><Cloudy /></el-icon>
+          <el-icon><Sunny /></el-icon>
           氛围营造
         </h3>
         <p class="section-desc">选择开篇的整体氛围</p>
@@ -50,7 +50,7 @@
       <!-- 开篇场景 -->
       <div class="form-section">
         <h3>
-          <el-icon><Camera /></el-icon>
+          <el-icon><Picture /></el-icon>
           开篇场景
           <span class="required">*</span>
         </h3>
@@ -170,7 +170,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Fish, Cloudy, Camera, MagicStick, TrendCharts, Check, Close } from '@element-plus/icons-vue'
+import { Pointer, Sunny, Picture, MagicStick, TrendCharts, Check, Close } from '@element-plus/icons-vue'
 
 const props = defineProps({
   stepData: { type: Object, default: () => ({}) },

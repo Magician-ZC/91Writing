@@ -27,7 +27,7 @@
       <!-- 主要冲突 -->
       <div class="form-section">
         <h3>
-          <el-icon><Lightning /></el-icon>
+            <el-icon><Star /></el-icon>
           主要冲突
           <span class="required">*</span>
         </h3>
@@ -217,7 +217,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Document, Lightning, Files, MagicStick, Check, Close } from '@element-plus/icons-vue'
+import { Document, Star, Files, MagicStick, Check, Close } from '@element-plus/icons-vue'
 
 const props = defineProps({
   stepData: { type: Object, default: () => ({}) },

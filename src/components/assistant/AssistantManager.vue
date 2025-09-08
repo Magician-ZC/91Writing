@@ -24,7 +24,7 @@
       <template #header="{ titleId, titleClass }">
         <div class="drawer-header">
           <h4 :id="titleId" :class="titleClass">
-            <el-icon><Robot /></el-icon>
+            <el-icon><User /></el-icon>
             {{ drawerTitle }}
           </h4>
           <div class="header-controls">
@@ -130,7 +130,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElNotification } from 'element-plus'
-import { Robot, Plus, Minus, Lock, Unlock } from '@element-plus/icons-vue'
+import { User, Plus, Minus, Lock, Unlock } from '@element-plus/icons-vue'
 import AIWritingAssistant from './AIWritingAssistant.vue'
 import { useNovelStore } from '@/stores/novel.js'
 import { useMemoryStore } from '@/stores/memoryStore.js'

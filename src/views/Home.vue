@@ -39,7 +39,7 @@
           {{ isApiConfigured ? 'API已配置' : 'API配置' }}
         </el-button>
         <el-button @click="openAnnouncement" type="primary">
-          <el-icon class="mr-2"><Bell /></el-icon>
+            <el-icon class="mr-2"><Notification /></el-icon>
           公告及教程
         </el-button>
       </div>
@@ -395,7 +395,7 @@
 import { ref, computed, onMounted, shallowRef, onBeforeUnmount, watch } from 'vue'
 import { useNovelStore } from '@/stores/novel'
 import { ElMessage } from 'element-plus'
-import { DataAnalysis, Collection, Setting, Key, Document, Loading, Notebook, Aim, FolderOpened, Bell } from '@element-plus/icons-vue'
+import { DataAnalysis, Collection, Setting, Key, Document, Loading, Notebook, Aim, FolderOpened, Notification } from '@element-plus/icons-vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { createEditor, createToolbar } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'

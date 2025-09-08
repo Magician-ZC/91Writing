@@ -9,7 +9,7 @@
       <!-- 核心创意输入 -->
       <div class="form-section">
         <h3>
-          <el-icon><Lightbulb /></el-icon>
+            <el-icon><Sunny /></el-icon>
           核心创意
           <span class="required">*</span>
         </h3>
@@ -267,7 +267,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Lightbulb,
+  Sunny,
   Collection,
   User,
   Flag,

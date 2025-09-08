@@ -577,7 +577,7 @@
         <el-card shadow="never" class="result-card">
           <template #header>
             <div class="card-header">
-              <el-icon><Magic /></el-icon>
+                <el-icon><MagicStick /></el-icon>
               <span>续写结果</span>
               <div class="header-actions" v-if="continueResult && !continuingStory">
                 <el-button size="small" @click="copyContinueText">
@@ -647,7 +647,7 @@
               :loading="continuingStory"
               :disabled="!generatedStory || generatedStory.replace(/<[^>]*>/g, '').trim().length < 50"
             >
-              <el-icon v-if="!continuingStory"><Magic /></el-icon>
+              <el-icon v-if="!continuingStory"><MagicStick /></el-icon>
               {{ continuingStory ? '续写中...' : (continueResult ? '重新续写' : '开始续写') }}
             </el-button>
           </div>

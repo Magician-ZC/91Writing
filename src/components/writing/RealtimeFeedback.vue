@@ -58,7 +58,7 @@
         <div class="indicator suggestions" v-if="suggestionCount > 0">
           <div class="indicator-icon">
             <el-badge :value="suggestionCount" :max="99">
-              <el-icon><Lightbulb /></el-icon>
+              <el-icon><Sunny /></el-icon>
             </el-badge>
           </div>
           <div class="indicator-info">
@@ -174,7 +174,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { 
-  Document, View, Star, Lightbulb, ArrowUp, ArrowDown, 
+  Document, View, Star, Sunny, ArrowUp, ArrowDown, 
   InfoFilled, Check, Warning, Loading 
 } from '@element-plus/icons-vue'
 import suggestionEngine from '@/services/suggestionEngine.js'

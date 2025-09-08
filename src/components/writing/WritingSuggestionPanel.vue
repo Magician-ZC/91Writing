@@ -50,7 +50,7 @@
     <div class="suggestions-container">
       <div class="suggestions-header">
         <h3 class="suggestions-title">
-          <el-icon><Lightbulb /></el-icon>
+          <el-icon><Sunny /></el-icon>
           智能建议
           <el-badge :value="activeSuggestions.length" class="suggestion-count" />
         </h3>
@@ -119,7 +119,7 @@
                 @click="applySuggestion(suggestion, action)"
                 :loading="applyingActions.has(action.action)"
               >
-                <el-icon><Magic /></el-icon>
+                <el-icon><MagicStick /></el-icon>
                 {{ action.text }}
               </el-button>
             </div>
@@ -200,7 +200,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { 
-  TrendCharts, Lightbulb, Refresh, Filter, Magic, Close, 
+  TrendCharts, Sunny, Refresh, Filter, MagicStick, Close, 
   Star, DataAnalysis, User 
 } from '@element-plus/icons-vue'
 import suggestionEngine from '@/services/suggestionEngine.js'
