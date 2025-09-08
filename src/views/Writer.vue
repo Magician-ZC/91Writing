@@ -416,6 +416,16 @@
           </template>
           
           
+          <!-- 实时写作反馈 -->
+          <RealtimeFeedback 
+            v-if="currentChapter && activeTab === 'editor'"
+            :content="content"
+            :realtime="true"
+            @apply-suggestion="handleApplySuggestion"
+            @show-suggestions="showSuggestionPanel = true"
+            class="realtime-feedback-component"
+          />
+
           <div class="editor-container">
             <div class="editor-wrapper">
               <Toolbar
@@ -448,6 +458,28 @@
             <el-button type="primary" @click="addNewChapter">创建第一章</el-button>
           </div>
         </el-card>
+      </div>
+
+      <!-- 右侧智能建议面板 -->
+      <div class="suggestions-panel" v-if="activeTab === 'editor' && showSuggestionPanel">
+        <WritingSuggestionPanel 
+          :content="content"
+          :auto-refresh="true"
+          @apply-suggestion="handleApplySuggestion"
+          @deep-analysis="handleDeepAnalysis"
+        />
+      </div>
+
+      <!-- 建议面板切换按钮 -->
+      <div class="suggestion-toggle" v-if="activeTab === 'editor'">
+        <el-button 
+          type="primary" 
+          :icon="showSuggestionPanel ? 'ArrowRight' : 'ArrowLeft'"
+          @click="toggleSuggestionPanel"
+          circle
+          class="toggle-btn"
+        >
+        </el-button>
       </div>
     </div>
 
@@ -2135,6 +2167,8 @@ import '@wangeditor/editor/dist/css/style.css'
 import apiService from '../services/api.js'
 import billingService from '../services/billing.js'
 import { useNovelStore } from '../stores/novel.js'
+import WritingSuggestionPanel from '@/components/writing/WritingSuggestionPanel.vue'
+import RealtimeFeedback from '@/components/writing/RealtimeFeedback.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -2180,6 +2214,9 @@ const showChapterDialog = ref(false)
 const editingChapter = ref(null)
 const editorRef = shallowRef()
 const activeTab = ref('editor')
+
+// 智能建议系统相关数据
+const showSuggestionPanel = ref(false)
 
 // AI相关数据
 const activeAITools = ref(['chapter-gen'])
@@ -2469,6 +2506,72 @@ const saveCurrentChapter = () => {
     currentChapter.value.wordCount = contentWordCount.value
     currentChapter.value.updatedAt = new Date()
     saveNovelData()
+  }
+}
+
+// 智能建议系统方法
+const toggleSuggestionPanel = () => {
+  showSuggestionPanel.value = !showSuggestionPanel.value
+}
+
+const handleApplySuggestion = (event) => {
+  try {
+    const { suggestion, action, result } = event
+    
+    // 应用建议到编辑器内容
+    if (result && result !== content.value) {
+      content.value = result
+      ElMessage.success(`已应用建议：${suggestion.title}`)
+    } else {
+      // 处理其他类型的建议应用
+      switch (action?.action) {
+        case 'add_description':
+          // 在当前光标位置添加描述提示
+          insertTextAtCursor('\n\n[在此处添加描述]')
+          break
+        case 'add_dialogue':
+          // 添加对话模板
+          insertTextAtCursor('\n\n"对话内容，"他说道。')
+          break
+        case 'simplify_sentence':
+          ElMessage.info('建议：检查长句并考虑拆分')
+          break
+        default:
+          ElMessage.success(`建议已记录：${suggestion.title}`)
+      }
+    }
+    
+    // 保存更改
+    saveCurrentChapter()
+  } catch (error) {
+    console.error('应用建议失败:', error)
+    ElMessage.error('应用建议失败')
+  }
+}
+
+const handleDeepAnalysis = (event) => {
+  try {
+    const { analysis, suggestions } = event
+    
+    // 显示深度分析结果
+    ElMessage.success(`深度分析完成，发现${suggestions.length}条建议`)
+    
+    // 可以在这里打开详细的分析结果对话框
+    console.log('深度分析结果:', analysis)
+    console.log('深度建议:', suggestions)
+    
+  } catch (error) {
+    console.error('处理深度分析失败:', error)
+    ElMessage.error('处理分析结果失败')
+  }
+}
+
+const insertTextAtCursor = (text) => {
+  if (editorRef.value && editorRef.value.insertText) {
+    editorRef.value.insertText(text)
+  } else {
+    // 备用方案：直接在内容末尾添加
+    content.value += text
   }
 }
 
@@ -8724,6 +8827,7 @@ ${customPrompt}`
   gap: 16px;
   padding: 16px;
   overflow: hidden;
+  position: relative;
 }
 
 .left-panel {
@@ -11202,5 +11306,169 @@ ${customPrompt}`
   background-color: #f0f9ff;
   border-color: #b3e5fc;
   color: #01579b;
+}
+
+/* 智能建议系统样式 */
+.suggestions-panel {
+  width: 350px;
+  flex-shrink: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.suggestion-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+}
+
+.toggle-btn {
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* 实时反馈组件样式 */
+.realtime-feedback-component {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 编辑器容器调整 */
+.editor-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+/* 响应式调整 */
+@media (max-width: 1400px) {
+  .suggestions-panel {
+    width: 300px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .main-content {
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .suggestions-panel {
+    width: 280px;
+  }
+  
+  .left-panel {
+    width: 250px;
+  }
+}
+
+@media (max-width: 992px) {
+  .suggestions-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 320px;
+    z-index: 1000;
+    background: white;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .suggestion-toggle {
+    right: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 140px);
+  }
+  
+  .left-panel {
+    width: 100%;
+    height: auto;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .editor-panel {
+    width: 100%;
+    min-height: 500px;
+  }
+  
+  .suggestions-panel {
+    position: fixed;
+    right: 0;
+    top: 140px;
+    bottom: 0;
+    width: 90vw;
+    max-width: 350px;
+    z-index: 2000;
+  }
+  
+  .suggestion-toggle {
+    position: fixed;
+    right: 10px;
+    bottom: 80px;
+    top: auto;
+    transform: none;
+  }
+}
+
+/* 智能建议面板动画 */
+.suggestions-panel {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* 实时反馈的特殊样式集成 */
+.editor-container .realtime-feedback-component {
+  margin: 0 0 16px 0;
+  border-radius: 6px;
+}
+
+/* 确保编辑器工具栏和反馈组件的协调 */
+.editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.editor-wrapper .w-e-toolbar {
+  border-bottom: 1px solid #e4e7ed;
+  border-radius: 6px 6px 0 0;
+}
+
+.editor-wrapper .w-e-text-container {
+  flex: 1;
+  border-radius: 0 0 6px 6px;
+  border-top: none;
 }
 </style>
