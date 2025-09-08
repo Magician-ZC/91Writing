@@ -1143,7 +1143,9 @@ const generateArticle = async () => {
     articleStreamingContent.value = ''
 
     // 构建提示词
-    let prompt = `请根据以下要求创作一篇短文：
+    let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下要求创作一篇短文：
 
 标题：${articleData.title}
 字数：约${articleData.wordCount}字
@@ -1350,7 +1352,9 @@ const generateStory = async () => {
 const buildStoryPrompt = () => {
   const { protagonist, genre, plotType, emotion, timeFrame, location } = storyData
   
-  let prompt = `请根据以下要求创作一篇短篇小说：\n\n`
+  let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下要求创作一篇短篇小说：\n\n`
   
   // 基础信息 - 始终包含所有参数设置
   prompt += `【基础设定】\n`
@@ -1511,7 +1515,9 @@ const copyContinueText = async () => {
 const buildContinuePrompt = (currentText) => {
   const { protagonist, genre, plotType, emotion, timeFrame, location } = storyData
   
-  let prompt = `请继续续写以下短篇小说，保持风格和情节的连贯性：\n\n`
+  let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请继续续写以下短篇小说，保持风格和情节的连贯性：\n\n`
   
   // 添加原始设置信息，保持一致性
   prompt += `【原始设定】\n`
@@ -1675,7 +1681,9 @@ const performOptimize = async () => {
   optimizedResult.value = ''
   
   try {
-    let prompt = `请根据以下要求优化这段文字：\n\n`
+    let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下要求优化这段文字：\n\n`
     prompt += `【优化方向】\n${optimizeDirection.value}\n\n`
     prompt += `【原文】\n${selectedTextForOptimize.value}\n\n`
     prompt += `请直接输出优化后的文字，保持原文的基本意思，但要按照优化方向进行改进。`

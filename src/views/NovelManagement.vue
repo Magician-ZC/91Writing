@@ -1497,7 +1497,9 @@ const generateEditDescription = async () => {
     const genreInfo = genrePresets.value[editForm.value.genre]
     
     // 构建AI提示词
-    const prompt = `请为小说《${title}》重新生成一段简介。
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请为小说《${title}》重新生成一段简介。
 
 小说信息：
 - 标题：${title}
@@ -1604,7 +1606,9 @@ const generateDescription = async () => {
     const genreInfo = genrePresets.value[createForm.value.genre]
     
     // 构建AI提示词
-    const prompt = `请为小说《${title}》生成一段简介。
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请为小说《${title}》生成一段简介。
 
 小说信息：
 - 标题：${title}

@@ -2727,7 +2727,9 @@ const generateChapters = async () => {
     const template = aiChapterForm.value.template
     
     // 构建提示词
-    const prompt = `=== 小说基本信息 ===
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${(() => {
       const genreMap = {
@@ -2938,7 +2940,9 @@ const optimizeText = async () => {
     const currentContent = content.value.replace(/<[^>]*>/g, '').trim() // 移除HTML标签
     const optimizeTypeText = getOptimizeTypeText()
     
-    const prompt = `请对以下小说内容进行${optimizeTypeText}。
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请对以下小说内容进行${optimizeTypeText}。
 
 原文内容：
 ${currentContent}
@@ -5074,7 +5078,9 @@ const generateWorldSettingAI = async () => {
       'history': '历史背景'
     }[worldForm.value.category] || '世界设定'
     
-    const prompt = `=== 小说基本信息 ===
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${(() => {
       const genreMap = {
@@ -6009,7 +6015,9 @@ const generateChapterOutline = async () => {
     const chapterTitle = chapterForm.value.title || '新章节'
     const context = buildGenerationContext()
     
-    const prompt = `=== 小说基本信息 ===
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${(() => {
       const genreMap = {
@@ -6128,7 +6136,9 @@ const continueWriting = async () => {
     const context = buildGenerationContext()
     const currentContent = content.value.replace(/<[^>]*>/g, '').trim() // 移除HTML标签
     
-    const prompt = `=== 小说基本信息 ===
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${(() => {
       const genreMap = {
@@ -6349,7 +6359,9 @@ const startNewContinue = async () => {
     const currentContent = content.value.replace(/<[^>]*>/g, '').trim()
     
     // 构建续写提示词
-    let prompt = `=== 小说基本信息 ===
+    let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${(() => {
       const genreMap = {
@@ -7009,7 +7021,9 @@ const buildContentPrompt = (chapter, context, config = null) => {
   const novel = currentNovel.value
   const settings = config || aiContentForm.value
   
-  let prompt = `=== 小说基本信息 ===
+  let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${novel?.title || '未命名小说'}
 小说类型：${novel?.genre || '通用'}
 小说简介：${novel?.description || '暂无简介'}
@@ -7268,7 +7282,9 @@ const generateCharacterAI = async () => {
   characterForm.value.tags = []
   
   try {
-    const prompt = `=== 小说基本信息 ===
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${(() => {
       const genreMap = {
@@ -8155,7 +8171,9 @@ const generateSingleChapter = async () => {
     }
     
     // 使用默认模板，确保包含用户填写的所有信息
-    const prompt = `=== 小说基本信息 ===
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${getChineseGenre(currentNovel.value?.genre)}
 小说简介：${currentNovel.value?.description || '暂无简介'}
@@ -8264,7 +8282,9 @@ const generateBatchChapters = async () => {
 大纲：[详细的章节内容描述，包含主要情节、人物发展、重要事件等]`)
     }
     
-    const prompt = `=== 小说基本信息 ===
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+=== 小说基本信息 ===
 小说标题：${currentNovel.value?.title || '未命名小说'}
 小说类型：${getChineseGenre(currentNovel.value?.genre)}
 小说简介：${currentNovel.value?.description || '暂无简介'}
@@ -8392,7 +8412,9 @@ const startOptimizeContent = async () => {
         break
     }
     
-    const prompt = `${optimizeInstruction}：
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+${optimizeInstruction}：
 
 原始内容：
 ${aiOptimizeForm.value.originalContent}

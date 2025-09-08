@@ -241,7 +241,9 @@ class WizardService {
    * 提示词构建器
    */
   buildBrainstormPrompt(input) {
-    return `请基于以下基础想法生成5个创意脑洞：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请基于以下基础想法生成5个创意脑洞：
 
 基础想法：${input.baseIdea}
 期望类型：${input.preferredGenre || '不限'}
@@ -263,7 +265,9 @@ class WizardService {
   }
   
   buildGenreAnalysisPrompt(input) {
-    return `请分析以下小说类型的市场潜力和创作要点：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请分析以下小说类型的市场潜力和创作要点：
 
 类型：${input.preferredGenre}
 目标读者：${input.targetAudience || '全年龄'}
@@ -278,7 +282,9 @@ class WizardService {
   }
   
   buildWorldviewPrompt(input) {
-    return `请根据以下信息构建详细的世界观设定：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下信息构建详细的世界观设定：
 
 小说类型：${input.genre}
 核心创意：${input.coreIdea}
@@ -306,7 +312,9 @@ class WizardService {
     const contextInfo = input.worldContext ? `
 世界背景：${JSON.stringify(input.worldContext, null, 2)}` : ''
     
-    return `请生成${input.count}个${this.getRoleDisplayName(input.role)}角色：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请生成${input.count}个${this.getRoleDisplayName(input.role)}角色：
 
 角色定位：${input.role}
 数量：${input.count}
@@ -331,7 +339,9 @@ ${contextInfo}
   }
   
   buildConflictPrompt(input) {
-    return `请设计多层次的冲突体系：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请设计多层次的冲突体系：
 
 世界背景：${JSON.stringify(input.worldContext, null, 2)}
 主要角色：${JSON.stringify(input.characters, null, 2)}
@@ -352,7 +362,9 @@ ${contextInfo}
   }
   
   buildOutlinePrompt(input) {
-    return `请生成详细的章节细纲：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请生成详细的章节细纲：
 
 故事前提：${input.premise}
 主要冲突：${input.mainConflict}
@@ -377,7 +389,9 @@ ${contextInfo}
   
   buildOpeningPrompt(input) {
     const context = input.context
-    return `请创作引人入胜的小说开篇：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请创作引人入胜的小说开篇：
 
 开篇类型：${input.openingType}
 氛围要求：${input.atmosphere}
@@ -402,7 +416,9 @@ ${contextInfo}
   
   buildSynopsisPrompt(input) {
     const novelData = input.novelData
-    return `请撰写吸引人的小说简介：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请撰写吸引人的小说简介：
 
 小说标题：${novelData.title}
 类型：${novelData.concept.selectedGenre}

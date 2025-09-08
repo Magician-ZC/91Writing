@@ -428,7 +428,9 @@ class AIWritingAssistant {
    * 构建内容生成提示词
    */
   buildContentGenerationPrompt(requirement, context) {
-    let prompt = `你是一个专业的小说写作助手。请根据以下信息继续创作:\n\n`
+    let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+你是一个专业的小说写作助手。请根据以下信息继续创作:\n\n`
     
     // 小说背景信息
     if (context.novel) {

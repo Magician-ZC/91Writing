@@ -1048,7 +1048,9 @@ const generateAnalysisResult = async (analysisData) => {
   const { textToAnalyze, analysisInfo, chapterInfos, template, totalWordCount, fileName, encoding } = analysisData
   
   // 构建完整的AI提示词
-  let prompt = `你是一位专业的文学分析师和写作导师，请根据以下模板和要求对小说文本进行深度拆书分析。
+  let prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+你是一位专业的文学分析师和写作导师，请根据以下模板和要求对小说文本进行深度拆书分析。
 
 ## 分析模板信息
 模板名称：${template.name}

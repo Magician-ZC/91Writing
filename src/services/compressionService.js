@@ -66,7 +66,8 @@ class CompressionService {
    * 生成AI摘要
    */
   async generateAISummary(content, title = '') {
-    const prompt = `
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
 请将以下章节内容压缩为${this.minSummaryLength}-${this.maxSummaryLength}字的精要摘要：
 
 章节标题：${title}

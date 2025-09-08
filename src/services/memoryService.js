@@ -297,7 +297,8 @@ class MemoryService {
     
     try {
       // 使用AI检查角色行为是否与设定一致
-      const prompt = `
+      const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
 请检查以下新内容中的角色行为是否与角色设定一致：
 
 角色设定：
@@ -350,7 +351,8 @@ ${newContent}
     }
     
     try {
-      const prompt = `
+      const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
 请检查以下新内容是否违反了世界观设定：
 
 世界观规则：
@@ -409,7 +411,8 @@ ${newContent}
         .map(s => `第${s.chapterNumber}章：${s.summary}`)
         .join('\n')
       
-      const prompt = `
+      const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
 请检查新内容的情节发展是否与前文逻辑一致：
 
 前文情节：
@@ -474,7 +477,8 @@ ${newContent}
    */
   async extractKeyInformation(chapterContent) {
     try {
-      const prompt = `
+      const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
 请从以下章节内容中提取关键信息：
 
 ${chapterContent}

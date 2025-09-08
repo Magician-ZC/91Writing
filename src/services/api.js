@@ -491,7 +491,9 @@ class APIService {
     const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
     const keywordList = keywords ? `\n关键词：${keywords}` : ''
     
-    const prompt = `请为以下主题生成一个详细的小说大纲：
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请为以下主题生成一个详细的小说大纲：
 主题：${theme}${templateInfo}${keywordList}
 
 要求：
@@ -511,7 +513,9 @@ class APIService {
     const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
     const keywordList = keywords ? `\n关键词：${keywords}` : ''
     
-    const prompt = `请为以下主题生成一个详细的小说大纲：
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请为以下主题生成一个详细的小说大纲：
 主题：${theme}${templateInfo}${keywordList}
 
 要求：
@@ -562,7 +566,9 @@ class APIService {
       })
     }
     
-    const prompt = `请根据以下信息生成小说章节内容：
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下信息生成小说章节内容：
 章节标题：${chapterTitle}
 章节大纲：${chapterOutline}${novelBasicInfo}${templateInfo}${contextInfo}${charactersInfo}${worldInfo}
 
@@ -619,7 +625,9 @@ class APIService {
       })
     }
     
-    const prompt = `请根据以下信息生成小说章节内容：
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下信息生成小说章节内容：
 章节标题：${chapterTitle}
 章节大纲：${chapterOutline}${novelBasicInfo}${templateInfo}${contextInfo}${charactersInfo}${worldInfo}
 
@@ -704,7 +712,9 @@ class APIService {
         break
     }
     
-    const prompt = `${lengthInstruction}，${typeInstruction}。\n\n文章内容：\n${content}`
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+${lengthInstruction}，${typeInstruction}。\n\n文章内容：\n${content}`
     
     return await this.generateTextStream(prompt, {
       maxTokens: null, // 移除token限制
@@ -714,7 +724,9 @@ class APIService {
 
   // 内容优化建议
   async getWritingAdvice(content) {
-    const prompt = `请对以下文章内容提供写作建议：
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请对以下文章内容提供写作建议：
 
 ${content}
 
@@ -756,7 +768,9 @@ ${prompt}
     const outlineInfo = outline ? `\n参考大纲：${outline}` : ''
     const keywordList = keywords ? `\n关键词：${keywords}` : ''
     
-    const prompt = `请根据以下信息生成小说内容：${keywordList}${templateInfo}${outlineInfo}
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下信息生成小说内容：${keywordList}${templateInfo}${outlineInfo}
 
 要求：
 1. 字数控制在${wordLimit}字左右
@@ -776,7 +790,9 @@ ${prompt}
     const outlineInfo = outline ? `\n参考大纲：${outline}` : ''
     const keywordList = keywords ? `\n关键词：${keywords}` : ''
     
-    const prompt = `请根据以下信息生成小说内容：${keywordList}${templateInfo}${outlineInfo}
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据以下信息生成小说内容：${keywordList}${templateInfo}${outlineInfo}
 
 要求：
 1. 字数控制在${wordLimit}字左右
@@ -816,7 +832,9 @@ ${prompt}
   // AI生成人物
   async generateCharacter(theme, characterType = '') {
     const typeInfo = characterType ? `角色类型：${characterType}` : ''
-    const prompt = `请根据主题"${theme}"生成一个小说人物，${typeInfo}
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据主题“${theme}”生成一个小说人物，${typeInfo}
 
 要求：
 1. 提供人物的基本信息（姓名、年龄、职业等）
@@ -850,7 +868,9 @@ ${prompt}
   // AI生成世界观设定
   async generateWorldSetting(theme, settingType = '') {
     const typeInfo = settingType ? `设定类型：${settingType}` : ''
-    const prompt = `请根据主题"${theme}"生成一个小说世界观设定，${typeInfo}
+    const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请根据主题“${theme}”生成一个小说世界观设定，${typeInfo}
 
 要求：
 1. 设定的名称和概述
@@ -883,7 +903,9 @@ ${prompt}
   // AI文章分析
   async analyzeArticle(content) {
     try {
-      const prompt = `请对以下文章进行深度分析，并以JSON格式返回分析结果：
+      const prompt = `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请对以下文章进行深度分析，并以JSON格式返回分析结果：
 
 文章内容：
 ${content}

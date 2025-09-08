@@ -689,7 +689,9 @@ class ContextBuilder {
   }
   
   buildBrainstormPrompt(params) {
-    return `请基于以下信息生成创意脑洞：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请基于以下信息生成创意脑洞：
     
 基础想法：${params.baseIdea || ''}
 创意方向：${params.direction || ''}
@@ -710,7 +712,9 @@ class ContextBuilder {
   }
   
   buildGenrePrompt(params) {
-    return `请分析以下类型的创作要点：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请分析以下类型的创作要点：
     
 类型：${params.genre}
 目标读者：${params.audience || ''}
@@ -754,7 +758,9 @@ class ContextBuilder {
       contextInfo += `世界背景：${worldData.worldType}\n`
     }
     
-    return `请生成${params.count || 1}个${params.role}角色：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请生成${params.count || 1}个${params.role}角色：
     
 ${contextInfo}
 角色要求：${params.requirements || ''}
@@ -773,7 +779,9 @@ ${contextInfo}
   buildConflictPrompt(params) {
     const allData = this.wizardData
     
-    return `请设计冲突体系：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请设计冲突体系：
     
 已有设定：
 ${JSON.stringify(allData, null, 2)}
@@ -794,7 +802,9 @@ ${JSON.stringify(allData, null, 2)}
   buildOutlinePrompt(params) {
     const allData = this.wizardData
     
-    return `请生成详细细纲：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请生成详细细纲：
     
 小说信息：
 ${JSON.stringify(allData, null, 2)}
@@ -815,7 +825,9 @@ ${JSON.stringify(allData, null, 2)}
   buildOpeningPrompt(params) {
     const allData = this.wizardData
     
-    return `请创作小说开篇：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请创作小说开篇：
     
 完整设定：
 ${JSON.stringify(allData, null, 2)}
@@ -838,7 +850,9 @@ ${JSON.stringify(allData, null, 2)}
   buildSynopsisPrompt(params) {
     const allData = this.wizardData
     
-    return `请撰写小说简介：
+    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
+
+请撰写小说简介：
     
 完整设定：
 ${JSON.stringify(allData, null, 2)}
