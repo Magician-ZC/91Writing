@@ -261,43 +261,105 @@ const updateThreeAct = () => {
   updateData('threeActStructure', localData.threeActStructure)
 }
 
-const generateConflicts = async () => {
-  generatingConflicts.value = true
-  try {
-    await emit('use-tool', 'conflict', {
-      premise: localData.premise,
-      mainConflict: localData.mainConflict,
-      characters: props.wizardData.characterDesign,
-      worldSetting: props.wizardData.worldBuilding
-    })
-    ElMessage.success('冲突体系生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingConflicts.value = false
+const generateConflicts = () => {
+  if (!localData.premise?.trim() || !localData.mainConflict?.trim()) {
+    ElMessage.warning('请先填写故事前提和主要冲突')
+    return
   }
+  
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
+  generatingConflicts.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'conflict', {
+    premise: localData.premise,
+    mainConflict: localData.mainConflict,
+    characters: props.wizardData.characterDesign,
+    worldSetting: props.wizardData.worldBuilding
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('冲突体系生成结果:', result)
+      
+      if (result) {
+        // 处理冲突结果
+        if (typeof result === 'object' && result.conflictLayers) {
+          localData.conflictLayers = result.conflictLayers
+          updateData('conflictLayers', localData.conflictLayers)
+        }
+        ElMessage.success('冲突体系生成完成')
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成冲突体系失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingConflicts.value = false
+    }
+  })
 }
 
-const generateOutline = async () => {
-  generatingOutline.value = true
-  try {
-    // 模拟生成细纲
-    generatedOutline.value = [
-      { title: '初遇', summary: '主角首次接触到神秘事件' },
-      { title: '深入调查', summary: '主角开始深入调查，发现更多线索' },
-      { title: '真相浮现', summary: '关键真相逐渐浮现，冲突激化' },
-      { title: '最终对决', summary: '主角与反角的最终对决' },
-      { title: '尘埃落定', summary: '事件得到解决，故事收尾' }
-    ]
-    
-    localData.plotPoints = generatedOutline.value
-    updateData('plotPoints', localData.plotPoints)
-    ElMessage.success('章节细纲生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingOutline.value = false
+const generateOutline = () => {
+  if (!localData.premise?.trim() || !localData.mainConflict?.trim()) {
+    ElMessage.warning('请先填写故事前提和主要冲突')
+    return
   }
+  
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
+  generatingOutline.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'outline', {
+    premise: localData.premise,
+    mainConflict: localData.mainConflict,
+    threeActStructure: localData.threeActStructure,
+    characters: props.wizardData.characterDesign,
+    worldSetting: props.wizardData.worldBuilding,
+    conflictLayers: localData.conflictLayers
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('章节细纲生成结果:', result)
+      
+      if (result && Array.isArray(result.chapters)) {
+        generatedOutline.value = result.chapters
+        localData.plotPoints = generatedOutline.value
+        updateData('plotPoints', localData.plotPoints)
+        ElMessage.success(`章节细纲生成完成，共生成 ${generatedOutline.value.length} 章`)
+      } else if (Array.isArray(result)) {
+        generatedOutline.value = result
+        localData.plotPoints = generatedOutline.value
+        updateData('plotPoints', localData.plotPoints)
+        ElMessage.success(`章节细纲生成完成，共生成 ${generatedOutline.value.length} 章`)
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成章节细纲失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingOutline.value = false
+    }
+  })
 }
 
 watch(() => props.stepData, (newData) => {

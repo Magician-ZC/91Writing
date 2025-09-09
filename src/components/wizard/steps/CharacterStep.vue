@@ -168,76 +168,136 @@ const updateProtagonist = () => {
   updateData('protagonist', localData.protagonist)
 }
 
-const generateProtagonist = async () => {
+const generateProtagonist = () => {
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
   generatingProtagonist.value = true
-  try {
-    const result = await emit('use-tool', 'character', {
-      role: 'protagonist',
-      count: 1,
-      contextData: props.wizardData
-    })
-    
-    // 模拟角色数据
-    localData.protagonist = {
-      id: Date.now(),
-      name: '林晓',
-      age: 25,
-      personality: '聪明冷静，富有正义感，但有时过于理想主义',
-      background: '从小在普通家庭长大，通过努力成为一名优秀的侦探',
-      abilities: ['逻辑推理', '观察细节'],
-      weaknesses: ['过于相信他人', '情感用事'],
-      motivation: '追求真相，保护无辜'
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'character', {
+    role: 'protagonist',
+    count: 1,
+    contextData: props.wizardData
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('主角生成结果:', result)
+      
+      if (result && typeof result === 'object') {
+        localData.protagonist = {
+          id: Date.now(),
+          ...result
+        }
+        updateData('protagonist', localData.protagonist)
+        ElMessage.success('主角生成完成')
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成主角失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingProtagonist.value = false
     }
-    
-    updateData('protagonist', localData.protagonist)
-    ElMessage.success('主角生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingProtagonist.value = false
-  }
+  })
 }
 
-const generateSupportingCharacters = async () => {
+const generateSupportingCharacters = () => {
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
   generatingSupporting.value = true
-  try {
-    // 模拟生成配角
-    const newCharacter = {
-      id: Date.now(),
-      name: '王小明',
-      age: 30,
-      personality: '幽默风趣，是主角的得力助手',
-      role: 'supporting'
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'character', {
+    role: 'supporting',
+    count: 1,
+    contextData: props.wizardData,
+    protagonist: localData.protagonist
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('配角生成结果:', result)
+      
+      if (result && typeof result === 'object') {
+        const newCharacter = {
+          id: Date.now(),
+          role: 'supporting',
+          ...result
+        }
+        
+        localData.supporting.push(newCharacter)
+        updateData('supporting', localData.supporting)
+        ElMessage.success('配角生成完成')
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成配角失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingSupporting.value = false
     }
-    
-    localData.supporting.push(newCharacter)
-    updateData('supporting', localData.supporting)
-    ElMessage.success('配角生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingSupporting.value = false
-  }
+  })
 }
 
-const generateAntagonist = async () => {
-  generatingAntagonist.value = true
-  try {
-    // 模拟生成反角
-    localData.antagonist = {
-      id: Date.now(),
-      name: '黑衣人',
-      personality: '神秘冷酷，智谋过人',
-      motivation: '阻止主角发现真相'
-    }
-    
-    updateData('antagonist', localData.antagonist)
-    ElMessage.success('反角生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingAntagonist.value = false
+const generateAntagonist = () => {
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
   }
+  
+  generatingAntagonist.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'character', {
+    role: 'antagonist',
+    count: 1,
+    contextData: props.wizardData,
+    protagonist: localData.protagonist
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('反角生成结果:', result)
+      
+      if (result && typeof result === 'object') {
+        localData.antagonist = {
+          id: Date.now(),
+          ...result
+        }
+        
+        updateData('antagonist', localData.antagonist)
+        ElMessage.success('反角生成完成')
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成反角失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingAntagonist.value = false
+    }
+  })
 }
 
 const removeCharacter = (type, index) => {

@@ -237,16 +237,6 @@ function validateCodeUnique(rule, value, callback) {
 const loadDefaultGenres = () => {
   const defaultGenres = [
     {
-      code: 'fantasy',
-      name: '玄幻',
-      tags: ['修仙', '异世界', '法宝', '灵气', '境界'],
-      prompt: '创作一部玄幻小说，包含修仙体系、异世界冒险等元素，注重世界观构建和修炼体系描写。',
-      examples: '《斗破苍穹》、《完美世界》',
-      isDefault: true,
-      createdAt: new Date(),
-      usageCount: 0
-    },
-    {
       code: 'urban',
       name: '都市',
       tags: ['都市', '现代', '职场', '生活'],
@@ -257,11 +247,11 @@ const loadDefaultGenres = () => {
       usageCount: 0
     },
     {
-      code: 'history',
-      name: '历史',
-      tags: ['历史', '古代', '朝廷', '战争'],
-      prompt: '创作一部历史小说，以真实历史为背景，注重历史考证和时代特色描写。',
-      examples: '《明朝那些事儿》、《康熙大帝》',
+      code: 'fantasy',
+      name: '玄幻',
+      tags: ['修仙', '异世界', '法宝', '灵气', '境界'],
+      prompt: '创作一部玄幻小说，包含修仙体系、异世界冒险等元素，注重世界观构建和修炼体系描写。',
+      examples: '《斗破苍穹》、《完美世界》',
       isDefault: true,
       createdAt: new Date(),
       usageCount: 0
@@ -277,6 +267,36 @@ const loadDefaultGenres = () => {
       usageCount: 0
     },
     {
+      code: 'romance',
+      name: '言情',
+      tags: ['言情', '爱情', '情感', '浪漫'],
+      prompt: '创作一部言情小说，以爱情为主线，注重情感描写和人物关系发展。',
+      examples: '《简爱》、《傲慢与偏见》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'mystery',
+      name: '悬疑',
+      tags: ['推理', '悬念', '解谜', '犯罪', '侦探'],
+      prompt: '创作一部悬疑小说，包含推理解谜、悬念重重的情节，注重逻辑性和氛围营造。',
+      examples: '《福尔摩斯探案集》、《白夜行》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'historical',
+      name: '历史',
+      tags: ['历史', '古代', '朝廷', '战争'],
+      prompt: '创作一部历史小说，以真实历史为背景，注重历史考证和时代特色描写。',
+      examples: '《明朝那些事儿》、《康熙大帝》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
       code: 'wuxia',
       name: '武侠',
       tags: ['武侠', '江湖', '武功', '侠义'],
@@ -287,11 +307,111 @@ const loadDefaultGenres = () => {
       usageCount: 0
     },
     {
-      code: 'romance',
-      name: '言情',
-      tags: ['言情', '爱情', '情感', '浪漫'],
-      prompt: '创作一部言情小说，以爱情为主线，注重情感描写和人物关系发展。',
-      examples: '《简爱》、《傲慢与偏见》',
+      code: 'gaming',
+      name: '游戏',
+      tags: ['游戏', '虚拟世界', '游戏元素', '升级', 'VR'],
+      prompt: '创作一部游戏类小说，包含虚拟世界、游戏元素等设定，注重游戏性和代入感。',
+      examples: '《全职高手》、《网游之天谴修罗》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'esports',
+      name: '电竞',
+      tags: ['电竞', '竞技', '团队', '荣耀', '比赛'],
+      prompt: '创作一部电竞类小说，以电竞竞技为背景，注重团队合作和竞技精神。',
+      examples: '《全职高手》、《蜜汁炖鱿鱼》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'business',
+      name: '商战',
+      tags: ['商业', '企业', '竞争', '智谋', '财富'],
+      prompt: '创作一部商战小说，以商业竞争为背景，注重智谋博弈和商业策略。',
+      examples: '《大江大河》、《温州一家人》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'military',
+      name: '军事',
+      tags: ['军事', '战争', '军人', '战略', '国防'],
+      prompt: '创作一部军事小说，以战争题材或军人生活为背景，注重战略战术和军人精神。',
+      examples: '《亮剑》、《我是特种兵》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'apocalypse',
+      name: '末世',
+      tags: ['末日', '求生', '丧尸', '灾难', '重建'],
+      prompt: '创作一部末世小说，以末日求生为背景，注重人性考验和生存智慧。',
+      examples: '《生化危机》、《行尸走肉》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'rebirth',
+      name: '重生',
+      tags: ['重生', '复仇', '改变命运', '预知', '第二次机会'],
+      prompt: '创作一部重生小说，主角获得第二次生命机会，注重命运改变和成长蜕变。',
+      examples: '《重生之完美时代》、《重生军嫂俏佳人》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'system',
+      name: '系统',
+      tags: ['系统', '数据面板', '任务', '奖励', '升级'],
+      prompt: '创作一部系统流小说，主角拥有特殊系统辅助，注重系统设定和成长路线。',
+      examples: '《最强升级系统》、《超级医生系统》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'cultivation',
+      name: '修真',
+      tags: ['修真', '炼道', '飞升', '仙界', '道法'],
+      prompt: '创作一部修真小说，以修仙炼道为主线，注重修炼体系和境界突破。',
+      examples: '《凡人修仙传》、《一念永恒》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'horror',
+      name: '恐怖',
+      tags: ['恐怖', '惊悚', '鬼怪', '诡异', '恐惧'],
+      prompt: '创作一部恐怖小说，营造惊悚恐怖的诡异氛围，注重心理恐惧和悬疑设计。',
+      examples: '《鬼吹灯》、《盗墓笔记》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'school',
+      name: '校园',
+      tags: ['校园', '青春', '学生', '成长', '友谊'],
+      prompt: '创作一部校园小说，以校园生活为背景，注重青春记忆和成长故事。',
+      examples: '《那些年，我们一起追的女孩》、《同桌的你》',
+      isDefault: true,
+      createdAt: new Date(),
+      usageCount: 0
+    },
+    {
+      code: 'entertainment',
+      name: '娱乐圈',
+      tags: ['明星', '演艺圈', '娱乐', '名利', '梦想'],
+      prompt: '创作一部娱乐圈小说，以演艺圈为背景，注重明星生活和梦想追求。',
+      examples: '《何以笙箫默》、《微微一笑很倾城》',
       isDefault: true,
       createdAt: new Date(),
       usageCount: 0

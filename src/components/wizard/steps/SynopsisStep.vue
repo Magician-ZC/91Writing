@@ -337,87 +337,136 @@ const applySelectedVariation = () => {
   }
 }
 
-const generateSynopsis = async () => {
+const generateSynopsis = () => {
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
   generatingSynopsis.value = true
-  try {
-    await emit('use-tool', 'synopsis', {
-      style: selectedStyle.value,
-      allData: props.wizardData
-    })
-    
-    // 模拟生成的简介变体
-    synopsisVariations.value = [
-      {
-        style: '悬疑版',
-        content: '当梦境与现实的边界变得模糊，侦探林晓发现自己陷入了一场前所未有的追凶游戏。每一个夜晚，他都会进入受害者的梦境，寻找隐藏在潜意识深处的真相。然而，随着调查的深入，他开始怀疑：究竟是他在追捕杀手，还是杀手在等待着他？'
-      },
-      {
-        style: '情感版',
-        content: '林晓拥有一项特殊的能力——进入他人的梦境。这项天赋让他成为了城市中最出色的侦探，也让他承受着常人无法理解的孤独。当一系列神秘案件出现时，他必须在梦境与现实之间游走，不仅要面对罪犯的狡猾，更要直面自己内心深处的恐惧。'
-      },
-      {
-        style: '商业版',
-        content: '拥有梦境探索能力的侦探林晓，遇到了职业生涯中最大的挑战。连环杀手在梦境中留下线索，现实中却不留痕迹。为了破解这起案件，林晓必须深入最危险的梦境世界，在虚幻与真实之间寻找答案。一场跨越意识边界的较量即将开始...'
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'synopsis', {
+    style: selectedStyle.value,
+    allData: props.wizardData
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
       }
-    ]
-    
-    ElMessage.success('多版本简介生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingSynopsis.value = false
-  }
+      
+      console.log('简介生成结果:', result)
+      
+      if (result && Array.isArray(result.variations)) {
+        synopsisVariations.value = result.variations
+        ElMessage.success(`多版本简介生成完成，共生成 ${result.variations.length} 个版本`)
+      } else if (Array.isArray(result)) {
+        synopsisVariations.value = result
+        ElMessage.success(`多版本简介生成完成，共生成 ${result.length} 个版本`)
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成简介失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingSynopsis.value = false
+    }
+  })
 }
 
-const analyzeSynopsis = async () => {
+const analyzeSynopsis = () => {
+  if (!localData.shortSynopsis?.trim()) {
+    ElMessage.warning('请先填写短简介')
+    return
+  }
+  
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
   analyzingSynopsis.value = true
-  try {
-    // 模拟简介分析
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    synopsisAnalysis.value = {
-      attractiveness: 8.3,
-      clarity: 8.7,
-      uniqueness: 7.9,
-      marketAppeal: 8.1,
-      suggestions: [
-        '突出独特的梦境设定',
-        '增强紧张感和悬念',
-        '更明确地描述主角的困境',
-        '添加更多情感层面的描述'
-      ]
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'analyze-synopsis', {
+    synopsis: localData.shortSynopsis,
+    logline: localData.logline,
+    pitchPoints: localData.pitchPoints,
+    allData: props.wizardData
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('简介分析结果:', result)
+      
+      if (result && typeof result === 'object') {
+        synopsisAnalysis.value = result
+        ElMessage.success('简介效果分析完成')
+      } else {
+        throw new Error('未收到有效的分析结果')
+      }
+    } catch (err) {
+      console.error('分析简介失败:', err)
+      ElMessage.error('分析失败：' + (err.message || '未知错误'))
+    } finally {
+      analyzingSynopsis.value = false
     }
-    
-    ElMessage.success('简介效果分析完成')
-  } catch (error) {
-    ElMessage.error('分析失败')
-  } finally {
-    analyzingSynopsis.value = false
-  }
+  })
 }
 
-const generateMarketingCopy = async () => {
-  generatingMarketing.value = true
-  try {
-    // 模拟生成推广文案
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    const marketingCopy = {
-      tagline: '当梦境成为破案的钥匙',
-      backCover: '一个拥有特殊能力的侦探，一系列无解的案件，一场跨越意识边界的较量...',
-      socialMedia: '🔍 梦境侦探系列震撼来袭！ #悬疑小说 #梦境探索',
-      bookstore: '现象级悬疑小说，开创梦境推理新流派'
-    }
-    
-    localData.backCover = marketingCopy.backCover
-    updateData('backCover', marketingCopy.backCover)
-    
-    ElMessage.success('推广文案生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingMarketing.value = false
+const generateMarketingCopy = () => {
+  if (!localData.shortSynopsis?.trim()) {
+    ElMessage.warning('请先填写短简介')
+    return
   }
+  
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
+  generatingMarketing.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'marketing-copy', {
+    synopsis: localData.shortSynopsis,
+    logline: localData.logline,
+    pitchPoints: localData.pitchPoints,
+    allData: props.wizardData
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('推广文案生成结果:', result)
+      
+      if (result && typeof result === 'object') {
+        if (result.backCover) {
+          localData.backCover = result.backCover
+          updateData('backCover', result.backCover)
+        }
+        
+        ElMessage.success('推广文案生成完成')
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成推广文案失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingMarketing.value = false
+    }
+  })
 }
 
 watch(() => props.stepData, (newData) => {

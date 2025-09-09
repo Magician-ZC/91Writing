@@ -723,12 +723,20 @@ export const useNovelStore = defineStore('novel', () => {
 
   // 通用内容生成方法
   const generateContent = async (prompt, onChunk = null) => {
+    console.log('generateContent 被调用:', { 
+      prompt: prompt ? prompt.substring(0, 100) + '...' : prompt,
+      isApiConfigured: isApiConfigured.value,
+      currentConfigType: currentConfigType.value
+    })
+    
     if (!isApiConfigured.value) {
-      throw new Error('请先配置API')
+      throw new Error('API未配置：请前往设置页面配置您的API密钥后再使用此功能')
     }
     
     try {
       isGenerating.value = true
+      
+      console.log('开始调用 API 生成内容...')
       
       // 如果提供了onChunk回调，使用流式API
       if (onChunk) {
@@ -738,13 +746,15 @@ export const useNovelStore = defineStore('novel', () => {
           onChunk(chunk)
         })
         
+        console.log('流式API返回结果 (带回调):', result ? result.substring(0, 200) + '...' : result)
         return result
       } else {
-        // 否则使用流式API（不提供回调）
-        const result = await apiService.generateTextStream(prompt, {
+        // 否则使用非流式API获取结果
+        const result = await apiService.generateText(prompt, {
           type: 'content_generation'
-        }, null)
+        })
         
+        console.log('非流式API返回结果:', result ? result.substring(0, 200) + '...' : result)
         return result
       }
     } catch (error) {

@@ -22,10 +22,14 @@ class ToolIntegrationService {
         }
       },
       worldbuilding: {
-        primary: ['worldview'],
-        secondary: [],
+        primary: ['worldview', 'coreRules', 'powerSystem', 'socialStructure'],
+        secondary: ['consistency'],
         integration: {
-          worldview: 'integrateWorldviewResult'
+          worldview: 'integrateWorldviewResult',
+          coreRules: 'integrateCoreRulesResult',
+          powerSystem: 'integratePowerSystemResult',
+          socialStructure: 'integrateSocialStructureResult',
+          consistency: 'integrateConsistencyResult'
         }
       },
       characters: {
@@ -133,6 +137,14 @@ class ToolIntegrationService {
         return contextBuilder.buildGenrePrompt(params)
       case 'worldview':
         return contextBuilder.buildWorldviewPrompt(params)
+      case 'coreRules':
+        return contextBuilder.buildCoreRulesPrompt(params)
+      case 'powerSystem':
+        return contextBuilder.buildPowerSystemPrompt(params)
+      case 'socialStructure':
+        return contextBuilder.buildSocialStructurePrompt(params)
+      case 'consistency':
+        return contextBuilder.buildConsistencyPrompt(params)
       case 'character':
         return contextBuilder.buildCharacterPrompt(params)
       case 'conflict':
@@ -160,9 +172,18 @@ class ToolIntegrationService {
       this.init()
     }
     
+    console.log('callTool 被调用:', { toolType, prompt: prompt.substring(0, 100) + '...', params })
+    
     // 这里应该调用实际的工具API
     // 目前使用 novelStore 的 generateContent 方法
-    return await this.novelStore.generateContent(prompt)
+    try {
+      const result = await this.novelStore.generateContent(prompt)
+      console.log('callTool 返回结果:', result ? result.substring(0, 100) + '...' : result)
+      return result
+    } catch (error) {
+      console.error('callTool 调用失败:', error)
+      throw error
+    }
   }
   
   /**
@@ -231,19 +252,80 @@ class ToolIntegrationService {
   async integrateWorldviewResult(result, stepId, params) {
     const worldSettings = this.parseWorldviewResult(result)
     
-    // 更新向导数据
-    Object.keys(worldSettings).forEach(key => {
-      this.wizardStore.updateStepData('worldBuilding', key, worldSettings[key])
-    })
+    console.log('世界观整合结果:', worldSettings)
+    
+    // 更新向导数据 - 但不更新到store，因为这是生成的内容，用户可能不采用
+    // Object.keys(worldSettings).forEach(key => {
+    //   this.wizardStore.updateStepData('worldBuilding', key, worldSettings[key])
+    // })
     
     // 检查与前面步骤的一致性
-    const consistencyCheck = await this.checkWorldConsistency(worldSettings)
+    // const consistencyCheck = await this.checkWorldConsistency(worldSettings)
+    
+    // 直接返回解析好的世界观数据，供模板显示
+    return {
+      type: 'worldview', 
+      ...worldSettings,  // 展开worldSettings，这样模板可以直接访问basic, history, culture, geography
+      integrated: true,
+      // consistency: consistencyCheck
+    }
+  }
+
+  /**
+   * 核心规则生成结果整合
+   */
+  async integrateCoreRulesResult(result, stepId, params) {
+    const rules = this.parseCoreRulesResult(result)
     
     return {
-      type: 'worldview',
-      settings: worldSettings,
+      type: 'coreRules',
+      rules,
       integrated: true,
-      consistency: consistencyCheck
+      suggestions: ['建议验证规则之间的一致性', '考虑规则对故事发展的影响']
+    }
+  }
+
+  /**
+   * 力量体系生成结果整合
+   */
+  async integratePowerSystemResult(result, stepId, params) {
+    const powerSystemData = this.parsePowerSystemResult(result)
+    
+    return {
+      type: 'powerSystem',
+      description: powerSystemData.description,
+      details: powerSystemData.details,
+      integrated: true,
+      suggestions: ['检查与核心规则的契合度', '考虑力量体系的平衡性']
+    }
+  }
+
+  /**
+   * 社会结构生成结果整合
+   */
+  async integrateSocialStructureResult(result, stepId, params) {
+    const socialData = this.parseSocialStructureResult(result)
+    
+    return {
+      type: 'socialStructure',
+      description: socialData.description,
+      details: socialData.details,
+      integrated: true,
+      suggestions: ['验证与力量体系的关系', '检查社会矛盾的合理性']
+    }
+  }
+
+  /**
+   * 一致性检查结果整合
+   */
+  async integrateConsistencyResult(result, stepId, params) {
+    const consistencyAnalysis = this.parseConsistencyResult(result)
+    
+    return {
+      type: 'consistency',
+      analysis: consistencyAnalysis,
+      integrated: true,
+      actionItems: consistencyAnalysis.issues || []
     }
   }
   
@@ -426,35 +508,210 @@ class ToolIntegrationService {
   parseBrainstormResult(result) {
     // 解析脑洞生成结果，提取结构化数据
     const brainstorms = []
-    const lines = result.split('\n')
-    let current = null
     
-    lines.forEach(line => {
-      if (line.startsWith('脑洞') && line.includes('：')) {
-        if (current) brainstorms.push(current)
-        current = {
-          id: Date.now() + Math.random(),
-          title: line.split('：')[1],
-          description: '',
-          highlight: '',
-          conflict: '',
-          potential: ''
-        }
-      } else if (current) {
-        if (line.includes('核心设定')) {
-          current.description = line.replace(/[-\s]*核心设定[：:]\s*/, '')
-        } else if (line.includes('创意亮点')) {
-          current.highlight = line.replace(/[-\s]*创意亮点[：:]\s*/, '')
-        } else if (line.includes('冲突设计')) {
-          current.conflict = line.replace(/[-\s]*冲突设计[：:]\s*/, '')
-        } else if (line.includes('发展潜力')) {
-          current.potential = line.replace(/[-\s]*发展潜力[：:]\s*/, '')
+    if (typeof result !== 'string') {
+      console.error('脑洞生成结果不是字符串:', result)
+      return brainstorms
+    }
+    
+    console.log('原始脑洞数据长度:', result.length)
+    console.log('原始脑洞数据预览:', result.substring(0, 500) + '...')
+    
+    // 首先尝试找到真正的脑洞内容开始位置，过滤掉提示词
+    let contentStart = result.indexOf('**脑洞1：')
+    if (contentStart === -1) {
+      contentStart = result.indexOf('**脑洞一：')
+      if (contentStart === -1) {
+        contentStart = result.indexOf('### 脑洞1')
+        if (contentStart === -1) {
+          contentStart = result.indexOf('脑洞1：')
+          if (contentStart === -1) {
+            contentStart = result.indexOf('---') // 寻找分隔线
+            if (contentStart !== -1) {
+              contentStart = result.indexOf('\n', contentStart) + 1
+            } else {
+              contentStart = 0
+            }
+          }
         }
       }
+    }
+    
+    // 只处理真正的脑洞内容部分
+    const cleanResult = contentStart > 0 ? result.substring(contentStart).trim() : result.trim()
+    console.log('清理后的脑洞数据预览:', cleanResult.substring(0, 300) + '...')
+    
+    // 先尝试按不同的分隔符分割成多个部分
+    let sections = []
+    
+    // 方法1: 按标准格式分割（### 脑洞一、脑洞1、创意1等）
+    if (cleanResult.match(/###\s*脑洞[一二三四五六七八九十\d]/i)) {
+      sections = cleanResult.split(/(?=###\s*脑洞[一二三四五六七八九十\d])/i).filter(s => s.trim())
+      console.log('使用### 脑洞格式分割')
+    }
+    else if (cleanResult.match(/\*\*脑洞[一二三四五六七八九十\d]+[：:]/i)) {
+      // 匹配 **脑洞1： 或 **脑洞一： 格式
+      sections = cleanResult.split(/(?=\*\*脑洞[一二三四五六七八九十\d]+[：:])/i).filter(s => s.trim())
+      console.log('使用**脑洞格式分割')
+    }
+    else if (cleanResult.match(/脑洞\s*[一二三四五六七八九十\d]/i) || cleanResult.match(/创意\s*[1-9\d]/i) || cleanResult.match(/想法\s*[1-9\d]/i)) {
+      sections = cleanResult.split(/(?=(?:^|\n)脑洞\s*[一二三四五六七八九十\d]|创意\s*[1-9\d]|想法\s*[1-9\d])/i).filter(s => s.trim())
+      console.log('使用脑洞/创意格式分割')
+    }
+    // 方法2: 按数字编号分割（1. 2. 3. 或 1、2、3、）  
+    else if (cleanResult.match(/[1-9\d][.、]\s*[^\d]/)) {
+      sections = cleanResult.split(/(?=[1-9\d][.、]\s*[^\d])/).filter(s => s.trim())
+      console.log('使用数字编号分割')
+    }
+    // 方法3: 按双换行分割
+    else if (cleanResult.includes('\n\n')) {
+      sections = cleanResult.split(/\n\s*\n/).filter(s => s.trim())
+      console.log('使用双换行分割')
+    }
+    // 方法4: 按内容长度智能分割（每200-300字一段）
+    else if (cleanResult.length > 400) {
+      const sentences = cleanResult.split(/[。！？.!?]/).filter(s => s.trim())
+      let currentSection = ''
+      sentences.forEach(sentence => {
+        currentSection += sentence + '。'
+        if (currentSection.length > 200) {
+          sections.push(currentSection.trim())
+          currentSection = ''
+        }
+      })
+      if (currentSection.trim()) sections.push(currentSection.trim())
+      console.log('使用长度智能分割')
+    }
+    // 方法5: 作为单个脑洞处理
+    else {
+      sections = [cleanResult.trim()]
+      console.log('作为单个脑洞处理')
+    }
+    
+    console.log('分割后的章节数量:', sections.length)
+    sections.forEach((section, i) => {
+      console.log(`章节${i+1}预览:`, section.substring(0, 100) + '...')
     })
     
-    if (current) brainstorms.push(current)
-    return brainstorms
+    // 解析每个章节
+    sections.forEach((section, index) => {
+      if (!section.trim()) return
+      
+      // 提取标题 - 重新优化逻辑
+      let title = `创意脑洞 ${index + 1}`
+      const lines = section.split('\n').map(line => line.trim()).filter(line => line)
+      const firstLine = lines[0] || ''
+      
+      console.log(`脑洞${index + 1} - 首行内容:`, firstLine)
+      
+      // 尝试从第一行提取标题
+      if (firstLine.match(/^\*\*脑洞[一二三四五六七八九十\d]+[：:]/i)) {
+        // 处理 "**脑洞一：标题：《血月法则》**" 格式
+        let titleLine = firstLine.replace(/^\*\*脑洞[一二三四五六七八九十\d]+[：:]\s*/, '').replace(/\*\*$/, '').trim()
+        console.log(`脑洞${index + 1} - 标题行处理:`, titleLine)
+        
+        // 进一步提取标题部分（如果有"标题："前缀）
+        if (titleLine.match(/^标题[：:]/i)) {
+          titleLine = titleLine.replace(/^标题[：:]\s*/, '')
+          // 去掉书名号
+          if (titleLine.match(/^《(.+?)》/)) {
+            titleLine = titleLine.replace(/^《(.+?)》/, '$1')
+          }
+          title = titleLine || title
+        } else if (titleLine.length > 0 && titleLine.length < 100) {
+          // 如果没有"标题："前缀，但内容合理，直接使用
+          title = titleLine
+        }
+        console.log(`脑洞${index + 1} - 最终标题:`, title)
+        
+      } else if (firstLine.match(/^###\s*脑洞[一二三四五六七八九十\d]*\s*[：:]/i)) {
+        // 处理 "### 脑洞一: 血色天赋·力物解析" 格式
+        const titlePart = firstLine.replace(/^###\s*/, '').split(/[：:]/)[1]?.trim()
+        title = titlePart || firstLine.replace(/^###\s*/, '').trim()
+        
+      } else if (firstLine.match(/^(脑洞|创意|想法)[一二三四五六七八九十\d]*\s*[：:]/i)) {
+        title = firstLine.split(/[：:]/)[1]?.trim() || 
+               firstLine.split(/[：:]/)[0]?.trim() || title
+        
+      } else if (firstLine.match(/^[1-9\d][.、]/)) {
+        const cleanTitle = firstLine.replace(/^[1-9\d][.、]\s*/, '')
+        // 如果首行看起来像标题（短且不是明显的描述文字）
+        if (cleanTitle.length < 50 && !cleanTitle.includes('核心设定') && !cleanTitle.includes('创意亮点')) {
+          title = cleanTitle
+        }
+        
+      } else if (firstLine.length > 0 && firstLine.length < 50 && !firstLine.includes('核心设定') && !firstLine.includes('创意亮点')) {
+        title = firstLine
+      }
+      
+      // 提取各个部分
+      let description = ''
+      let highlight = ''
+      let conflict = ''
+      let potential = ''
+      
+      const fullText = section
+      
+      // 尝试按关键词提取各个字段
+      const coreMatch = fullText.match(/[-·]?\s*核心设定[：:]?\s*([^-·\n]*?)(?=\n[-·]?\s*(创意亮点|冲突设计|发展潜力)|$)/is)
+      const highlightMatch = fullText.match(/[-·]?\s*创意亮点[：:]?\s*([^-·\n]*?)(?=\n[-·]?\s*(核心设定|冲突设计|发展潜力)|$)/is)
+      const conflictMatch = fullText.match(/[-·]?\s*冲突设计[：:]?\s*([^-·\n]*?)(?=\n[-·]?\s*(核心设定|创意亮点|发展潜力)|$)/is)
+      const potentialMatch = fullText.match(/[-·]?\s*发展潜力[：:]?\s*([^-·\n]*?)(?=\n[-·]?\s*(核心设定|创意亮点|冲突设计)|$)/is)
+      
+      description = coreMatch ? coreMatch[1].trim() : ''
+      highlight = highlightMatch ? highlightMatch[1].trim() : ''
+      conflict = conflictMatch ? conflictMatch[1].trim() : ''
+      potential = potentialMatch ? potentialMatch[1].trim() : ''
+      
+      // 如果没有找到特定字段，使用整段作为描述
+      if (!description && !highlight && !conflict && !potential) {
+        // 清理格式化标记后作为描述
+        description = fullText
+          .replace(/^\*\*脑洞[一二三四五六七八九十\d]+[：:].*?\*\*/i, '')
+          .replace(/^###\s*(脑洞|创意|想法)[一二三四五六七八九十\d]*\s*[：:]/i, '')
+          .replace(/^(脑洞|创意|想法)\s*[一二三四五六七八九十\d]*\s*[：:]/i, '')
+          .replace(/^[1-9\d][.、]\s*/, '')
+          .trim()
+      }
+      
+      // 设置默认值
+      if (!description) description = '精彩的创意构思'
+      if (!highlight) highlight = '具有独特的创意价值'
+      if (!conflict) conflict = '包含丰富的戏剧冲突'
+      if (!potential) potential = '具有很好的发展潜力'
+      
+      console.log(`脑洞${index + 1} - 解析结果:`, {
+        title,
+        description: description.substring(0, 50) + '...',
+        highlight: highlight.substring(0, 30) + '...',
+        conflict: conflict.substring(0, 30) + '...',
+        potential: potential.substring(0, 30) + '...'
+      })
+      
+      brainstorms.push({
+        id: Date.now() + Math.random() * 1000 + index,
+        title: title,
+        description: description,
+        highlight: highlight,
+        conflict: conflict, 
+        potential: potential
+      })
+    })
+    
+    // 如果仍然没有解析出结果，创建一个默认的脑洞
+    if (brainstorms.length === 0 && result.trim()) {
+      brainstorms.push({
+        id: Date.now(),
+        title: '生成的创意脑洞',
+        description: result.substring(0, 200) + (result.length > 200 ? '...' : ''),
+        highlight: '具有独特的创意价值',
+        conflict: '包含丰富的戏剧冲突',
+        potential: '具有很好的发展潜力'
+      })
+    }
+    
+    console.log('解析脑洞结果:', brainstorms)
+    return brainstorms.filter(item => item.title || item.description)
   }
   
   parseGenreAnalysis(result) {
@@ -472,16 +729,147 @@ class ToolIntegrationService {
   
   parseWorldviewResult(result) {
     // 解析世界观生成结果
-    return {
-      worldType: '',
-      scale: '',
-      coreRules: [],
-      powerSystem: '',
-      socialStructure: '',
-      geography: '',
+    if (typeof result !== 'string') {
+      console.error('世界观生成结果不是字符串:', result)
+      return {
+        basic: '解析失败，请重新生成',
+        history: '解析失败，请重新生成', 
+        culture: '解析失败，请重新生成',
+        geography: '解析失败，请重新生成'
+      }
+    }
+
+    console.log('原始世界观生成结果:', result)
+    
+    const worldview = {
+      basic: '',
       history: '',
       culture: '',
-      technology: ''
+      geography: ''
+    }
+
+    try {
+      // 尝试按标题分割内容
+      const sections = result.split(/(?=##?\s*[一二三四五六七八九十\d]+[、.。]?\s*[基本历史文化地理背景架构环境传统设定])/i)
+      
+      sections.forEach(section => {
+        const trimmedSection = section.trim()
+        if (!trimmedSection) return
+        
+        // 基本架构/世界设定
+        if (trimmedSection.match(/[基本世界架构设定框架]/i)) {
+          worldview.basic = this.extractSectionContent(trimmedSection)
+        }
+        // 历史背景
+        else if (trimmedSection.match(/历史|背景|起源|发展/i)) {
+          worldview.history = this.extractSectionContent(trimmedSection)
+        }
+        // 文化传统
+        else if (trimmedSection.match(/文化|传统|习俗|社会/i)) {
+          worldview.culture = this.extractSectionContent(trimmedSection)
+        }
+        // 地理环境
+        else if (trimmedSection.match(/地理|环境|地形|气候|位置/i)) {
+          worldview.geography = this.extractSectionContent(trimmedSection)
+        }
+      })
+
+      // 如果按标题分割失败，尝试其他方法
+      if (!worldview.basic && !worldview.history && !worldview.culture && !worldview.geography) {
+        // 按段落分割，前1/4作为基本设定，其余平分
+        const paragraphs = result.split(/\n\s*\n/).filter(p => p.trim())
+        const quarterPoint = Math.ceil(paragraphs.length / 4)
+        
+        worldview.basic = paragraphs.slice(0, quarterPoint).join('\n\n')
+        worldview.history = paragraphs.slice(quarterPoint, quarterPoint * 2).join('\n\n')
+        worldview.culture = paragraphs.slice(quarterPoint * 2, quarterPoint * 3).join('\n\n')
+        worldview.geography = paragraphs.slice(quarterPoint * 3).join('\n\n')
+      }
+
+      // 设置默认内容（如果仍然为空）
+      if (!worldview.basic) worldview.basic = result.substring(0, 200) + '...'
+      if (!worldview.history) worldview.history = '暂未生成历史背景信息'
+      if (!worldview.culture) worldview.culture = '暂未生成文化传统信息'  
+      if (!worldview.geography) worldview.geography = '暂未生成地理环境信息'
+
+      console.log('解析后的世界观:', worldview)
+      return worldview
+
+    } catch (error) {
+      console.error('解析世界观结果时出错:', error)
+      return {
+        basic: result.substring(0, 500) + (result.length > 500 ? '...' : ''),
+        history: '解析失败，完整内容请查看基本架构',
+        culture: '解析失败，完整内容请查看基本架构',
+        geography: '解析失败，完整内容请查看基本架构'
+      }
+    }
+  }
+
+  // 提取章节内容的辅助方法
+  extractSectionContent(section) {
+    // 移除标题行，保留内容
+    const lines = section.split('\n')
+    return lines.slice(1).join('\n').trim() || section.trim()
+  }
+
+  parseCoreRulesResult(result) {
+    // 解析核心规则生成结果
+    if (typeof result !== 'string') {
+      return []
+    }
+    
+    // 按行分割，过滤空行和非规则内容
+    const lines = result.split('\n').map(line => line.trim()).filter(line => line)
+    const rules = []
+    
+    lines.forEach(line => {
+      // 去除编号和格式符号
+      let cleanRule = line.replace(/^\d+[.、]\s*/, '').replace(/^[-*]\s*/, '').trim()
+      if (cleanRule && cleanRule.length > 10 && cleanRule.length < 200) {
+        rules.push(cleanRule)
+      }
+    })
+    
+    return rules.length > 0 ? rules : [result.trim()]
+  }
+
+  parsePowerSystemResult(result) {
+    // 解析力量体系生成结果
+    return {
+      description: typeof result === 'string' ? result.trim() : '',
+      details: {
+        source: '',
+        acquisition: '',
+        levels: '',
+        limitations: '',
+        socialRole: ''
+      }
+    }
+  }
+
+  parseSocialStructureResult(result) {
+    // 解析社会结构生成结果
+    return {
+      description: typeof result === 'string' ? result.trim() : '',
+      details: {
+        government: '',
+        hierarchy: '',
+        economy: '',
+        law: '',
+        conflicts: ''
+      }
+    }
+  }
+
+  parseConsistencyResult(result) {
+    // 解析一致性检查结果
+    return {
+      overall: 'analyzed',
+      issues: [],
+      suggestions: [],
+      strengths: [],
+      analysis: typeof result === 'string' ? result.trim() : ''
     }
   }
   
@@ -744,6 +1132,95 @@ class ContextBuilder {
 4. 历史背景
 5. 地理环境
 6. 与故事主题的结合`
+  }
+
+  buildCoreRulesPrompt(params) {
+    const conceptData = this.wizardData.concept || {}
+    const existingRules = params.existingRules || []
+    
+    return `请为以下世界生成核心运行规则：
+
+小说类型：${conceptData.selectedGenre || ''}
+核心创意：${conceptData.coreIdea || ''}
+世界类型：${params.worldType}
+规模大小：${params.scale || ''}
+已有规则：${existingRules.join('; ') || '无'}
+
+要求：
+1. 生成3-5条世界的基本运行规则
+2. 规则要符合世界类型和故事设定
+3. 规则之间要保持逻辑一致性
+4. 避免与已有规则重复
+5. 规则要为故事发展提供支撑
+
+格式：每条规则单独一行，简洁明了`
+  }
+
+  buildPowerSystemPrompt(params) {
+    const conceptData = this.wizardData.concept || {}
+    const coreRules = params.coreRules || []
+    
+    return `请为以下世界设计力量体系：
+
+小说类型：${conceptData.selectedGenre || ''}
+核心创意：${conceptData.coreIdea || ''}
+世界类型：${params.worldType}
+规模大小：${params.scale || ''}
+核心规则：${coreRules.join('; ') || '无'}
+
+设计要求：
+1. 力量的来源和本质
+2. 获得力量的方式和条件
+3. 力量的等级划分体系
+4. 力量的使用限制和代价
+5. 力量在社会中的作用和地位
+6. 与核心规则的契合性
+
+请以详细的段落形式描述，包含具体的运作机制和限制条件。`
+  }
+
+  buildSocialStructurePrompt(params) {
+    const conceptData = this.wizardData.concept || {}
+    const coreRules = params.coreRules || []
+    const powerSystem = params.powerSystem || ''
+    
+    return `请为以下世界设计社会结构：
+
+小说类型：${conceptData.selectedGenre || ''}
+核心创意：${conceptData.coreIdea || ''}
+世界类型：${params.worldType}
+规模大小：${params.scale || ''}
+核心规则：${coreRules.join('; ') || '无'}
+力量体系：${powerSystem || '无'}
+
+设计要求：
+1. 政治体制和统治结构
+2. 社会阶层和地位划分
+3. 权力分配和制衡机制
+4. 经济体系和资源分配
+5. 法律制度和社会秩序
+6. 与力量体系的关系
+7. 社会矛盾和冲突点
+
+请以详细的段落形式描述，突出社会结构的特色和内在逻辑。`
+  }
+
+  buildConsistencyPrompt(params) {
+    const allData = params.allWizardData || this.wizardData
+    
+    return `请检查以下世界设定的一致性：
+
+完整设定信息：
+${JSON.stringify(allData, null, 2)}
+
+检查要点：
+1. 世界规则之间是否存在逻辑冲突
+2. 力量体系与社会结构是否匹配
+3. 设定是否支持故事主题发展
+4. 角色设定与世界观是否协调
+5. 时间线和历史背景是否合理
+
+请指出发现的问题并提供修改建议。如果设定一致，请说明优点和可能的扩展方向。`
   }
   
   buildCharacterPrompt(params) {

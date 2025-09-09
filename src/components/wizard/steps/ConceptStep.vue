@@ -199,6 +199,7 @@
           生成创意脑洞
         </el-button>
         
+        <!-- 暂时移除类型分析功能，直到API配置完善
         <el-button 
           type="info" 
           @click="analyzeGenre"
@@ -208,7 +209,9 @@
         >
           分析类型潜力
         </el-button>
+        -->
         
+        <!-- 暂时移除市场分析功能
         <el-button 
           type="success" 
           @click="analyzeMarket"
@@ -218,6 +221,7 @@
         >
           市场潜力评估
         </el-button>
+        -->
       </div>
     </div>
     
@@ -309,8 +313,8 @@ const localData = reactive({
 const customTheme = ref('')
 const selectedBrainstorm = ref(null)
 const generatingBrainstorm = ref(false)
-const analyzingGenre = ref(false)
-const analyzingMarket = ref(false)
+// const analyzingGenre = ref(false) // 暂时移除类型分析功能
+// const analyzingMarket = ref(false) // 暂时移除市场分析功能
 
 const brainstormResults = ref([])
 const marketAnalysis = ref(null)
@@ -359,6 +363,78 @@ const availableGenres = [
     label: '历史',
     icon: '📜',
     description: '历史背景，古代题材'
+  },
+  {
+    value: 'wuxia',
+    label: '武侠',
+    icon: '⚔️',
+    description: '江湖恩怨，武功传奇'
+  },
+  {
+    value: 'gaming',
+    label: '游戏',
+    icon: '🎮',
+    description: '虚拟世界，游戏元素'
+  },
+  {
+    value: 'esports',
+    label: '电竞',
+    icon: '⚡',
+    description: '电竞竞技，团队荣耀'
+  },
+  {
+    value: 'business',
+    label: '商战',
+    icon: '📈',
+    description: '商业竞争，智谋博弈'
+  },
+  {
+    value: 'military',
+    label: '军事',
+    icon: '🪖',
+    description: '战争题材，军人生活'
+  },
+  {
+    value: 'apocalypse',
+    label: '末世',
+    icon: '🧟',
+    description: '末日求生，人性考验'
+  },
+  {
+    value: 'rebirth',
+    label: '重生',
+    icon: '🔄',
+    description: '重生复仇，改变命运'
+  },
+  {
+    value: 'system',
+    label: '系统',
+    icon: '💻',
+    description: '系统流，数据面板'
+  },
+  {
+    value: 'cultivation',
+    label: '修真',
+    icon: '⛰️',
+    description: '修仙炼道，飞升成仙'
+  },
+  {
+    value: 'horror',
+    label: '恐怖',
+    icon: '👻',
+    description: '惊悚恐怖，诡异氛围'
+  },
+  {
+    value: 'school',
+    label: '校园',
+    icon: '🎓',
+    description: '校园生活，青春记忆'
+  },
+  {
+    value: 'entertainment',
+    label: '娱乐圈',
+    icon: '🎬',
+    description: '明星生活，演艺圈故事'
   }
 ]
 
@@ -414,12 +490,8 @@ const selectGenre = (genre) => {
   localData.selectedGenre = genre
   updateData('selectedGenre', genre)
   
-  // 自动触发类型分析
-  if (localData.coreIdea) {
-    setTimeout(() => {
-      analyzeGenre()
-    }, 500)
-  }
+  // 移除自动触发类型分析，让用户手动点击
+  // 这样可以避免异步调用时状态不一致的问题
 }
 
 const toggleTheme = (theme) => {
@@ -471,82 +543,88 @@ const generateBrainstorm = async () => {
     return
   }
   
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
   generatingBrainstorm.value = true
   try {
-    const result = await emit('use-tool', 'brainstorm', {
+    // 等待一小段时间确保父组件状态稳定
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    console.log('开始生成脑洞:', {
+      baseIdea: localData.coreIdea,
+      preferredGenre: localData.selectedGenre,
+      wizardData: props.wizardData
+    })
+    
+    // 使用回调方式处理工具调用 - 修复异步问题
+    emit('use-tool', 'brainstorm', {
       baseIdea: localData.coreIdea,
       preferredGenre: localData.selectedGenre,
       creativity: 'novel'
+    }, (result, error) => {
+      // 这个回调将在API调用完成后被调用
+      console.log('脑洞生成回调结果:', result, error)
+      
+      if (error) {
+        console.error('工具调用异常:', error)
+        ElMessage.error('生成失败：' + (error.message || '未知错误'))
+        generatingBrainstorm.value = false
+        return
+      }
+      
+      // 处理成功结果
+      if (result) {
+        // 如果结果是数组，直接使用
+        if (Array.isArray(result.results)) {
+          brainstormResults.value = result.results
+          // 同时更新到 wizardData 中
+          updateData('brainstormResults', result.results)
+        } else if (Array.isArray(result)) {
+          brainstormResults.value = result
+          updateData('brainstormResults', result)
+        } else {
+          // 如果是字符串，尝试解析
+          console.warn('脑洞生成结果格式异常，尝试手动解析:', result)
+          brainstormResults.value = [{
+            id: Date.now(),
+            title: '生成的创意脑洞',
+            description: result.raw || result.content || result.toString(),
+            highlight: '创意亮点待完善',
+            conflict: '冲突设计待完善',
+            potential: '发展潜力良好'
+          }]
+          updateData('brainstormResults', brainstormResults.value)
+        }
+        ElMessage.success(`创意脑洞生成完成，共生成 ${brainstormResults.value.length} 个创意`)
+      } else {
+        ElMessage.error('生成失败：未收到有效的生成结果')
+      }
+      
+      generatingBrainstorm.value = false
     })
-    
-    if (result && result.results) {
-      brainstormResults.value = result.results
-      ElMessage.success('创意脑洞生成完成')
-    }
   } catch (error) {
     console.error('生成脑洞失败:', error)
-    ElMessage.error('生成失败')
-  } finally {
+    ElMessage.error('生成失败：' + (error.message || '未知错误'))
     generatingBrainstorm.value = false
   }
+  
+  // 注意：不要在这里设置 finally，因为 loading 状态由回调函数管理
 }
 
-const analyzeGenre = async () => {
-  if (!localData.selectedGenre) {
-    ElMessage.warning('请先选择小说类型')
-    return
-  }
-  
-  analyzingGenre.value = true
-  try {
-    const result = await emit('use-tool', 'genre', {
-      genre: localData.selectedGenre,
-      targetAudience: localData.targetAudience
-    })
-    
-    if (result) {
-      ElMessage.success('类型分析完成')
-    }
-  } catch (error) {
-    console.error('分析类型失败:', error)
-    ElMessage.error('分析失败')
-  } finally {
-    analyzingGenre.value = false
-  }
-}
+// 暂时移除类型分析功能
+// const analyzeGenre = async () => {
+//   // 功能暂时禁用，等待API配置完善
+//   ElMessage.warning('类型分析功能暂时不可用，请先配置API')
+// }
 
-const analyzeMarket = async () => {
-  if (!localData.coreIdea || !localData.selectedGenre) {
-    ElMessage.warning('请先完成核心创意和类型选择')
-    return
-  }
-  
-  analyzingMarket.value = true
-  try {
-    // 模拟市场分析
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    marketAnalysis.value = {
-      score: 8.2,
-      audience: '年轻都市读者',
-      competition: '中等',
-      innovation: '较高',
-      suggestions: [
-        '突出独特设定',
-        '加强角色魅力',
-        '优化节奏感'
-      ]
-    }
-    
-    updateData('marketPotential', '高')
-    ElMessage.success('市场潜力评估完成')
-  } catch (error) {
-    console.error('市场分析失败:', error)
-    ElMessage.error('分析失败')
-  } finally {
-    analyzingMarket.value = false
-  }
-}
+// 暂时移除市场分析功能
+// const analyzeMarket = async () => {
+//   ElMessage.warning('市场分析功能暂时不可用，请先配置API')
+// }
 
 // 监听数据变化
 watch(() => props.stepData, (newData) => {
@@ -560,6 +638,13 @@ onMounted(() => {
     brainstormResults.value = props.stepData.brainstormResults
   }
 })
+
+// 监听 wizardData 中的 brainstormResults 变化
+watch(() => props.wizardData.concept?.brainstormResults, (newResults) => {
+  if (newResults && Array.isArray(newResults)) {
+    brainstormResults.value = newResults
+  }
+}, { deep: true, immediate: true })
 </script>
 
 <style scoped>

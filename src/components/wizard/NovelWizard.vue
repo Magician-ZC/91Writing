@@ -15,25 +15,25 @@
           :text-inside="false"
           color="#409eff"
         />
-        <span class="progress-text">{{ currentStep + 1 }} / {{ wizardSteps.length }}</span>
+        <span class="progress-text">{{ currentStep + 1 }} / {{ wizardSteps?.length || 0 }}</span>
       </div>
     </div>
     
     <!-- 步骤导航 -->
     <div class="steps-navigation">
       <div 
-        v-for="(step, index) in wizardSteps" 
+        v-for="(step, index) in (wizardSteps || [])" 
         :key="step.id"
         class="step-item"
         :class="{ 
           active: index === currentStep, 
-          completed: isStepCompleted(index),
-          accessible: index <= currentStep 
+          completed: isStepCompleted && isStepCompleted(index),
+          accessible: index <= (currentStep || 0) 
         }"
         @click="goToStep(index)"
       >
         <div class="step-icon">
-          <span v-if="isStepCompleted(index)" class="completed-icon">✓</span>
+          <span v-if="isStepCompleted && isStepCompleted(index)" class="completed-icon">✓</span>
           <span v-else>{{ step.icon }}</span>
         </div>
         <div class="step-content">
@@ -53,7 +53,7 @@
             :key="currentStep"
             :step-data="currentStepData"
             :wizard-data="wizardData"
-            @update-data="updateStepData"
+            @update-data="(stepId, field, value) => updateStepData(stepId, field, value)"
             @next-step="handleNextStep"
             @previous-step="previousStep"
             @use-tool="handleToolUsage"
@@ -62,7 +62,7 @@
       </div>
       
       <!-- 工具侧边栏 -->
-      <div class="tools-sidebar" v-if="currentStepInfo?.tools?.length">
+      <div class="tools-sidebar" v-if="currentStepInfo?.tools && Array.isArray(currentStepInfo.tools) && currentStepInfo.tools.length > 0">
         <div class="sidebar-header">
           <h3>可用工具</h3>
           <p>使用AI工具辅助创作</p>
@@ -70,7 +70,7 @@
         
         <div class="tools-list">
           <div 
-            v-for="toolType in currentStepInfo.tools" 
+            v-for="toolType in (currentStepInfo?.tools || [])" 
             :key="toolType"
             class="tool-item"
             @click="openTool(toolType)"
@@ -84,11 +84,11 @@
         </div>
         
         <!-- 工具使用历史 -->
-        <div class="tool-history" v-if="currentStepToolHistory.length">
+        <div class="tool-history" v-if="currentStepToolHistory?.length">
           <h4>本步骤工具历史</h4>
           <div class="history-list">
             <div 
-              v-for="usage in currentStepToolHistory" 
+              v-for="usage in (currentStepToolHistory || [])" 
               :key="usage.id"
               class="history-item"
               @click="reviewToolResult(usage)"
@@ -114,6 +114,20 @@
           保存进度
         </el-button>
         
+        <el-dropdown @command="handleProgressCommand">
+          <el-button plain>
+            进度管理
+            <el-icon><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="view">查看进度详情</el-dropdown-item>
+              <el-dropdown-item command="clear">清空保存的进度</el-dropdown-item>
+              <el-dropdown-item command="reload">重新加载进度</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        
         <el-button 
           @click="showExitDialog = true"
           type="warning"
@@ -134,8 +148,9 @@
           上一步
         </el-button>
         
+
         <el-button 
-          v-if="currentStep < wizardSteps.length - 1"
+          v-if="currentStep < (wizardSteps?.length || 0) - 1"
           @click="handleNextStep"
           :disabled="!canProceedToNext"
           type="primary"
@@ -147,7 +162,7 @@
         <el-button 
           v-else
           @click="completeWizard"
-          :disabled="!canCompleteWizard"
+          :disabled="!canCompleteWizard || canCompleteWizard === false"
           :loading="completing"
           type="success"
         >
@@ -195,12 +210,14 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Check, 
-  Close, 
-  DocumentAdd 
+import { storeToRefs } from 'pinia'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Close,
+  DocumentAdd,
+  ArrowDown
 } from '@element-plus/icons-vue'
 
 import { useWizardStore } from '@/stores/wizardStore'
@@ -229,14 +246,7 @@ const emit = defineEmits(['wizard-completed', 'wizard-exited'])
 // Store
 const wizardStore = useWizardStore()
 
-// 响应式数据
-const showToolDialog = ref(false)
-const showExitDialog = ref(false)
-const currentToolType = ref('')
-const saving = ref(false)
-const completing = ref(false)
-
-// 计算属性
+// 使用 storeToRefs 保持响应性
 const {
   currentStep,
   wizardData,
@@ -246,7 +256,14 @@ const {
   canProceedToNext,
   canCompleteWizard,
   toolUsageHistory
-} = wizardStore
+} = storeToRefs(wizardStore)
+
+// 响应式数据
+const showToolDialog = ref(false)
+const showExitDialog = ref(false)
+const currentToolType = ref('')
+const saving = ref(false)
+const completing = ref(false)
 
 // 当前步骤组件
 const currentStepComponent = computed(() => {
@@ -266,13 +283,35 @@ const currentStepComponent = computed(() => {
 // 当前步骤数据
 const currentStepData = computed(() => {
   const stepId = currentStepInfo.value?.id
-  return stepId ? wizardData[stepId] : {}
+  if (!stepId) return {}
+  
+  // 确保步骤数据存在
+  if (!wizardData.value[stepId]) {
+    console.warn(`步骤数据 ${stepId} 不存在，自动创建...`)
+    if (stepId === 'concept') {
+      wizardData.value[stepId] = {
+        coreIdea: '',
+        selectedGenre: '',
+        targetAudience: '',
+        themes: [],
+        brainstormResults: [],
+        marketPotential: ''
+      }
+    } else {
+      wizardData.value[stepId] = {}
+    }
+  }
+  
+  return wizardData.value[stepId] || {}
 })
 
 // 当前步骤的工具使用历史
 const currentStepToolHistory = computed(() => {
   const stepId = currentStepInfo.value?.id
-  return toolUsageHistory.filter(usage => usage.stepId === stepId)
+  if (!stepId || !toolUsageHistory.value || !Array.isArray(toolUsageHistory.value)) {
+    return []
+  }
+  return toolUsageHistory.value.filter(usage => usage.stepId === stepId)
 })
 
 // 当前工具信息
@@ -280,7 +319,7 @@ const currentTool = computed(() => {
   return getToolConfig(currentToolType.value)
 })
 
-// 方法
+// 获取store的方法（这些不需要 storeToRefs）
 const { 
   nextStep, 
   previousStep, 
@@ -294,15 +333,54 @@ const {
 
 // 初始化向导
 const initializeWizard = () => {
-  if (props.initialTitle) {
-    wizardStore.startWizard(props.initialTitle)
+  console.log('=== 向导初始化开始 ===')
+  console.log('Store状态检查:', {
+    wizardSteps: wizardStore.wizardSteps,
+    wizardStepsLength: wizardStore.wizardSteps?.length || 0,
+    storeRef_wizardSteps: wizardSteps.value,
+    storeRef_wizardStepsLength: wizardSteps.value?.length || 0
+  })
+  
+  // 确保 wizardSteps 数组存在
+  if (!wizardStore.wizardSteps || wizardStore.wizardSteps.length === 0) {
+    console.error('❌ wizardSteps 数组为空！这是严重问题')
+    ElMessage.error('向导数据异常，请刷新页面重试')
+    return
   }
   
-  // 加载保存的进度（如果有）
-  wizardStore.loadWizardProgress()
+  // 优先尝试加载保存的进度
+  console.log('尝试加载保存的进度...')
+  try {
+    const hasProgress = wizardStore.loadWizardProgress()
+    
+    // 检查是否成功加载了进度
+    if (hasProgress && wizardStore.isWizardActive) {
+      console.log('成功加载保存的进度:', {
+        currentStep: currentStep.value,
+        isActive: wizardStore.isWizardActive,
+        hasData: Object.keys(wizardData.value).length > 2 // title和novelId之外是否有数据
+      })
+      ElMessage.success('已恢复上次的创作进度')
+    } else {
+      // 没有保存的进度，启动新向导
+      console.log('没有保存的进度，启动新向导')
+      wizardStore.startWizard(props.initialTitle || '新小说')
+    }
+  } catch (error) {
+    console.error('加载进度失败:', error)
+    // 加载失败，启动新向导
+    wizardStore.startWizard(props.initialTitle || '新小说')
+  }
   
   // 初始化工具整合服务
   toolIntegrationService.init()
+  
+  console.log('向导初始化完成:', {
+    currentStep: currentStep.value,
+    wizardStepsLength: wizardSteps.value?.length || 0,
+    canProceedToNext: canProceedToNext.value,
+    hasRestoredData: Object.keys(wizardData.value).length > 2
+  })
 }
 
 // 处理下一步
@@ -332,9 +410,18 @@ const handleNextStep = async () => {
 
 // 验证当前步骤
 const validateCurrentStep = () => {
-  const stepId = currentStepInfo.value.id
+  const stepId = currentStepInfo.value?.id
   const stepData = currentStepData.value
-  const requiredFields = currentStepInfo.value.required || []
+  const requiredFields = currentStepInfo.value?.required || []
+  
+  console.log('验证步骤数据:', { stepId, hasData: !!stepData, requiredFields })
+  
+  if (!stepData) {
+    return {
+      valid: false,
+      message: '步骤数据未初始化，请刷新页面重试'
+    }
+  }
   
   for (const field of requiredFields) {
     const value = stepData[field]
@@ -350,20 +437,50 @@ const validateCurrentStep = () => {
 }
 
 // 处理工具使用
-const handleToolUsage = async (toolType, params) => {
+const handleToolUsage = async (toolType, params, callback) => {
   try {
+    // 等待一小段时间确保组件完全初始化
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // 检查向导状态
+    if (!wizardStore.isWizardActive) {
+      console.log('向导未激活，正在重新初始化...')
+      wizardStore.startWizard(wizardData.title || '新小说')
+    }
+    
+    // 检查 currentStepInfo 是否存在
+    if (!currentStepInfo.value || !currentStepInfo.value.id) {
+      throw new Error(`向导步骤配置错误：无法获取步骤信息。请检查向导是否正确初始化。`)
+    }
+    
     const stepId = currentStepInfo.value.id
+    
+    console.log('执行工具:', { toolType, stepId, params })
+    
     const result = await toolIntegrationService.executeAndIntegrateTool(
       toolType, 
       stepId, 
       params
     )
     
+    console.log('工具执行结果:', result)
     ElMessage.success('工具执行成功')
+    
+    // 如果有回调函数，调用它
+    if (callback && typeof callback === 'function') {
+      callback(result)
+    }
+    
     return result
   } catch (error) {
     console.error('工具使用失败:', error)
     ElMessage.error('工具使用失败：' + error.message)
+    
+    // 如果有回调函数，传递错误
+    if (callback && typeof callback === 'function') {
+      callback(null, error)
+    }
+    
     throw error
   }
 }
@@ -500,6 +617,71 @@ const stopAutoSave = () => {
   if (autoSaveInterval) {
     clearInterval(autoSaveInterval)
     autoSaveInterval = null
+  }
+}
+
+// 进度管理命令处理
+const handleProgressCommand = (command) => {
+  switch (command) {
+    case 'view':
+      viewProgressDetails()
+      break
+    case 'clear':
+      clearProgress()
+      break
+    case 'reload':
+      reloadProgress()
+      break
+  }
+}
+
+const viewProgressDetails = () => {
+  const saved = localStorage.getItem('wizardProgress')
+  if (saved) {
+    const data = JSON.parse(saved)
+    const details = `
+当前步骤: ${data.currentStep + 1}/6
+向导状态: ${data.isWizardActive ? '激活' : '未激活'}
+保存时间: ${new Date(data.timestamp).toLocaleString()}
+数据概况: ${Object.keys(data.wizardData || {}).length} 个步骤有数据
+    `
+    ElMessageBox.alert(details, '进度详情', {
+      confirmButtonText: '确定'
+    })
+  } else {
+    ElMessage.info('暂无保存的进度')
+  }
+}
+
+const clearProgress = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要清空保存的进度吗？此操作不可恢复。',
+      '清空进度',
+      {
+        type: 'warning',
+        confirmButtonText: '确定清空',
+        cancelButtonText: '取消'
+      }
+    )
+    
+    localStorage.removeItem('wizardProgress')
+    ElMessage.success('已清空保存的进度')
+  } catch {
+    // 用户取消
+  }
+}
+
+const reloadProgress = () => {
+  try {
+    const hasProgress = wizardStore.loadWizardProgress()
+    if (hasProgress) {
+      ElMessage.success('进度已重新加载')
+    } else {
+      ElMessage.info('暂无保存的进度')
+    }
+  } catch (error) {
+    ElMessage.error('加载进度失败：' + error.message)
   }
 }
 

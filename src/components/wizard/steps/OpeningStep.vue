@@ -238,37 +238,50 @@ const selectAtmosphere = (atmosphere) => {
   updateData('atmosphere', atmosphere)
 }
 
-const generateOpening = async () => {
+const generateOpening = () => {
   if (!localData.hook || !localData.openingScene) {
     ElMessage.warning('请先完成钩子设计和场景描述')
     return
   }
   
-  generatingOpening.value = true
-  try {
-    await emit('use-tool', 'opening', {
-      hook: localData.hook,
-      atmosphere: localData.atmosphere,
-      scene: localData.openingScene,
-      allData: props.wizardData
-    })
-    
-    // 模拟生成的开篇
-    generatedOpening.value = `夜色如墨，城市的霓虹灯在雨夜中闪烁着诡异的光芒。林晓站在犯罪现场外，雨水顺着他的风衣滴落，眼神凝重地注视着那扇紧闭的门。
-    
-"又是一起无解的案件。"他的搭档王小明走了过来，手中拿着初步的勘察报告。"受害者毫无外伤，但表情极度恐惧，就像见到了什么可怕的东西。"
-    
-林晓缓缓点头，心中涌起一股不安的预感。这已经是这个月第三起类似案件了，每一次都让他想起那个奇怪的梦境...`
-    
-    localData.firstParagraph = generatedOpening.value.split('\n')[0]
-    updateData('firstParagraph', localData.firstParagraph)
-    
-    ElMessage.success('开篇内容生成完成')
-  } catch (error) {
-    ElMessage.error('生成失败')
-  } finally {
-    generatingOpening.value = false
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
   }
+  
+  generatingOpening.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'opening', {
+    hook: localData.hook,
+    atmosphere: localData.atmosphere,
+    scene: localData.openingScene,
+    allData: props.wizardData
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('开篇生成结果:', result)
+      
+      if (result && typeof result === 'string' && result.trim()) {
+        generatedOpening.value = result.trim()
+        localData.firstParagraph = generatedOpening.value.split('\n')[0]
+        updateData('firstParagraph', localData.firstParagraph)
+        ElMessage.success('开篇内容生成完成')
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成开篇失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingOpening.value = false
+    }
+  })
 }
 
 const applyOpening = () => {
@@ -281,26 +294,49 @@ const regenerateOpening = () => {
   generateOpening()
 }
 
-const analyzeOpening = async () => {
-  analyzingOpening.value = true
-  try {
-    // 模拟开篇分析
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    openingAnalysis.value = {
-      hookStrength: 8.5,
-      pacing: 7.8,
-      characterIntro: 8.2,
-      worldBuilding: 7.5,
-      overallScore: 8.0
-    }
-    
-    ElMessage.success('开篇效果分析完成')
-  } catch (error) {
-    ElMessage.error('分析失败')
-  } finally {
-    analyzingOpening.value = false
+const analyzeOpening = () => {
+  if (!generatedOpening.value?.trim()) {
+    ElMessage.warning('请先生成开篇内容')
+    return
   }
+  
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
+  }
+  
+  analyzingOpening.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'analyze-opening', {
+    openingContent: generatedOpening.value,
+    hook: localData.hook,
+    atmosphere: localData.atmosphere,
+    scene: localData.openingScene,
+    allData: props.wizardData
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('开篇分析结果:', result)
+      
+      if (result && typeof result === 'object') {
+        openingAnalysis.value = result
+        ElMessage.success('开篇效果分析完成')
+      } else {
+        throw new Error('未收到有效的分析结果')
+      }
+    } catch (err) {
+      console.error('分析开篇失败:', err)
+      ElMessage.error('分析失败：' + (err.message || '未知错误'))
+    } finally {
+      analyzingOpening.value = false
+    }
+  })
 }
 
 watch(() => props.stepData, (newData) => {

@@ -67,18 +67,30 @@
         </h3>
         <p class="section-desc">定义这个世界的基本运行规则</p>
         
-        <div class="rules-input">
-          <el-input
-            v-model="newRule"
-            placeholder="输入世界规则，例如：魔法需要消耗生命力"
-            @keyup.enter="addRule"
+        <div class="section-actions">
+          <div class="rules-input">
+            <el-input
+              v-model="newRule"
+              placeholder="输入世界规则，例如：魔法需要消耗生命力"
+              @keyup.enter="addRule"
+            >
+              <template #append>
+                <el-button @click="addRule" :disabled="!newRule.trim()">
+                  添加
+                </el-button>
+              </template>
+            </el-input>
+          </div>
+          
+          <el-button 
+            type="primary" 
+            @click="generateCoreRules"
+            :loading="generatingRules"
+            icon="MagicStick"
+            :disabled="!localData.worldType"
           >
-            <template #append>
-              <el-button @click="addRule" :disabled="!newRule.trim()">
-                添加
-              </el-button>
-            </template>
-          </el-input>
+            AI生成核心规则
+          </el-button>
         </div>
         
         <div class="rules-list" v-if="localData.coreRules.length">
@@ -108,13 +120,27 @@
         </h3>
         <p class="section-desc">描述世界中的力量系统（如魔法、武功、科技等）</p>
         
-        <el-input
-          v-model="localData.powerSystem"
-          type="textarea"
-          :rows="4"
-          placeholder="详细描述力量体系的运作方式、等级划分、获得方法等..."
-          @input="updateData('powerSystem', $event)"
-        />
+        <div class="section-actions">
+          <el-input
+            v-model="localData.powerSystem"
+            type="textarea"
+            :rows="4"
+            placeholder="详细描述力量体系的运作方式、等级划分、获得方法等..."
+            @input="updateData('powerSystem', $event)"
+          />
+          
+          <el-button 
+            type="primary" 
+            @click="generatePowerSystem"
+            :loading="generatingPower"
+            icon="MagicStick"
+            :disabled="!localData.worldType"
+            size="small"
+            style="align-self: flex-start; margin-top: 8px;"
+          >
+            AI生成力量体系
+          </el-button>
+        </div>
       </div>
       
       <!-- 社会结构 -->
@@ -125,13 +151,27 @@
         </h3>
         <p class="section-desc">描述社会的政治体制、阶层划分等</p>
         
-        <el-input
-          v-model="localData.socialStructure"
-          type="textarea"
-          :rows="3"
-          placeholder="描述政治体制、社会阶层、权力分配等..."
-          @input="updateData('socialStructure', $event)"
-        />
+        <div class="section-actions">
+          <el-input
+            v-model="localData.socialStructure"
+            type="textarea"
+            :rows="3"
+            placeholder="描述政治体制、社会阶层、权力分配等..."
+            @input="updateData('socialStructure', $event)"
+          />
+          
+          <el-button 
+            type="primary" 
+            @click="generateSocialStructure"
+            :loading="generatingSocial"
+            icon="MagicStick"
+            :disabled="!localData.worldType"
+            size="small"
+            style="align-self: flex-start; margin-top: 8px;"
+          >
+            AI生成社会结构
+          </el-button>
+        </div>
       </div>
       
       <!-- AI生成的世界观 -->
@@ -172,26 +212,39 @@
     
     <!-- 快速操作区 -->
     <div class="quick-actions">
-      <h3>世界构建工具</h3>
+      <h3>
+        <el-icon><MagicStick /></el-icon>
+        世界构建工具
+      </h3>
+      <p class="tools-desc">使用AI工具快速完善您的世界设定</p>
+      
       <div class="action-buttons">
-        <el-button 
-          type="primary" 
-          @click="generateWorldview"
-          :loading="generatingWorld"
-          icon="MagicStick"
-          :disabled="!localData.worldType"
-        >
-          生成详细世界观
-        </el-button>
+        <div class="action-item">
+          <el-button 
+            type="primary" 
+            @click="generateWorldview"
+            :loading="generatingWorld"
+            icon="MagicStick"
+            :disabled="!localData.worldType"
+            size="large"
+          >
+            生成详细世界观
+          </el-button>
+          <p class="action-desc">基于已有设定，AI自动生成完整的世界观背景，包括历史、文化、地理等详细信息</p>
+        </div>
         
-        <el-button 
-          type="info" 
-          @click="analyzeConsistency"
-          :loading="analyzingConsistency"
-          icon="Checked"
-        >
-          检查设定一致性
-        </el-button>
+        <div class="action-item">
+          <el-button 
+            type="info" 
+            @click="analyzeConsistency"
+            :loading="analyzingConsistency"
+            icon="Checked"
+            size="large"
+          >
+            检查设定一致性
+          </el-button>
+          <p class="action-desc">AI检查您的世界设定是否存在逻辑冲突，确保世界观的内在一致性和合理性</p>
+        </div>
       </div>
     </div>
     
@@ -280,6 +333,9 @@ const localData = reactive({
 const newRule = ref('')
 const generatingWorld = ref(false)
 const analyzingConsistency = ref(false)
+const generatingRules = ref(false)
+const generatingPower = ref(false)
+const generatingSocial = ref(false)
 const generatedWorldview = ref(null)
 const activeWorldTab = ref('basic')
 
@@ -389,37 +445,49 @@ const removeRule = (index) => {
   updateData('coreRules', localData.coreRules)
 }
 
-const generateWorldview = async () => {
+const generateWorldview = () => {
   if (!localData.worldType) {
     ElMessage.warning('请先选择世界类型')
     return
   }
   
-  generatingWorld.value = true
-  try {
-    const result = await emit('use-tool', 'worldview', {
-      worldType: localData.worldType,
-      scale: localData.scale,
-      coreRules: localData.coreRules,
-      powerSystem: localData.powerSystem,
-      conceptData: props.wizardData.concept
-    })
-    
-    // 模拟生成的世界观数据
-    generatedWorldview.value = {
-      basic: '这是一个魔法与科技并存的世界，古老的魔法传统与现代科技发生激烈碰撞...',
-      history: '千年前，第一批魔法师发现了魔法能量的存在，从此改变了整个世界的发展轨迹...',
-      culture: '社会分为魔法师阶层和普通人阶层，两个群体之间存在复杂的关系...',
-      geography: '世界由七大大陆组成，每个大陆都有独特的地理环境和魔法特性...'
-    }
-    
-    ElMessage.success('世界观生成完成')
-  } catch (error) {
-    console.error('生成世界观失败:', error)
-    ElMessage.error('生成失败')
-  } finally {
-    generatingWorld.value = false
+  // 检查组件状态
+  if (!props.wizardData || !emit) {
+    ElMessage.error('组件未正确初始化，请刷新页面重试')
+    return
   }
+  
+  generatingWorld.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'worldview', {
+    worldType: localData.worldType,
+    scale: localData.scale,
+    coreRules: localData.coreRules,
+    powerSystem: localData.powerSystem,
+    conceptData: props.wizardData.concept
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      console.log('世界观生成结果:', result)
+      
+      if (result && typeof result === 'object') {
+        generatedWorldview.value = result
+        ElMessage.success('世界观生成完成')
+      } else {
+        throw new Error('未收到有效的生成结果')
+      }
+    } catch (err) {
+      console.error('生成世界观失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingWorld.value = false
+    }
+  })
 }
 
 const applyWorldview = () => {
@@ -440,17 +508,155 @@ const regenerateWorldview = () => {
   generateWorldview()
 }
 
-const analyzeConsistency = async () => {
-  analyzingConsistency.value = true
-  try {
-    // 模拟一致性检查
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    ElMessage.success('设定一致性检查完成，未发现冲突')
-  } catch (error) {
-    ElMessage.error('检查失败')
-  } finally {
-    analyzingConsistency.value = false
+const generateCoreRules = () => {
+  if (!localData.worldType) {
+    ElMessage.warning('请先选择世界类型')
+    return
   }
+  
+  generatingRules.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'coreRules', {
+    worldType: localData.worldType,
+    scale: localData.scale,
+    existingRules: localData.coreRules,
+    conceptData: props.wizardData.concept
+  }, (result, error) => {
+    try {
+      if (error) {
+        throw error
+      }
+      
+      if (result && result.rules) {
+        // 添加生成的规则到现有规则中
+        result.rules.forEach(rule => {
+          if (!localData.coreRules.includes(rule)) {
+            localData.coreRules.push(rule)
+          }
+        })
+        updateData('coreRules', localData.coreRules)
+        ElMessage.success(`成功生成 ${result.rules.length} 条核心规则`)
+      } else {
+        throw new Error('未收到有效的规则生成结果')
+      }
+    } catch (err) {
+      console.error('生成核心规则失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingRules.value = false
+    }
+  })
+}
+
+const generatePowerSystem = () => {
+  if (!localData.worldType) {
+    ElMessage.warning('请先选择世界类型')
+    return
+  }
+  
+  generatingPower.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'powerSystem', {
+    worldType: localData.worldType,
+    scale: localData.scale,
+    coreRules: localData.coreRules,
+    conceptData: props.wizardData.concept
+  }, (result, error) => {
+    try {
+      if (error) {
+        throw error
+      }
+      
+      if (result && result.description) {
+        localData.powerSystem = result.description
+        updateData('powerSystem', result.description)
+        ElMessage.success('力量体系生成完成')
+      } else {
+        throw new Error('未收到有效的力量体系生成结果')
+      }
+    } catch (err) {
+      console.error('生成力量体系失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingPower.value = false
+    }
+  })
+}
+
+const generateSocialStructure = () => {
+  if (!localData.worldType) {
+    ElMessage.warning('请先选择世界类型')
+    return
+  }
+  
+  generatingSocial.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'socialStructure', {
+    worldType: localData.worldType,
+    scale: localData.scale,
+    coreRules: localData.coreRules,
+    powerSystem: localData.powerSystem,
+    conceptData: props.wizardData.concept
+  }, (result, error) => {
+    try {
+      if (error) {
+        throw error
+      }
+      
+      if (result && result.description) {
+        localData.socialStructure = result.description
+        updateData('socialStructure', result.description)
+        ElMessage.success('社会结构生成完成')
+      } else {
+        throw new Error('未收到有效的社会结构生成结果')
+      }
+    } catch (err) {
+      console.error('生成社会结构失败:', err)
+      ElMessage.error('生成失败：' + (err.message || '未知错误'))
+    } finally {
+      generatingSocial.value = false
+    }
+  })
+}
+
+const analyzeConsistency = () => {
+  // 检查是否有足够的世界设定数据
+  if (!localData.worldType || localData.coreRules.length === 0) {
+    ElMessage.warning('请先完成基本的世界设定')
+    return
+  }
+  
+  analyzingConsistency.value = true
+  
+  // 使用callback处理异步结果
+  emit('use-tool', 'consistency', {
+    worldType: localData.worldType,
+    coreRules: localData.coreRules,
+    powerSystem: localData.powerSystem,
+    socialStructure: localData.socialStructure,
+    allWizardData: props.wizardData
+  }, (result, error) => {
+    try {
+      if (error) {
+        console.error('工具调用异常:', error)
+        throw error
+      }
+      
+      if (result) {
+        ElMessage.success('设定一致性检查完成')
+      } else {
+        throw new Error('一致性检查失败')
+      }
+    } catch (err) {
+      console.error('检查失败:', err)
+      ElMessage.error('检查失败：' + (err.message || '未知错误'))
+    } finally {
+      analyzingConsistency.value = false
+    }
+  })
 }
 
 // 监听数据变化
@@ -564,8 +770,14 @@ watch(() => props.stepData, (newData) => {
   color: #7f8c8d;
 }
 
+.section-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .rules-input {
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 .rules-list {
@@ -620,14 +832,39 @@ watch(() => props.stepData, (newData) => {
 }
 
 .quick-actions h3 {
-  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
   color: #2c3e50;
+}
+
+.tools-desc {
+  color: #7f8c8d;
+  font-size: 14px;
+  margin-bottom: 20px;
+  line-height: 1.5;
 }
 
 .action-buttons {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.action-desc {
+  color: #7f8c8d;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 500px;
 }
 
 .completion-status {

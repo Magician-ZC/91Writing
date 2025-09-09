@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, toRaw } from 'vue'
 
 export const useWizardStore = defineStore('wizard', () => {
   // 当前向导状态
   const currentStep = ref(0)
   const isWizardActive = ref(false)
+  
   const wizardData = reactive({
     novelId: null,
     title: '',
@@ -77,8 +78,8 @@ export const useWizardStore = defineStore('wizard', () => {
     }
   })
   
-  // 向导步骤配置
-  const wizardSteps = [
+  // 向导步骤配置（响应式数组）
+  const wizardSteps = ref([
     {
       id: 'concept',
       title: '创意构思',
@@ -127,27 +128,31 @@ export const useWizardStore = defineStore('wizard', () => {
       required: ['shortSynopsis'],
       icon: '📝'
     }
-  ]
+  ])
   
   // 工具使用历史
   const toolUsageHistory = ref([])
   
   // 向导进度
   const wizardProgress = computed(() => {
-    if (!wizardSteps.length) return 0
-    return Math.round((currentStep.value / wizardSteps.length) * 100)
+    if (!wizardSteps.value.length) return 0
+    return Math.round((currentStep.value / wizardSteps.value.length) * 100)
   })
   
   // 当前步骤信息
   const currentStepInfo = computed(() => {
-    return wizardSteps[currentStep.value] || null
+    console.log('计算currentStepInfo:', { 
+      currentStep: currentStep.value, 
+      stepsLength: wizardSteps.value.length 
+    })
+    return wizardSteps.value[currentStep.value] || null;
   })
   
   // 检查步骤是否完成
   const isStepCompleted = (stepIndex) => {
-    if (stepIndex >= wizardSteps.length) return false
+    if (stepIndex >= wizardSteps.value.length) return false
     
-    const step = wizardSteps[stepIndex]
+    const step = wizardSteps.value[stepIndex]
     const stepData = wizardData[step.id]
     
     if (!stepData) return false
@@ -168,11 +173,12 @@ export const useWizardStore = defineStore('wizard', () => {
   
   // 检查是否可以完成向导
   const canCompleteWizard = computed(() => {
-    return wizardSteps.every((_, index) => isStepCompleted(index))
+    return wizardSteps.value.every((_, index) => isStepCompleted(index))
   })
   
   // Actions
   const startWizard = (novelTitle = '') => {
+    console.log('启动向导:', novelTitle)
     isWizardActive.value = true
     currentStep.value = 0
     wizardData.title = novelTitle
@@ -180,6 +186,14 @@ export const useWizardStore = defineStore('wizard', () => {
     
     // 清空之前的数据
     resetWizardData()
+    
+    // 确保步骤数据正确
+    console.log('向导初始化完成:', {
+      isActive: isWizardActive.value,
+      currentStep: currentStep.value,
+      stepsCount: wizardSteps.value.length,
+      currentStepInfo: wizardSteps.value[currentStep.value]
+    })
   }
   
   const resetWizardData = () => {
@@ -214,7 +228,7 @@ export const useWizardStore = defineStore('wizard', () => {
   }
   
   const nextStep = () => {
-    if (currentStep.value < wizardSteps.length - 1 && canProceedToNext.value) {
+    if (currentStep.value < wizardSteps.value.length - 1 && canProceedToNext.value) {
       currentStep.value++
     }
   }
@@ -226,15 +240,40 @@ export const useWizardStore = defineStore('wizard', () => {
   }
   
   const goToStep = (stepIndex) => {
-    if (stepIndex >= 0 && stepIndex < wizardSteps.length) {
+    if (stepIndex >= 0 && stepIndex < wizardSteps.value.length) {
       currentStep.value = stepIndex
     }
   }
   
   const updateStepData = (stepId, field, value) => {
-    if (wizardData[stepId] && wizardData[stepId].hasOwnProperty(field)) {
-      wizardData[stepId][field] = value
+    console.log('更新步骤数据:', { stepId, field, value })
+    
+    // 确保步骤数据对象存在
+    if (!wizardData[stepId]) {
+      console.warn(`步骤数据 ${stepId} 不存在，正在创建...`)
+      // 为concept步骤创建初始结构
+      if (stepId === 'concept') {
+        wizardData[stepId] = {
+          coreIdea: '',
+          selectedGenre: '',
+          targetAudience: '',
+          themes: [],
+          brainstormResults: [],
+          marketPotential: ''
+        }
+      } else {
+        wizardData[stepId] = {}
+      }
     }
+    
+    // 直接设置值
+    wizardData[stepId][field] = value
+    
+    console.log('更新后的步骤数据:', wizardData[stepId])
+    console.log('完整的wizardData:', Object.keys(wizardData).reduce((acc, key) => {
+      acc[key] = Object.keys(wizardData[key] || {})
+      return acc
+    }, {}))
   }
   
   const addToolUsage = (toolType, stepId, result) => {
@@ -272,12 +311,20 @@ export const useWizardStore = defineStore('wizard', () => {
   
   const saveWizardProgress = () => {
     try {
-      localStorage.setItem('wizardProgress', JSON.stringify({
+      const progressData = {
         currentStep: currentStep.value,
         isWizardActive: isWizardActive.value,
-        wizardData: wizardData,
-        toolUsageHistory: toolUsageHistory.value
-      }))
+        wizardData: toRaw(wizardData), // 确保序列化时去掉响应式包装
+        toolUsageHistory: toolUsageHistory.value,
+        timestamp: Date.now()
+      }
+      
+      localStorage.setItem('wizardProgress', JSON.stringify(progressData))
+      console.log('保存进度成功:', {
+        currentStep: progressData.currentStep,
+        isActive: progressData.isWizardActive,
+        dataKeys: Object.keys(progressData.wizardData)
+      })
     } catch (error) {
       console.error('保存向导进度失败:', error)
     }
@@ -286,15 +333,43 @@ export const useWizardStore = defineStore('wizard', () => {
   const loadWizardProgress = () => {
     try {
       const saved = localStorage.getItem('wizardProgress')
+      console.log('尝试从localStorage加载进度:', !!saved)
+      
       if (saved) {
         const data = JSON.parse(saved)
+        console.log('加载的进度数据:', {
+          currentStep: data.currentStep,
+          isWizardActive: data.isWizardActive,
+          hasWizardData: !!data.wizardData,
+          wizardDataKeys: data.wizardData ? Object.keys(data.wizardData) : []
+        })
+        
+        // 恢复状态
         currentStep.value = data.currentStep || 0
         isWizardActive.value = data.isWizardActive || false
-        Object.assign(wizardData, data.wizardData || {})
+        
+        // 恢复向导数据，保持响应性
+        if (data.wizardData) {
+          Object.keys(data.wizardData).forEach(key => {
+            wizardData[key] = data.wizardData[key]
+          })
+        }
+        
+        // 恢复工具使用历史
         toolUsageHistory.value = data.toolUsageHistory || []
+        
+        console.log('进度加载完成:', {
+          currentStep: currentStep.value,
+          isActive: isWizardActive.value,
+          dataKeys: Object.keys(wizardData)
+        })
+        
+        return true
       }
+      return false
     } catch (error) {
       console.error('加载向导进度失败:', error)
+      return false
     }
   }
   
@@ -404,7 +479,7 @@ export const useWizardStore = defineStore('wizard', () => {
       metadata: {
         createdBy: 'wizard',
         wizardVersion: '1.0',
-        completedSteps: wizardSteps.map((_, index) => isStepCompleted(index))
+        completedSteps: wizardSteps.value.map((_, index) => isStepCompleted(index))
       }
     }
   }
@@ -457,7 +532,7 @@ export const useWizardStore = defineStore('wizard', () => {
   
   // 获取步骤完成状态
   const getStepCompletionStatus = () => {
-    return wizardSteps.map((_, index) => isStepCompleted(index))
+    return wizardSteps.value.map((_, index) => isStepCompleted(index))
   }
   
   return {
