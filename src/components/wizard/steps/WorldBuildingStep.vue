@@ -210,6 +210,17 @@
       </div>
     </div>
     
+    <!-- 酒馆模式 -->
+    <TavernManager
+      ref="tavernManagerRef"
+      :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
+      :enable-tavern-mode="false"
+      @mode-changed="onTavernModeChanged"
+      @authors-changed="onAuthorsChanged"
+      @discussion-started="onDiscussionStarted"
+      @discussion-completed="onDiscussionCompleted"
+    />
+    
     <!-- 快速操作区 -->
     <div class="quick-actions">
       <h3>
@@ -222,13 +233,13 @@
         <div class="action-item">
           <el-button 
             type="primary" 
-            @click="generateWorldview"
+            @click="enhancedGenerateWorldview"
             :loading="generatingWorld"
             icon="MagicStick"
             :disabled="!localData.worldType"
             size="large"
           >
-            生成详细世界观
+            {{ isTavernMode ? '酒馆讨论生成世界观' : '生成详细世界观' }}
           </el-button>
           <p class="action-desc">基于已有设定，AI自动生成完整的世界观背景，包括历史、文化、地理等详细信息</p>
         </div>
@@ -299,6 +310,7 @@ import {
   Check,
   Close
 } from '@element-plus/icons-vue'
+import TavernManager from '@/components/tavern/TavernManager.vue'
 
 // Props
 const props = defineProps({
@@ -338,6 +350,12 @@ const generatingPower = ref(false)
 const generatingSocial = ref(false)
 const generatedWorldview = ref(null)
 const activeWorldTab = ref('basic')
+
+// 酒馆模式相关
+const tavernManagerRef = ref(null)
+const isTavernMode = ref(false)
+const selectedAuthors = ref([])
+const currentDiscussions = ref([])
 
 // 世界类型选项
 const worldTypes = [
@@ -657,6 +675,81 @@ const analyzeConsistency = () => {
       analyzingConsistency.value = false
     }
   })
+}
+
+// 酒馆模式事件处理
+const onTavernModeChanged = (enabled) => {
+  isTavernMode.value = enabled
+  console.log('酒馆模式状态:', enabled)
+}
+
+const onAuthorsChanged = (authors) => {
+  selectedAuthors.value = authors
+  console.log('选中的作者:', authors)
+}
+
+const onDiscussionStarted = (config) => {
+  console.log('讨论开始:', config)
+}
+
+const onDiscussionCompleted = (result) => {
+  console.log('讨论完成:', result)
+  if (result && result.topProposals && result.topProposals.length > 0) {
+    const topResult = result.topProposals[0]
+    
+    // 根据讨论主题应用结果
+    if (result.topic.includes('世界观') || result.topic.includes('worldview')) {
+      generatedWorldview.value = {
+        basic: topResult.details,
+        history: topResult.details,
+        culture: topResult.details,
+        geography: topResult.details
+      }
+      ElMessage.success('酒馆讨论结果已生成')
+    }
+  }
+}
+
+// 修改现有的生成方法以支持酒馆模式
+const enhancedGenerateWorldview = async () => {
+  if (!localData.worldType) {
+    ElMessage.warning('请先选择世界类型')
+    return
+  }
+
+  // 检查是否启用酒馆模式
+  if (isTavernMode.value && tavernManagerRef.value) {
+    generatingWorld.value = true
+    
+    try {
+      const discussionConfig = {
+        discussionId: `worldview-${Date.now()}`,
+        topic: '详细世界观生成',
+        context: `为${localData.worldType}类型的${localData.scale || ''}世界创建详细世界观`,
+        backgroundInfo: {
+          worldType: localData.worldType,
+          scale: localData.scale,
+          coreRules: localData.coreRules,
+          powerSystem: localData.powerSystem,
+          conceptData: props.wizardData.concept
+        }
+      }
+      
+      const result = await tavernManagerRef.value.startDiscussion(discussionConfig)
+      if (!result) {
+        // 用户选择了直接生成，回退到单模型模式
+        generateWorldview()
+      }
+    } catch (error) {
+      console.error('酒馆模式生成失败:', error)
+      ElMessage.error('酒馆模式生成失败，回退到单模型模式')
+      generateWorldview()
+    } finally {
+      generatingWorld.value = false
+    }
+  } else {
+    generateWorldview()
+  }
 }
 
 // 监听数据变化

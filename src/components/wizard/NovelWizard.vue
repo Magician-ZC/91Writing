@@ -331,8 +331,59 @@ const {
   exitWizard
 } = wizardStore
 
+// 检查向导是否已完成
+const isWizardCompleted = (progressData) => {
+  if (!progressData || !progressData.wizardData) return false
+  
+  // 检查是否到达最后一步并且有完成标记
+  const isAtLastStep = progressData.currentStep >= (wizardSteps.value?.length - 1 || 5)
+  const hasCompleteFlag = progressData.wizardData._completed === true
+  
+  // 检查关键步骤是否都有数据
+  const hasBasicData = !!(
+    progressData.wizardData.concept?.coreIdea &&
+    progressData.wizardData.concept?.selectedGenre &&
+    progressData.wizardData.synopsisWriting?.shortSynopsis
+  )
+  
+  return hasCompleteFlag || (isAtLastStep && hasBasicData)
+}
+
+// 显示进度选择对话框
+const showProgressChoiceDialog = async (progressData) => {
+  const isCompleted = isWizardCompleted(progressData)
+  const progressInfo = `当前进度：第 ${progressData.currentStep + 1} 步，共 ${wizardSteps.value?.length || 6} 步`
+  const timeInfo = `保存时间：${new Date(progressData.timestamp).toLocaleString()}`
+  
+  let message = `发现上次未完成的创作进度\n\n${progressInfo}\n${timeInfo}`
+  let title = '恢复创作进度'
+  
+  if (isCompleted) {
+    message = `发现上次已完成的创作记录\n\n${timeInfo}\n\n上次创作已完成，建议重新开始新的创作`
+    title = '创作记录'
+  }
+  
+  try {
+    const action = await ElMessageBox.confirm(
+      message,
+      title,
+      {
+        confirmButtonText: isCompleted ? '重新开始' : '继续创作',
+        cancelButtonText: isCompleted ? '查看记录' : '重新开始',
+        type: 'info',
+        center: true,
+        customClass: 'progress-choice-dialog'
+      }
+    )
+    
+    return isCompleted ? 'restart' : 'continue'
+  } catch (dismiss) {
+    return isCompleted ? 'view' : 'restart'
+  }
+}
+
 // 初始化向导
-const initializeWizard = () => {
+const initializeWizard = async () => {
   console.log('=== 向导初始化开始 ===')
   console.log('Store状态检查:', {
     wizardSteps: wizardStore.wizardSteps,
@@ -348,28 +399,62 @@ const initializeWizard = () => {
     return
   }
   
-  // 优先尝试加载保存的进度
-  console.log('尝试加载保存的进度...')
+  // 检查是否有保存的进度
+  console.log('检查保存的进度...')
   try {
-    const hasProgress = wizardStore.loadWizardProgress()
+    const saved = localStorage.getItem('wizardProgress')
     
-    // 检查是否成功加载了进度
-    if (hasProgress && wizardStore.isWizardActive) {
-      console.log('成功加载保存的进度:', {
-        currentStep: currentStep.value,
-        isActive: wizardStore.isWizardActive,
-        hasData: Object.keys(wizardData.value).length > 2 // title和novelId之外是否有数据
+    if (saved) {
+      const progressData = JSON.parse(saved)
+      console.log('发现保存的进度:', {
+        currentStep: progressData.currentStep,
+        isActive: progressData.isWizardActive,
+        timestamp: new Date(progressData.timestamp).toLocaleString(),
+        isCompleted: isWizardCompleted(progressData)
       })
-      ElMessage.success('已恢复上次的创作进度')
+      
+      // 显示选择对话框
+      const userChoice = await showProgressChoiceDialog(progressData)
+      
+      switch (userChoice) {
+        case 'continue':
+          // 继续上次进度
+          const hasProgress = wizardStore.loadWizardProgress()
+          if (hasProgress && wizardStore.isWizardActive) {
+            ElMessage.success('已恢复上次的创作进度')
+          } else {
+            throw new Error('恢复进度失败')
+          }
+          break
+          
+        case 'restart':
+          // 重新开始，清除旧进度
+          localStorage.removeItem('wizardProgress')
+          wizardStore.startWizard(props.initialTitle || '新小说')
+          ElMessage.success('开始新的创作')
+          break
+          
+        case 'view':
+          // 查看记录（已完成的情况下）
+          wizardStore.loadWizardProgress()
+          ElMessage.info('已加载创作记录，您可以查看详情')
+          break
+          
+        default:
+          // 默认重新开始
+          wizardStore.startWizard(props.initialTitle || '新小说')
+          break
+      }
     } else {
       // 没有保存的进度，启动新向导
       console.log('没有保存的进度，启动新向导')
       wizardStore.startWizard(props.initialTitle || '新小说')
     }
   } catch (error) {
-    console.error('加载进度失败:', error)
-    // 加载失败，启动新向导
+    console.error('处理进度失败:', error)
+    // 出错时启动新向导
     wizardStore.startWizard(props.initialTitle || '新小说')
+    ElMessage.warning('进度处理异常，已开始新的创作')
   }
   
   // 初始化工具整合服务
@@ -525,6 +610,13 @@ const completeWizard = async () => {
         type: 'warning'
       }
     )
+    
+    // 标记为已完成
+    wizardData.value._completed = true
+    wizardData.value._completedAt = Date.now()
+    
+    // 保存完成状态
+    wizardStore.saveWizardProgress()
     
     const novelData = await completeWizardStore()
     ElMessage.success('小说创建完成！')
@@ -1000,6 +1092,62 @@ onUnmounted(() => {
   .footer-left, .footer-right {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* 进度选择对话框样式 */
+:deep(.progress-choice-dialog) {
+  .el-message-box__header {
+    padding: 20px 24px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px 8px 0 0;
+  }
+  
+  .el-message-box__title {
+    color: white;
+    font-weight: 600;
+  }
+  
+  .el-message-box__content {
+    padding: 24px;
+    line-height: 1.6;
+    white-space: pre-line;
+  }
+  
+  .el-message-box__message {
+    font-size: 14px;
+    color: #606266;
+  }
+  
+  .el-message-box__btns {
+    padding: 16px 24px 24px;
+    
+    .el-button {
+      margin-left: 12px;
+      min-width: 88px;
+      border-radius: 6px;
+      
+      &--primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        
+        &:hover {
+          box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+          transform: translateY(-1px);
+        }
+      }
+      
+      &--default {
+        border-color: #d9d9d9;
+        
+        &:hover {
+          border-color: #667eea;
+          color: #667eea;
+        }
+      }
+    }
   }
 }
 </style>
