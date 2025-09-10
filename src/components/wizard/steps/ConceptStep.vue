@@ -186,17 +186,29 @@
       </div>
     </div>
     
+    <!-- 酒馆模式 -->
+    <TavernManager
+      ref="tavernManagerRef"
+      :genre="localData.selectedGenre || '玄幻'"
+      :enable-tavern-mode="false"
+      @mode-changed="onTavernModeChanged"
+      @authors-changed="onAuthorsChanged"
+      @discussion-started="onDiscussionStarted"
+      @discussion-completed="onDiscussionCompleted"
+    />
+    
     <!-- 快速操作区 -->
     <div class="quick-actions">
       <h3>快速工具</h3>
       <div class="action-buttons">
         <el-button 
           type="primary" 
-          @click="generateBrainstorm"
+          @click="enhancedGenerateBrainstorm"
           :loading="generatingBrainstorm"
           icon="MagicStick"
+          size="large"
         >
-          生成创意脑洞
+          {{ isTavernMode ? '酒馆讨论生成脑洞' : '生成创意脑洞' }}
         </el-button>
         
         <!-- 暂时移除类型分析功能，直到API配置完善
@@ -282,6 +294,7 @@ import {
   Close,
   InfoFilled
 } from '@element-plus/icons-vue'
+import TavernManager from '@/components/tavern/TavernManager.vue'
 
 // Props
 const props = defineProps({
@@ -318,6 +331,12 @@ const generatingBrainstorm = ref(false)
 
 const brainstormResults = ref([])
 const marketAnalysis = ref(null)
+
+// 酒馆模式相关
+const tavernManagerRef = ref(null)
+const isTavernMode = ref(false)
+const selectedAuthors = ref([])
+const currentDiscussions = ref([])
 const ideaSuggestions = ref([
   '穿越时空的恋爱故事',
   '未来世界的AI革命',
@@ -537,6 +556,94 @@ const selectBrainstorm = (brainstorm) => {
 }
 
 // 工具方法
+// 酒馆模式事件处理
+const onTavernModeChanged = (enabled) => {
+  isTavernMode.value = enabled
+  console.log('酒馆模式状态:', enabled)
+}
+
+const onAuthorsChanged = (authors) => {
+  selectedAuthors.value = authors
+  console.log('选中的作者:', authors)
+}
+
+const onDiscussionStarted = (config) => {
+  console.log('脑洞讨论开始:', config)
+}
+
+const onDiscussionCompleted = (result) => {
+  if (result && result.topProposals && result.topProposals.length > 0) {
+    const topResult = result.topProposals[0]
+    
+    // 将酒馆讨论结果转换为脑洞格式
+    const brainstormFromTavern = [{
+      id: Date.now(),
+      title: topResult.title || '酒馆讨论精选创意',
+      description: topResult.core || topResult.details,
+      highlight: topResult.advantages || '经过多位大神作者讨论验证',
+      conflict: '可根据讨论建议进一步完善',
+      potential: '集体智慧，创意价值较高'
+    }]
+    
+    brainstormResults.value = brainstormFromTavern
+    updateData('brainstormResults', brainstormFromTavern)
+    ElMessage.success('酒馆讨论结果已生成')
+  }
+}
+
+// 增强版脑洞生成（支持酒馆模式）
+const enhancedGenerateBrainstorm = async () => {
+  if (!localData.coreIdea?.trim()) {
+    ElMessage.warning('请先输入基础创意')
+    return
+  }
+  
+  if (!localData.selectedGenre) {
+    ElMessage.warning('请先选择小说类型')
+    return
+  }
+
+  // 检查是否启用酒馆模式
+  if (isTavernMode.value && tavernManagerRef.value) {
+    generatingBrainstorm.value = true
+    
+    try {
+      const discussionConfig = {
+        discussionId: 'brainstorm_' + Date.now(),
+        topic: `基于创意"${localData.coreIdea}"生成创新性的小说脑洞`,
+        context: `小说类型：${localData.selectedGenre}
+目标读者：${localData.targetAudience || '未指定'}
+主题元素：${localData.themes.join('、') || '未指定'}
+
+请各位作者针对这个基础创意，从各自的专业角度提出具有创新性的发展方向和独特设定。`,
+        backgroundInfo: {
+          coreIdea: localData.coreIdea,
+          genre: localData.selectedGenre,
+          audience: localData.targetAudience,
+          themes: localData.themes
+        }
+      }
+
+      const result = await tavernManagerRef.value.startDiscussion(discussionConfig)
+      
+      if (!result) {
+        // 用户选择了直接生成，回退到单模型模式
+        generateBrainstorm()
+      }
+    } catch (error) {
+      console.error('酒馆模式生成失败:', error)
+      ElMessage.error('酒馆模式生成失败，回退到单模型模式')
+      generateBrainstorm()
+    } finally {
+      generatingBrainstorm.value = false
+    }
+  } else {
+    // 单模型模式
+    generateBrainstorm()
+  }
+}
+
+// 原始的单模型脑洞生成
 const generateBrainstorm = async () => {
   if (!localData.coreIdea?.trim()) {
     ElMessage.warning('请先输入基础创意')
