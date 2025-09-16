@@ -85,6 +85,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { Avatar, Check, Close, Star } from '@element-plus/icons-vue'
 
 const props = defineProps({
@@ -113,13 +114,19 @@ const isAllSelected = computed(() =>
 
 // 监听选择变化
 watch(selectedAuthors, (newVal) => {
-  emit('update:modelValue', newVal)
+  // 避免重复触发，只有当值真正改变时才emit
+  if (JSON.stringify(newVal) !== JSON.stringify(props.modelValue)) {
+    emit('update:modelValue', newVal)
+  }
 }, { deep: true })
 
 // 监听外部变化
 watch(() => props.modelValue, (newVal) => {
-  selectedAuthors.value = [...newVal]
-})
+  // 避免重复设置相同的值
+  if (JSON.stringify(newVal) !== JSON.stringify(selectedAuthors.value)) {
+    selectedAuthors.value = [...newVal]
+  }
+}, { deep: true })
 
 function toggleAuthor(authorId) {
   const index = selectedAuthors.value.indexOf(authorId)

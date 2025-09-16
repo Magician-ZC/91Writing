@@ -140,6 +140,18 @@
       </div>
     </div>
     
+    <!-- 酒馆模式 -->
+    <TavernManager
+      ref="tavernManagerRef"
+      :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
+      :enable-tavern-mode="isTavernMode"
+      @mode-changed="onTavernModeChanged"
+      @authors-changed="onAuthorsChanged"
+      @discussion-started="onDiscussionStarted"
+      @discussion-completed="onDiscussionCompleted"
+      @proposal-selected="onProposalSelected"
+    />
+    
     <!-- 完成状态 -->
     <div class="completion-status">
       <div class="status-header">
@@ -171,6 +183,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Pointer, Sunny, Picture, MagicStick, TrendCharts, Check, Close } from '@element-plus/icons-vue'
+import TavernManager from '@/components/tavern/TavernManager.vue'
 
 const props = defineProps({
   stepData: { type: Object, default: () => ({}) },
@@ -193,6 +206,12 @@ const generatingOpening = ref(false)
 const analyzingOpening = ref(false)
 const generatedOpening = ref('')
 const openingAnalysis = ref(null)
+
+// 酒馆模式相关
+const tavernManagerRef = ref(null)
+const isTavernMode = ref(false)
+const selectedAuthors = ref([])
+const currentDiscussions = ref([])
 
 const atmosphereOptions = [
   {

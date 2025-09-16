@@ -190,11 +190,12 @@
     <TavernManager
       ref="tavernManagerRef"
       :genre="localData.selectedGenre || '玄幻'"
-      :enable-tavern-mode="false"
+      :enable-tavern-mode="isTavernMode"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"
       @discussion-completed="onDiscussionCompleted"
+      @proposal-selected="onProposalSelected"
     />
     
     <!-- 快速操作区 -->
@@ -280,8 +281,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Sunny,
   Collection,
@@ -563,8 +564,11 @@ const onTavernModeChanged = (enabled) => {
 }
 
 const onAuthorsChanged = (authors) => {
-  selectedAuthors.value = authors
-  console.log('选中的作者:', authors)
+  // 避免重复设置相同的值
+  if (JSON.stringify(authors) !== JSON.stringify(selectedAuthors.value)) {
+    selectedAuthors.value = authors
+    console.log('选中的作者已更新:', authors)
+  }
 }
 
 const onDiscussionStarted = (config) => {
@@ -591,8 +595,38 @@ const onDiscussionCompleted = (result) => {
   }
 }
 
+const onProposalSelected = (proposal) => {
+  console.log('ConceptStep 收到选择的方案:', proposal)
+  
+  // 更新核心创意为选中的方案
+  const updatedIdea = `${proposal.core} ${proposal.details}`.trim()
+  localData.coreIdea = updatedIdea
+  updateData('coreIdea', updatedIdea)
+  
+  // 更新脑洞结果
+  const enhancedBrainstorm = [{
+    id: Date.now(),
+    title: proposal.title || '酒馆讨论选定方案',
+    description: proposal.core || proposal.details,
+    highlight: proposal.advantages || '经过多位大神作者讨论验证',
+    conflict: '可根据讨论建议进一步完善',
+    potential: `获得${proposal.score}分，排名第${proposal.rank}位的优质创意`
+  }]
+  
+  brainstormResults.value = enhancedBrainstorm
+  updateData('brainstormResults', enhancedBrainstorm)
+  
+  ElMessage.success(`已采用"${proposal.title}"方案，创意已更新！`)
+}
+
 // 增强版脑洞生成（支持酒馆模式）
 const enhancedGenerateBrainstorm = async () => {
+  console.log('=== enhancedGenerateBrainstorm 被调用 ===')
+  console.log('localData.coreIdea:', localData.coreIdea)
+  console.log('localData.selectedGenre:', localData.selectedGenre)
+  console.log('isTavernMode.value:', isTavernMode.value)
+  console.log('tavernManagerRef.value:', tavernManagerRef.value)
+  
   if (!localData.coreIdea?.trim()) {
     ElMessage.warning('请先输入基础创意')
     return
@@ -604,7 +638,9 @@ const enhancedGenerateBrainstorm = async () => {
   }
 
   // 检查是否启用酒馆模式
+  console.log('检查酒馆模式条件...')
   if (isTavernMode.value && tavernManagerRef.value) {
+    console.log('✅ 酒馆模式已启用，开始酒馆讨论')
     generatingBrainstorm.value = true
     
     try {
@@ -615,7 +651,11 @@ const enhancedGenerateBrainstorm = async () => {
 目标读者：${localData.targetAudience || '未指定'}
 主题元素：${localData.themes.join('、') || '未指定'}
 
-请各位作者针对这个基础创意，从各自的专业角度提出具有创新性的发展方向和独特设定。`,
+请各位作者针对这个基础创意，从各自的专业角度提出具有创新性的发展方向和独特设定。重点考虑：
+1. 如何让这个创意更具吸引力
+2. 可以添加什么独特的世界观元素
+3. 主角的潜在特质和成长方向
+4. 可能的冲突和悬念设置`,
         backgroundInfo: {
           coreIdea: localData.coreIdea,
           genre: localData.selectedGenre,
@@ -624,11 +664,19 @@ const enhancedGenerateBrainstorm = async () => {
         }
       }
 
+      console.log('开始调用 tavernManager.startDiscussion...')
+      console.log('讨论配置:', discussionConfig)
+      
       const result = await tavernManagerRef.value.startDiscussion(discussionConfig)
       
+      console.log('startDiscussion 返回结果:', result)
+      
       if (!result) {
+        console.log('❌ startDiscussion 返回 null，回退到单模型模式')
         // 用户选择了直接生成，回退到单模型模式
         generateBrainstorm()
+      } else {
+        console.log('✅ 酒馆讨论启动成功')
       }
     } catch (error) {
       console.error('酒馆模式生成失败:', error)
@@ -638,8 +686,52 @@ const enhancedGenerateBrainstorm = async () => {
       generatingBrainstorm.value = false
     }
   } else {
-    // 单模型模式
-    generateBrainstorm()
+    console.log('❌ 酒馆模式条件不满足:')
+    console.log('- isTavernMode.value:', isTavernMode.value)
+    console.log('- tavernManagerRef.value:', tavernManagerRef.value)
+    
+    // 如果酒馆模式未开启，询问用户是否要开启
+    if (!isTavernMode.value && tavernManagerRef.value) {
+      console.log('💡 酒馆模式未开启，询问用户是否要启用...')
+      try {
+        const shouldEnableTavern = await ElMessageBox.confirm(
+          '您可以选择使用酒馆模式让多位大神作者共同讨论生成更优质的创意，或者使用单模型快速生成。',
+          '选择生成模式',
+          {
+            confirmButtonText: '使用酒馆模式 (推荐)',
+            cancelButtonText: '使用单模型生成',
+            type: 'info',
+            dangerouslyUseHTMLString: true,
+            message: `
+              <div>
+                <p><strong>🍺 酒馆模式：</strong>多位顶级作者共同讨论，质量更高但耗时稍长</p>
+                <p><strong>⚡ 单模型：</strong>快速生成，适合快速迭代</p>
+              </div>
+            `
+          }
+        )
+        
+        if (shouldEnableTavern) {
+          console.log('✅ 用户选择启用酒馆模式')
+          // 自动启用酒馆模式
+          isTavernMode.value = true
+          // 等待组件更新
+          await nextTick()
+          // 递归调用，这次应该会进入酒馆模式分支
+          return enhancedGenerateBrainstorm()
+        } else {
+          console.log('⚡ 用户选择单模型生成')
+          generateBrainstorm()
+        }
+      } catch (error) {
+        console.log('⚡ 用户取消选择，默认使用单模型')
+        generateBrainstorm()
+      }
+    } else {
+      console.log('回退到单模型模式')
+      // 单模型模式
+      generateBrainstorm()
+    }
   }
 }
 

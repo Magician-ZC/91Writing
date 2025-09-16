@@ -31,7 +31,7 @@
             <h6>{{ proposal.title }}</h6>
             <div class="score-info">
               <el-tag :type="getScoreTagType(index)" size="large">
-                {{ proposal.score }} 票
+                {{ proposal.score }} 分
               </el-tag>
             </div>
           </div>
@@ -54,13 +54,13 @@
             <div class="distribution-title">投票详情：</div>
             <div class="distribution-stats">
               <el-tag type="success" size="small" v-if="proposal.votes.first > 0">
-                第一名 {{ proposal.votes.first }} 票
+                第一名 {{ proposal.votes.first }} 人
               </el-tag>
               <el-tag type="primary" size="small" v-if="proposal.votes.second > 0">
-                第二名 {{ proposal.votes.second }} 票  
+                第二名 {{ proposal.votes.second }} 人  
               </el-tag>
               <el-tag type="info" size="small" v-if="proposal.votes.third > 0">
-                第三名 {{ proposal.votes.third }} 票
+                第三名 {{ proposal.votes.third }} 人
               </el-tag>
             </div>
           </div>
@@ -91,7 +91,7 @@
         <template #default>
           <div class="selected-details">
             <p><strong>核心：</strong>{{ selectedProposal.core }}</p>
-            <p><strong>得分：</strong>{{ selectedProposal.score }} 票</p>
+            <p><strong>得分：</strong>{{ selectedProposal.score }} 分</p>
           </div>
         </template>
       </el-alert>

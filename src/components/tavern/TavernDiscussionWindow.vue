@@ -6,6 +6,10 @@
     :before-close="handleClose"
     class="tavern-discussion-dialog"
     append-to-body
+    :z-index="3000"
+    :modal="true"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
   >
     <div class="discussion-window">
       <!-- Tab 切换 -->
@@ -14,11 +18,13 @@
         type="card" 
         @tab-click="handleTabClick"
         class="discussion-tabs"
+        @update:model-value="onTabChange"
       >
         <el-tab-pane 
           v-for="discussion in discussions" 
           :key="discussion.id"
           :name="discussion.id"
+          :label="discussion.topic"
         >
           <template #label>
             <span class="tab-label">
@@ -34,7 +40,7 @@
           </template>
           
           <!-- 讨论内容 -->
-          <div class="discussion-content">
+          <div v-if="activeTab === discussion.id" class="discussion-content">
             <!-- 讨论信息头部 -->
             <div class="discussion-header">
               <div class="discussion-info">
@@ -121,7 +127,9 @@
               <!-- 无消息状态 -->
               <div v-if="discussion.messages.length === 0" class="empty-messages">
                 <el-icon><ChatDotRound /></el-icon>
-                <p>讨论即将开始...</p>
+                <p v-if="discussion.status === 'starting'">讨论即将开始...</p>
+                <p v-else-if="discussion.status === 'discussing'">作者们正在热烈讨论中...</p>
+                <p v-else>等待讨论内容...</p>
               </div>
             </div>
 
@@ -140,22 +148,40 @@
               v-if="discussion.status === 'completed' && discussion.results"
               :results="discussion.results"
               :topic="discussion.topic"
+              @select-proposal="handleSelectProposal"
             />
           </div>
         </el-tab-pane>
       </el-tabs>
       
-      <!-- 空状态 -->
-      <div v-if="discussions.length === 0" class="empty-discussions">
-        <el-icon><ChatLineRound /></el-icon>
-        <p>暂无进行中的讨论</p>
-      </div>
+          <!-- 空状态 -->
+          <div v-if="discussions.length === 0" class="empty-discussions">
+            <el-icon><ChatLineRound /></el-icon>
+            <h3>暂无进行中的讨论</h3>
+            <p>当前没有活跃的酒馆讨论，请先启动一个讨论</p>
+            <el-button type="primary" @click="handleClose">
+              关闭窗口
+            </el-button>
+          </div>
     </div>
 
     <template #footer>
       <div class="dialog-footer">
         <div class="footer-info">
           共 {{ discussions.length }} 个讨论进行中
+          <!-- 调试按钮 -->
+          <div v-if="discussions.length > 1" style="margin-left: 10px; display: inline-block;">
+            <el-button 
+              v-for="(discussion, index) in discussions" 
+              :key="discussion.id"
+              size="small"
+              :type="activeTab === discussion.id ? 'primary' : 'default'"
+              @click="switchToTab(discussion.id)"
+              style="margin-left: 5px;"
+            >
+              切换到{{ index + 1 }}
+            </el-button>
+          </div>
         </div>
         <el-button @click="handleClose">关闭窗口</el-button>
       </div>
@@ -164,7 +190,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { 
   VideoPause, 
   VideoPlay, 
@@ -191,34 +217,140 @@ const emit = defineEmits([
   'pause-discussion',
   'resume-discussion', 
   'end-discussion',
-  'close'
+  'close',
+  'select-proposal'
 ])
 
 const isVisible = ref(props.modelValue)
 const activeTab = ref('')
+const messagesContainer = ref(null)
+let updateTimer = null
+
+// 安全访问 localStorage 的计算属性
+const localStorageDiscussions = computed(() => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage.getItem('tavernDiscussions')
+  }
+  return null
+})
+
+const localStorageHistory = computed(() => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage.getItem('tavernHistory')
+  }
+  return null
+})
+
+const localStorageDiscussionsPreview = computed(() => {
+  const data = localStorageDiscussions.value
+  return data ? data.substring(0, 200) : '无数据'
+})
+
+const localStorageHistoryPreview = computed(() => {
+  const data = localStorageHistory.value
+  return data ? data.substring(0, 200) : '无数据'
+})
+
+// 监听 activeTab 变化
+watch(activeTab, (newTab, oldTab) => {
+  console.log('activeTab 变化:', { 
+    oldTab, 
+    newTab, 
+    discussionCount: props.discussions.length,
+    discussionIds: props.discussions.map(d => d.id)
+  })
+}, { immediate: true })
 
 // 监听显示状态
 watch(() => props.modelValue, (newVal) => {
-  isVisible.value = newVal
-  if (newVal && props.discussions.length > 0) {
-    // 自动选择第一个tab
-    activeTab.value = props.discussions[0].id
+  console.log('🪟 TavernDiscussionWindow 对话框', newVal ? '打开' : '关闭')
+  console.log('📊 当前讨论数量:', props.discussions.length)
+  
+  if (newVal && props.discussions.length === 0) {
+    console.log('⚠️ 对话框打开但没有讨论内容，可能是手动打开或讨论创建失败')
   }
-})
+  
+  isVisible.value = newVal
+  if (newVal) {
+    if (props.discussions.length > 0) {
+      // 自动选择第一个tab
+      activeTab.value = props.discussions[0].id
+      console.log('✅ 活跃tab设置为:', activeTab.value)
+    }
+    // 开始定时更新
+    startUpdateTimer()
+  } else {
+    // 停止定时更新
+    stopUpdateTimer()
+  }
+}, { immediate: true })
 
 watch(isVisible, (newVal) => {
+  console.log('TavernDiscussionWindow isVisible 变化:', newVal)
   emit('update:modelValue', newVal)
+  if (!newVal) {
+    stopUpdateTimer()
+  }
 })
 
 // 监听讨论列表变化
-watch(() => props.discussions, (newDiscussions) => {
-  if (newDiscussions.length > 0 && !activeTab.value) {
-    activeTab.value = newDiscussions[0].id
+watch(() => props.discussions, (newDiscussions, oldDiscussions) => {
+  console.log('TavernDiscussionWindow 接收到的讨论数据变化:')
+  console.log('新数据:', newDiscussions?.length || 0, newDiscussions)
+  console.log('旧数据:', oldDiscussions?.length || 0)
+  console.log('当前activeTab:', activeTab.value)
+  
+  if (newDiscussions && newDiscussions.length > 0) {
+    // 检查当前选中的标签是否仍然存在
+    const currentTabExists = newDiscussions.some(d => d.id === activeTab.value)
+    
+    if (!activeTab.value || !currentTabExists) {
+      // 如果没有选中标签或当前标签不存在，选择第一个
+      const firstDiscussion = newDiscussions[0]
+      if (firstDiscussion && firstDiscussion.id) {
+        activeTab.value = firstDiscussion.id
+        console.log('设置活跃tab:', activeTab.value)
+        
+        // 强制触发响应式更新
+        nextTick(() => {
+          console.log('nextTick后activeTab:', activeTab.value)
+        })
+      }
+    }
+  } else {
+    // 如果没有讨论，清空activeTab
+    activeTab.value = ''
   }
+  
+  // 自动滚动到最新消息
+  nextTick(() => {
+    scrollToLatestMessage()
+  })
 }, { immediate: true, deep: true })
 
-function handleTabClick(tab) {
-  activeTab.value = tab.name
+// 定时更新机制
+function startUpdateTimer() {
+  if (updateTimer) return
+  
+  updateTimer = setInterval(() => {
+    // 只滚动到最新消息，不触发响应式更新
+    scrollToLatestMessage()
+  }, 2000) // 每2秒滚动一次，降低频率
+}
+
+function stopUpdateTimer() {
+  if (updateTimer) {
+    clearInterval(updateTimer)
+    updateTimer = null
+  }
+}
+
+// 滚动到最新消息
+function scrollToLatestMessage() {
+  const container = document.querySelector('.messages-container')
+  if (container) {
+    container.scrollTop = container.scrollHeight
+  }
 }
 
 function handleClose() {
@@ -236,6 +368,90 @@ function resumeDiscussion(discussionId) {
 
 function endDiscussion(discussionId) {
   emit('end-discussion', discussionId)
+}
+
+function handleSelectProposal(proposal) {
+  console.log('用户选择了方案:', proposal)
+  emit('select-proposal', proposal)
+  // 选择方案后关闭窗口
+  isVisible.value = false
+}
+
+function handleTabClick(tab) {
+  // Element Plus tabs 的 tab-click 事件传递的参数格式可能不同
+  const tabName = tab.props?.name || tab.name
+  console.log('handleTabClick 被调用:', {
+    tabName,
+    tabObject: tab,
+    currentActiveTab: activeTab.value,
+    discussionsLength: props.discussions.length
+  })
+  
+  if (tabName && tabName !== activeTab.value) {
+    activeTab.value = tabName
+    console.log('activeTab 已更新为:', activeTab.value)
+    
+    // 滚动到最新消息
+    nextTick(() => {
+      scrollToLatestMessage()
+      console.log('滚动完成，当前 activeTab:', activeTab.value)
+    })
+  } else {
+    console.log('标签页无需切换或 tabName 无效')
+  }
+}
+
+function switchToTab(discussionId) {
+  console.log('手动切换到标签页:', discussionId, '当前标签:', activeTab.value)
+  
+  if (discussionId && discussionId !== activeTab.value) {
+    activeTab.value = discussionId
+    console.log('手动切换完成，新标签:', activeTab.value)
+    
+    // 滚动到最新消息
+    nextTick(() => {
+      scrollToLatestMessage()
+    })
+  }
+}
+
+function onTabChange(newTabValue) {
+  console.log('v-model 触发 tab 变化:', newTabValue, '原值:', activeTab.value)
+  
+  // v-model 会自动更新 activeTab.value，这里只需要处理副作用
+  if (newTabValue) {
+    nextTick(() => {
+      scrollToLatestMessage()
+      console.log('v-model 更新完成，当前标签:', activeTab.value)
+    })
+  }
+}
+
+// 调试函数（仅在开发环境使用）
+function debugRefreshTabs() {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== 调试：强制刷新标签页 ===')
+    console.log('当前 discussions:', props.discussions)
+    console.log('当前 activeTab:', activeTab.value)
+    
+    if (props.discussions && props.discussions.length > 0) {
+      const firstTab = props.discussions[0].id
+      console.log('强制设置为第一个标签:', firstTab)
+      activeTab.value = firstTab
+    }
+  }
+}
+
+function debugSetFirstTab() {
+  if (process.env.NODE_ENV === 'development') {
+    console.log('=== 调试：设置第一个标签 ===')
+    if (props.discussions && props.discussions.length > 0) {
+      const firstDiscussion = props.discussions[0]
+      console.log('第一个讨论:', firstDiscussion)
+      activeTab.value = firstDiscussion.id
+      console.log('设置完成，activeTab:', activeTab.value)
+    }
+  }
 }
 
 function getStatusTagType(status) {
@@ -289,11 +505,34 @@ function formatTime(timestamp) {
     second: '2-digit'
   })
 }
+
+// 生命周期管理
+onMounted(() => {
+  // 如果对话框是打开状态，启动更新定时器
+  if (isVisible.value && props.discussions.length > 0) {
+    startUpdateTimer()
+  }
+})
+
+onUnmounted(() => {
+  // 清理定时器
+  stopUpdateTimer()
+})
 </script>
 
 <style scoped>
 .tavern-discussion-dialog {
   --el-dialog-margin-top: 5vh;
+  z-index: 3000 !important;
+}
+
+/* 确保对话框在最顶层 */
+:deep(.el-dialog) {
+  z-index: 3000 !important;
+}
+
+:deep(.el-overlay) {
+  z-index: 2999 !important;
 }
 
 .discussion-window {
@@ -527,5 +766,36 @@ function formatTime(timestamp) {
   .tab-title {
     max-width: 80px;
   }
+}
+
+/* 标签页样式修复 */
+.discussion-tabs :deep(.el-tab-pane) {
+  display: block !important;
+}
+
+.discussion-tabs :deep(.el-tabs__content) {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+.discussion-tabs :deep(.el-tabs__nav-wrap) {
+  margin-bottom: 16px;
+}
+
+/* 调试用的标签页高亮 */
+.discussion-tabs :deep(.el-tabs__item.is-active) {
+  background-color: #409eff !important;
+  color: white !important;
+}
+
+/* 讨论内容样式 */
+.discussion-content {
+  padding: 16px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  min-height: 300px;
+  max-height: 500px;
+  overflow-y: auto;
 }
 </style>

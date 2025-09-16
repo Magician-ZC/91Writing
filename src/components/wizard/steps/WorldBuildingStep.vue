@@ -214,11 +214,12 @@
     <TavernManager
       ref="tavernManagerRef"
       :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
-      :enable-tavern-mode="false"
+      :enable-tavern-mode="isTavernMode"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"
       @discussion-completed="onDiscussionCompleted"
+      @proposal-selected="onProposalSelected"
     />
     
     <!-- 快速操作区 -->
@@ -710,6 +711,21 @@ const onDiscussionCompleted = (result) => {
   }
 }
 
+const onProposalSelected = (proposal) => {
+  console.log('WorldBuildingStep 收到选择的方案:', proposal)
+  
+  // 应用选中的世界观方案
+  generatedWorldview.value = {
+    basic: `${proposal.core}\n\n${proposal.details}`,
+    history: proposal.details,
+    culture: proposal.details,
+    geography: proposal.details
+  }
+  
+  updateData('generatedWorldview', generatedWorldview.value)
+  ElMessage.success(`已采用"${proposal.title}"世界观方案！`)
+}
+
 // 修改现有的生成方法以支持酒馆模式
 const enhancedGenerateWorldview = async () => {
   if (!localData.worldType) {
@@ -722,16 +738,29 @@ const enhancedGenerateWorldview = async () => {
     generatingWorld.value = true
     
     try {
+      const conceptData = props.wizardData.concept || {}
+      
       const discussionConfig = {
         discussionId: `worldview-${Date.now()}`,
-        topic: '详细世界观生成',
-        context: `为${localData.worldType}类型的${localData.scale || ''}世界创建详细世界观`,
+        topic: `基于创意"${conceptData.coreIdea || '未设定创意'}"设计${localData.worldType}类型世界观`,
+        context: `
+核心创意：${conceptData.coreIdea || '未设定'}
+小说类型：${conceptData.selectedGenre || '玄幻'}
+世界类型：${localData.worldType}
+世界规模：${localData.scale || '中等'}
+核心规则：${localData.coreRules.join('、') || '无'}
+力量体系：${localData.powerSystem || '未设定'}
+
+请各位作者基于以上信息，设计一个完整的世界观体系，包括历史背景、文化特色、地理环境等。`,
         backgroundInfo: {
+          coreIdea: conceptData.coreIdea,
+          selectedGenre: conceptData.selectedGenre,
+          brainstormResults: conceptData.brainstormResults,
           worldType: localData.worldType,
           scale: localData.scale,
           coreRules: localData.coreRules,
           powerSystem: localData.powerSystem,
-          conceptData: props.wizardData.concept
+          conceptData: conceptData
         }
       }
       

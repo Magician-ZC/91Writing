@@ -37,11 +37,11 @@
         <el-button 
           v-else
           type="primary" 
-          @click="generateProtagonist"
+          @click="enhancedGenerateProtagonist"
           :loading="generatingProtagonist"
         >
           <el-icon><MagicStick /></el-icon>
-          生成主角
+          {{ isTavernMode ? '酒馆讨论设计主角' : '生成主角' }}
         </el-button>
       </div>
       
@@ -79,16 +79,28 @@
       </div>
     </div>
     
+    <!-- 酒馆模式 -->
+    <TavernManager
+      ref="tavernManagerRef"
+      :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
+      :enable-tavern-mode="isTavernMode"
+      @mode-changed="onTavernModeChanged"
+      @authors-changed="onAuthorsChanged"
+      @discussion-started="onDiscussionStarted"
+      @discussion-completed="onDiscussionCompleted"
+      @proposal-selected="onProposalSelected"
+    />
+    
     <!-- 快速操作 -->
     <div class="quick-actions">
       <h3>角色创建工具</h3>
       <div class="action-buttons">
         <el-button 
           type="primary" 
-          @click="generateProtagonist"
+          @click="enhancedGenerateProtagonist"
           :loading="generatingProtagonist"
         >
-          生成主角
+          {{ isTavernMode ? '酒馆讨论设计主角' : '生成主角' }}
         </el-button>
         
         <el-button 
@@ -133,6 +145,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Avatar, User, MagicStick, Plus, Check, Close } from '@element-plus/icons-vue'
+import TavernManager from '@/components/tavern/TavernManager.vue'
 
 const props = defineProps({
   stepData: { type: Object, default: () => ({}) },
@@ -154,6 +167,12 @@ const localData = reactive({
 const generatingProtagonist = ref(false)
 const generatingSupporting = ref(false)
 const generatingAntagonist = ref(false)
+
+// 酒馆模式相关
+const tavernManagerRef = ref(null)
+const isTavernMode = ref(false)
+const selectedAuthors = ref([])
+const currentDiscussions = ref([])
 
 const completionPercentage = computed(() => {
   return localData.protagonist ? 100 : 0
@@ -303,6 +322,121 @@ const generateAntagonist = () => {
 const removeCharacter = (type, index) => {
   localData[type].splice(index, 1)
   updateData(type, localData[type])
+}
+
+// 酒馆模式事件处理
+const onTavernModeChanged = (enabled) => {
+  isTavernMode.value = enabled
+  console.log('角色设计酒馆模式状态:', enabled)
+}
+
+const onAuthorsChanged = (authors) => {
+  if (JSON.stringify(authors) !== JSON.stringify(selectedAuthors.value)) {
+    selectedAuthors.value = authors
+    console.log('角色设计选中的作者已更新:', authors)
+  }
+}
+
+const onDiscussionStarted = (config) => {
+  console.log('角色设计讨论开始:', config)
+}
+
+const onDiscussionCompleted = (result) => {
+  console.log('角色设计讨论完成:', result)
+  if (result && result.topProposals && result.topProposals.length > 0) {
+    const topResult = result.topProposals[0]
+    
+    // 根据讨论主题应用结果到角色设计
+    try {
+      const characterData = JSON.parse(topResult.details)
+      if (characterData.protagonist) {
+        localData.protagonist = characterData.protagonist
+        updateData('protagonist', localData.protagonist)
+      }
+      ElMessage.success('酒馆讨论角色设计已生成')
+    } catch (error) {
+      // 如果不是JSON格式，作为文本处理
+      const protagonist = {
+        id: Date.now(),
+        name: topResult.title || '主角',
+        personality: topResult.core,
+        background: topResult.details,
+        age: '待设定'
+      }
+      localData.protagonist = protagonist
+      updateData('protagonist', localData.protagonist)
+      ElMessage.success('酒馆讨论角色设计已生成')
+    }
+  }
+}
+
+const onProposalSelected = (proposal) => {
+  console.log('角色设计收到选择的方案:', proposal)
+  
+  // 应用选中的角色设计方案
+  const protagonist = {
+    id: Date.now(),
+    name: proposal.title || '主角',
+    personality: proposal.core,
+    background: proposal.details,
+    advantages: proposal.advantages,
+    age: '待完善'
+  }
+  
+  localData.protagonist = protagonist
+  updateData('protagonist', localData.protagonist)
+  ElMessage.success(`已采用"${proposal.title}"角色设计方案！`)
+}
+
+// 增强版主角生成（支持酒馆模式）
+const enhancedGenerateProtagonist = async () => {
+  // 检查是否启用酒馆模式
+  if (isTavernMode.value && tavernManagerRef.value) {
+    generatingProtagonist.value = true
+    
+    try {
+      const conceptData = props.wizardData.concept || {}
+      const worldData = props.wizardData.worldBuilding || {}
+      
+      const discussionConfig = {
+        discussionId: 'character_protagonist_' + Date.now(),
+        topic: `基于创意"${conceptData.coreIdea || '未设定创意'}"设计主角角色`,
+        context: `
+核心创意：${conceptData.coreIdea || '未设定'}
+小说类型：${conceptData.selectedGenre || '玄幻'}
+世界类型：${worldData.worldType || '未设定'}
+世界规模：${worldData.scale || '未设定'}
+力量体系：${worldData.powerSystem || '未设定'}
+
+请各位作者基于以上背景信息，设计一个立体丰满的主角角色，包括：
+1. 性格特点和内心动机
+2. 背景故事和成长经历  
+3. 能力特长和弱点缺陷
+4. 人际关系和社会地位
+5. 角色弧光和成长方向`,
+        backgroundInfo: {
+          conceptData,
+          worldData,
+          previousSteps: props.wizardData
+        }
+      }
+      
+      const result = await tavernManagerRef.value.startDiscussion(discussionConfig)
+      if (!result) {
+        // 用户选择了直接生成，回退到单模型模式
+        generateProtagonist()
+      }
+    } catch (error) {
+      console.error('酒馆模式生成主角失败:', error)
+      ElMessage.error('酒馆模式生成失败，回退到单模型模式')
+      generateProtagonist()
+    } finally {
+      generatingProtagonist.value = false
+    }
+  } else {
+    // 单模型模式
+    generateProtagonist()
+  }
 }
 
 watch(() => props.stepData, (newData) => {

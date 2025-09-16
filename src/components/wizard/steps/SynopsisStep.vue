@@ -225,6 +225,18 @@
       </div>
     </div>
     
+    <!-- 酒馆模式 -->
+    <TavernManager
+      ref="tavernManagerRef"
+      :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
+      :enable-tavern-mode="isTavernMode"
+      @mode-changed="onTavernModeChanged"
+      @authors-changed="onAuthorsChanged"
+      @discussion-started="onDiscussionStarted"
+      @discussion-completed="onDiscussionCompleted"
+      @proposal-selected="onProposalSelected"
+    />
+    
     <!-- 完成状态 -->
     <div class="completion-status">
       <div class="status-header">
@@ -265,6 +277,7 @@ import {
   Close,
   SuccessFilled
 } from '@element-plus/icons-vue'
+import TavernManager from '@/components/tavern/TavernManager.vue'
 
 const props = defineProps({
   stepData: { type: Object, default: () => ({}) },
@@ -291,6 +304,12 @@ const generatingMarketing = ref(false)
 const synopsisVariations = ref([])
 const selectedVariation = ref(null)
 const synopsisAnalysis = ref(null)
+
+// 酒馆模式相关
+const tavernManagerRef = ref(null)
+const isTavernMode = ref(false)
+const selectedAuthors = ref([])
+const currentDiscussions = ref([])
 
 const completionPercentage = computed(() => {
   return localData.shortSynopsis?.trim() ? 100 : 0

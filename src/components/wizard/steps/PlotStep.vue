@@ -187,6 +187,18 @@
       </div>
     </div>
     
+    <!-- 酒馆模式 -->
+    <TavernManager
+      ref="tavernManagerRef"
+      :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
+      :enable-tavern-mode="isTavernMode"
+      @mode-changed="onTavernModeChanged"
+      @authors-changed="onAuthorsChanged"
+      @discussion-started="onDiscussionStarted"
+      @discussion-completed="onDiscussionCompleted"
+      @proposal-selected="onProposalSelected"
+    />
+    
     <!-- 完成状态 -->
     <div class="completion-status">
       <div class="status-header">
@@ -218,6 +230,7 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Document, Star, Files, MagicStick, Check, Close } from '@element-plus/icons-vue'
+import TavernManager from '@/components/tavern/TavernManager.vue'
 
 const props = defineProps({
   stepData: { type: Object, default: () => ({}) },
@@ -244,6 +257,12 @@ const activeTab = ref('act1')
 const generatingConflicts = ref(false)
 const generatingOutline = ref(false)
 const generatedOutline = ref([])
+
+// 酒馆模式相关
+const tavernManagerRef = ref(null)
+const isTavernMode = ref(false)
+const selectedAuthors = ref([])
+const currentDiscussions = ref([])
 
 const completionPercentage = computed(() => {
   let completed = 0
@@ -360,6 +379,48 @@ const generateOutline = () => {
       generatingOutline.value = false
     }
   })
+}
+
+// 酒馆模式事件处理
+const onTavernModeChanged = (enabled) => {
+  isTavernMode.value = enabled
+  console.log('情节架构酒馆模式状态:', enabled)
+}
+
+const onAuthorsChanged = (authors) => {
+  if (JSON.stringify(authors) !== JSON.stringify(selectedAuthors.value)) {
+    selectedAuthors.value = authors
+    console.log('情节架构选中的作者已更新:', authors)
+  }
+}
+
+const onDiscussionStarted = (config) => {
+  console.log('情节架构讨论开始:', config)
+}
+
+const onDiscussionCompleted = (result) => {
+  console.log('情节架构讨论完成:', result)
+  if (result && result.topProposals && result.topProposals.length > 0) {
+    const topResult = result.topProposals[0]
+    
+    // 应用情节架构结果
+    localData.premise = topResult.core || topResult.title
+    localData.mainConflict = topResult.details
+    updateData('premise', localData.premise)
+    updateData('mainConflict', localData.mainConflict)
+    ElMessage.success('酒馆讨论情节架构已生成')
+  }
+}
+
+const onProposalSelected = (proposal) => {
+  console.log('情节架构收到选择的方案:', proposal)
+  
+  // 应用选中的情节架构方案
+  localData.premise = proposal.core || proposal.title
+  localData.mainConflict = proposal.details
+  updateData('premise', localData.premise)
+  updateData('mainConflict', localData.mainConflict)
+  ElMessage.success(`已采用"${proposal.title}"情节架构方案！`)
 }
 
 watch(() => props.stepData, (newData) => {
