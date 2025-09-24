@@ -107,7 +107,7 @@
             </div>
 
             <!-- 消息列表 -->
-            <div class="messages-container">
+            <div class="messages-container" ref="messagesContainer">
               <div 
                 v-for="message in discussion.messages" 
                 :key="`${message.authorId}-${message.timestamp}`"
@@ -150,6 +150,13 @@
               :topic="discussion.topic"
               @select-proposal="handleSelectProposal"
             />
+            
+            <!-- 已完成讨论的提示 -->
+            <div v-if="discussion.status === 'completed' && !discussion.results" class="completion-notice">
+              <el-icon><CircleCheckFilled /></el-icon>
+              <h5>讨论已完成</h5>
+              <p>此讨论已圆满结束，请查看上方的讨论内容和投票结果</p>
+            </div>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -197,7 +204,8 @@ import {
   CircleCloseFilled, 
   ChatDotRound, 
   ChatLineRound,
-  Select
+  Select,
+  CircleCheckFilled
 } from '@element-plus/icons-vue'
 import TavernVotingResults from './TavernVotingResults.vue'
 
@@ -261,21 +269,24 @@ watch(activeTab, (newTab, oldTab) => {
   })
 }, { immediate: true })
 
-// 监听显示状态
+// 监听显示状态 - 修复对话框不显示的问题
 watch(() => props.modelValue, (newVal) => {
   console.log('🪟 TavernDiscussionWindow 对话框', newVal ? '打开' : '关闭')
   console.log('📊 当前讨论数量:', props.discussions.length)
   
-  if (newVal && props.discussions.length === 0) {
-    console.log('⚠️ 对话框打开但没有讨论内容，可能是手动打开或讨论创建失败')
-  }
-  
+  // 强制更新显示状态
   isVisible.value = newVal
+  
   if (newVal) {
+    // 确保有讨论数据时自动选择第一个tab
     if (props.discussions.length > 0) {
-      // 自动选择第一个tab
-      activeTab.value = props.discussions[0].id
-      console.log('✅ 活跃tab设置为:', activeTab.value)
+      const firstDiscussion = props.discussions[0]
+      if (firstDiscussion && firstDiscussion.id && activeTab.value !== firstDiscussion.id) {
+        activeTab.value = firstDiscussion.id
+        console.log('✅ 对话框打开时设置活跃tab:', activeTab.value)
+      }
+    } else {
+      console.log('⚠️ 对话框打开但没有讨论内容，等待讨论数据更新...')
     }
     // 开始定时更新
     startUpdateTimer()
@@ -293,12 +304,33 @@ watch(isVisible, (newVal) => {
   }
 })
 
-// 监听讨论列表变化
+// 监听讨论列表变化 - 修复无限循环和响应式问题
 watch(() => props.discussions, (newDiscussions, oldDiscussions) => {
-  console.log('TavernDiscussionWindow 接收到的讨论数据变化:')
-  console.log('新数据:', newDiscussions?.length || 0, newDiscussions)
-  console.log('旧数据:', oldDiscussions?.length || 0)
-  console.log('当前activeTab:', activeTab.value)
+  // 检查是否有新的消息或讨论变化
+  let hasChanges = false
+  
+  if (newDiscussions?.length !== oldDiscussions?.length) {
+    hasChanges = true
+  } else if (newDiscussions && oldDiscussions) {
+    // 检查消息数量是否发生变化
+    for (let i = 0; i < newDiscussions.length; i++) {
+      const newD = newDiscussions[i]
+      const oldD = oldDiscussions[i]
+      if (newD && oldD && newD.messages?.length !== oldD.messages?.length) {
+        hasChanges = true
+        console.log('💬 讨论', newD.id, '消息更新:', newD.messages?.length, '条消息')
+        break
+      }
+    }
+  }
+  
+  if (hasChanges && process.env.NODE_ENV === 'development') {
+    console.log('🔄 TavernDiscussionWindow 讨论数据变化:', {
+      newCount: newDiscussions?.length || 0,
+      oldCount: oldDiscussions?.length || 0,
+      currentTab: activeTab.value
+    })
+  }
   
   if (newDiscussions && newDiscussions.length > 0) {
     // 检查当前选中的标签是否仍然存在
@@ -307,35 +339,37 @@ watch(() => props.discussions, (newDiscussions, oldDiscussions) => {
     if (!activeTab.value || !currentTabExists) {
       // 如果没有选中标签或当前标签不存在，选择第一个
       const firstDiscussion = newDiscussions[0]
-      if (firstDiscussion && firstDiscussion.id) {
+      if (firstDiscussion && firstDiscussion.id && activeTab.value !== firstDiscussion.id) {
         activeTab.value = firstDiscussion.id
-        console.log('设置活跃tab:', activeTab.value)
-        
-        // 强制触发响应式更新
-        nextTick(() => {
-          console.log('nextTick后activeTab:', activeTab.value)
-        })
+        console.log('自动选择第一个讨论标签:', activeTab.value)
       }
     }
   } else {
     // 如果没有讨论，清空activeTab
-    activeTab.value = ''
+    if (activeTab.value !== '') {
+      activeTab.value = ''
+    }
   }
   
-  // 自动滚动到最新消息
-  nextTick(() => {
-    scrollToLatestMessage()
-  })
+  // 当有变化时立即滚动到最新消息
+  if (hasChanges) {
+    nextTick(() => {
+      scrollToLatestMessage()
+    })
+  }
 }, { immediate: true, deep: true })
 
-// 定时更新机制
+// 定时更新机制 - 优化性能，现在主要用于滚动保障
 function startUpdateTimer() {
   if (updateTimer) return
   
+  // 简化定时器逻辑，主要用于保障滚动位置
   updateTimer = setInterval(() => {
-    // 只滚动到最新消息，不触发响应式更新
-    scrollToLatestMessage()
-  }, 2000) // 每2秒滚动一次，降低频率
+    // 只在有消息时滚动
+    if (document.querySelector('.messages-container') && props.discussions.length > 0) {
+      scrollToLatestMessage()
+    }
+  }, 5000) // 进一步降低频率，因为现在有实时更新
 }
 
 function stopUpdateTimer() {
@@ -345,11 +379,14 @@ function stopUpdateTimer() {
   }
 }
 
-// 滚动到最新消息
+// 滚动到最新消息 - 优化滚动逻辑
 function scrollToLatestMessage() {
-  const container = document.querySelector('.messages-container')
+  const container = document.querySelector('.messages-container') || messagesContainer.value
   if (container) {
     container.scrollTop = container.scrollHeight
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📜 滚动到最新消息，容器高度:', container.scrollHeight)
+    }
   }
 }
 
@@ -797,5 +834,36 @@ onUnmounted(() => {
   min-height: 300px;
   max-height: 500px;
   overflow-y: auto;
+}
+
+.completion-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  margin: 20px 0;
+  background: #f0f9ff;
+  border: 1px solid #b3d8ff;
+  border-radius: 8px;
+  color: #409eff;
+}
+
+.completion-notice .el-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.completion-notice h5 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.completion-notice p {
+  margin: 0;
+  color: #606266;
+  text-align: center;
 }
 </style>

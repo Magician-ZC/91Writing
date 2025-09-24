@@ -179,6 +179,11 @@ const props = defineProps({
   enableTavernMode: {
     type: Boolean,
     default: false
+  },
+  currentStep: {
+    type: String,
+    default: '',
+    // 可选值：'concept', 'worldbuilding', 'characters', 'plot', 'opening', 'synopsis'
   }
 })
 
@@ -199,40 +204,57 @@ const skipSimpleQuestions = ref(true)
 const maxAuthors = ref(8)
 const showDiscussionWindow = ref(false)
 
+// 为了解决 tavernService 不是响应式的问题，添加一个响应式触发器
+const discussionsUpdateTrigger = ref(0)
+
 // 计算属性
 const availableAuthors = computed(() => {
   return getAuthorsByGenre(props.genre)
 })
 
 const activeDiscussions = computed(() => {
-  // 检查是否是新创作场景
-  const isNewCreation = !props.wizardData || Object.keys(props.wizardData).length === 0
-  
-  // 简化日志输出
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 activeDiscussions computed - isNewCreation:', isNewCreation)
-  }
-  
-  if (isNewCreation) {
-    // 新创作只显示当前活跃的讨论，不显示历史讨论
-    const currentDiscussions = tavernService.getActiveDiscussions()
+  try {
+    // 通过访问触发器来确保响应式更新
+    discussionsUpdateTrigger.value // 触发响应式依赖
     
-    // 只在有讨论时输出日志
-    if (currentDiscussions.length > 0) {
-      console.log('🆕 TavernManager activeDiscussions (新创作):', currentDiscussions.length, currentDiscussions)
+    // 检查是否是新创作场景
+    const isNewCreation = !props.wizardData || Object.keys(props.wizardData).length === 0
+    
+    let discussions = []
+    
+    if (isNewCreation) {
+      // 新创作场景：显示所有讨论（包括刚完成的），让用户能查看讨论历史
+      const activeDiscussions = tavernService.getActiveDiscussions() || []
+      const recentCompletedDiscussions = tavernService.getAllDiscussions()
+        .filter(d => d.status === 'completed' && d.endTime && (Date.now() - d.endTime < 3600000)) // 1小时内完成的
+      
+      // 合并活跃讨论和最近完成的讨论
+      discussions = [...activeDiscussions, ...recentCompletedDiscussions]
+      
+      // 去重（以防万一）
+      const uniqueDiscussions = new Map()
+      discussions.forEach(d => uniqueDiscussions.set(d.id, d))
+      discussions = Array.from(uniqueDiscussions.values())
+    } else {
+      // 已有数据的情况下显示所有相关讨论
+      discussions = tavernService.getAllDiscussions() || []
     }
     
-    return currentDiscussions
-  } else {
-    // 已有数据的情况下显示所有相关讨论，包括已完成的
-    const allDiscussions = tavernService.getAllDiscussions()
-    
-    // 只在有讨论时输出日志
-    if (allDiscussions.length > 0) {
-      console.log('📚 TavernManager activeDiscussions (已有数据):', allDiscussions.length, allDiscussions)
+    // 🔧 新增：根据当前步骤过滤讨论
+    if (props.currentStep) {
+      discussions = filterDiscussionsByStep(discussions, props.currentStep)
+      console.log(`🎯 已过滤为当前步骤 "${props.currentStep}" 的讨论:`, discussions.length, '个')
     }
     
-    return allDiscussions
+    // 只在有变化或开发环境时输出日志，减少控制台刷屏
+    if (process.env.NODE_ENV === 'development' && discussions.length > 0) {
+      console.log(`🔍 TavernManager activeDiscussions (${isNewCreation ? '新创作' : '已有数据'}):`, discussions.length, discussions)
+    }
+    
+    return discussions
+  } catch (error) {
+    console.error('activeDiscussions computed error:', error)
+    return []
   }
 })
 
@@ -257,8 +279,10 @@ watch(() => props.genre, () => {
 //   emit('authors-changed', newVal)
 // }, { deep: true })
 
-// 定时器用于更新讨论状态
+// 定时器用于更新讨论状态 - 修复无限循环问题
 let discussionUpdateTimer = null
+let lastDiscussionCount = 0 // 记录上次讨论数量，避免重复日志
+let messageUpdateUnsubscribe = null // 消息更新取消函数
 
 // 方法
 function handleModeChange(enabled) {
@@ -268,12 +292,17 @@ function handleModeChange(enabled) {
 }
 
 function autoSelectRecommendedAuthors() {
-  const recommended = tavernService.getRecommendedAuthors(props.genre)
-  const newSelection = recommended.map(author => author.id).slice(0, 5)
-  
-  // 避免重复设置相同的值，防止无限循环
-  if (JSON.stringify(selectedAuthors.value) !== JSON.stringify(newSelection)) {
-    selectedAuthors.value = newSelection
+  try {
+    const recommended = tavernService.getRecommendedAuthors(props.genre)
+    const newSelection = recommended.map(author => author.id).slice(0, 5)
+    
+    // 避免重复设置相同的值，防止无限循环
+    if (JSON.stringify(selectedAuthors.value) !== JSON.stringify(newSelection)) {
+      selectedAuthors.value = newSelection
+      console.log('自动选择推荐作者:', newSelection.length, '个')
+    }
+  } catch (error) {
+    console.error('自动选择作者失败:', error)
   }
 }
 
@@ -389,11 +418,19 @@ async function startDiscussion(config) {
   
   try {
     console.log('🚀 开始调用 tavernService.startDiscussion...')
+    
+    // 在开始讨论前先触发一次更新
+    discussionsUpdateTrigger.value++
+    
     const discussion = await tavernService.startDiscussion(discussionConfig)
     
-    console.log('✅ 讨论已创建:', discussion)
-    console.log('🔍 当前所有活跃讨论:', tavernService.getActiveDiscussions())
-    console.log('🔍 当前所有讨论(包括历史):', tavernService.getAllDiscussions())
+    console.log('✅ 讨论已创建:', discussion?.id, discussion?.status)
+    
+    // 检查讨论是否真的存在于服务中
+    const serviceDiscussions = tavernService.getActiveDiscussions()
+    const serviceAllDiscussions = tavernService.getAllDiscussions()
+    console.log('🔍 服务中的活跃讨论:', serviceDiscussions.length)
+    console.log('🔍 服务中的所有讨论:', serviceAllDiscussions.length)
     
     // 检查讨论是否真的存在
     if (!discussion || !discussion.id) {
@@ -414,9 +451,21 @@ async function startDiscussion(config) {
     console.log('⚡ 设置 showDiscussionWindow = true')
     showDiscussionWindow.value = true
     
-    console.log('✅ 讨论窗口应该显示了，showDiscussionWindow =', showDiscussionWindow.value)
-    console.log('✅ 活跃讨论数量:', activeDiscussions.value.length)
-    console.log('✅ activeDiscussions 详情:', activeDiscussions.value)
+    console.log('✅ 当前活跃讨论数量:', activeDiscussions.value.length)
+    
+    // 等待一小段时间，让computed属性更新
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // 强制触发响应式更新
+    discussionsUpdateTrigger.value++
+    console.log('触发响应式更新，当前触发器值:', discussionsUpdateTrigger.value)
+    
+    // 再次等待，确保响应式更新生效
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    // 再次触发更新，确保数据同步
+    discussionsUpdateTrigger.value++
+    console.log('✅ 最新活跃讨论数量:', activeDiscussions.value.length)
     
     // 显示启动成功消息
     ElMessage.success('酒馆讨论已开始，请查看讨论窗口了解进度')
@@ -427,8 +476,15 @@ async function startDiscussion(config) {
     const result = tavernService.getDiscussionResult(discussion.id)
     emit('discussion-completed', result)
     
+    // 讨论完成后立即触发更新，让用户能看到完成的讨论
+    discussionsUpdateTrigger.value++
+    console.log('✅ 讨论完成，触发响应式更新，显示完成的讨论')
+    
     // 显示完成消息
-    ElMessage.success('酒馆讨论已完成！')
+    ElMessage.success('酒馆讨论已完成！请查看讨论结果')
+    
+    // 保持窗口打开，让用户能查看结果
+    // showDiscussionWindow.value = true // 不自动关闭，让用户查看
     
     return result
   } catch (error) {
@@ -481,16 +537,60 @@ function getTavernConfig() {
   }
 }
 
+/**
+ * 根据当前步骤过滤讨论
+ */
+function filterDiscussionsByStep(discussions, currentStep) {
+  // 定义各步骤对应的讨论ID前缀
+  const stepPrefixMap = {
+    'concept': ['brainstorm_'],
+    'worldbuilding': ['worldview-', 'worldview_'],
+    'characters': ['character_', 'protagonist_', 'antagonist_'],
+    'plot': ['plot_', 'conflict_', 'outline_'],
+    'opening': ['opening_', 'hook_'],
+    'synopsis': ['synopsis_', 'logline_', 'marketing_']
+  }
+  
+  const prefixes = stepPrefixMap[currentStep]
+  if (!prefixes) {
+    console.warn(`⚠️ 未知的步骤: ${currentStep}，显示所有讨论`)
+    return discussions
+  }
+  
+  // 过滤出匹配当前步骤的讨论
+  const filtered = discussions.filter(discussion => {
+    if (!discussion || !discussion.id) return false
+    
+    return prefixes.some(prefix => discussion.id.startsWith(prefix))
+  })
+  
+  console.log(`🎯 步骤 "${currentStep}" 的讨论过滤:`, {
+    原始数量: discussions.length,
+    过滤后数量: filtered.length,
+    匹配前缀: prefixes,
+    过滤结果: filtered.map(d => d.id)
+  })
+  
+  return filtered
+}
+
 // 生命周期
 onMounted(() => {
-  // 启动定时更新 - 只在有讨论时才输出日志
+  // 优化定时更新 - 仅在有讨论时才进行检查，减少无意义的计算
   discussionUpdateTimer = setInterval(() => {
-    const discussions = tavernService.getActiveDiscussions()
-    // 只在有讨论时才输出日志，避免刷屏
-    if (discussions.length > 0) {
-      console.log('当前活跃讨论:', discussions.length, discussions)
+    const discussions = tavernService.getActiveDiscussions() || []
+    const currentCount = discussions.length
+    
+    // 只在数量变化或有讨论时才输出日志
+    if (currentCount !== lastDiscussionCount) {
+      lastDiscussionCount = currentCount
+      // 触发响应式更新
+      discussionsUpdateTrigger.value++
+      if (currentCount > 0) {
+        console.log('当前活跃讨论数量更新:', currentCount)
+      }
     }
-  }, 2000)
+  }, 3000) // 降低频率到3秒，减少CPU消耗
 
   // 初始化推荐作者
   if (isTavernMode.value && availableAuthors.value.length > 0) {
@@ -499,6 +599,16 @@ onMounted(() => {
 
   // 检查是否有历史讨论需要恢复
   restoreDiscussionState()
+  
+  // 初始化时触发一次响应式更新，确保计算属性正确响应
+  discussionsUpdateTrigger.value++
+  
+  // 注册消息实时更新回调
+  messageUpdateUnsubscribe = tavernService.onMessageUpdate((discussionId) => {
+    console.log('💬 收到消息更新通知:', discussionId)
+    // 触发响应式更新
+    discussionsUpdateTrigger.value++
+  })
 })
 
 // 恢复讨论状态
@@ -600,6 +710,11 @@ function clearDiscussionCache() {
 onUnmounted(() => {
   if (discussionUpdateTimer) {
     clearInterval(discussionUpdateTimer)
+  }
+  
+  // 取消消息更新监听
+  if (messageUpdateUnsubscribe) {
+    messageUpdateUnsubscribe()
   }
 })
 

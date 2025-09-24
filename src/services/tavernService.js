@@ -10,6 +10,7 @@ export class TavernService {
   constructor() {
     this.discussions = new Map() // 存储进行中的讨论
     this.discussionHistory = new Map() // 存储历史讨论记录
+    this.updateCallbacks = new Set() // 存储更新回调
     
     // 从localStorage恢复数据
     this.loadFromStorage()
@@ -52,21 +53,28 @@ export class TavernService {
   }
 
   /**
-   * 保存数据到localStorage
+   * 保存数据到localStorage - 优化日志输出
    */
   saveToStorage() {
     try {
       const discussionsData = Object.fromEntries(this.discussions)
       const historyData = Object.fromEntries(this.discussionHistory)
       
-      console.log('正在保存数据到localStorage:')
-      console.log('活跃讨论:', Object.keys(discussionsData).length, discussionsData)
-      console.log('历史讨论:', Object.keys(historyData).length, historyData)
+      const activeCount = Object.keys(discussionsData).length
+      const historyCount = Object.keys(historyData).length
       
       localStorage.setItem('tavernDiscussions', JSON.stringify(discussionsData))
       localStorage.setItem('tavernHistory', JSON.stringify(historyData))
       
-      console.log('数据已保存到localStorage')
+      // 减少日志输出，只在有意义的变化时输出
+      if (!this._lastSaveCount) {
+        this._lastSaveCount = { active: 0, history: 0 }
+      }
+      
+      if (activeCount !== this._lastSaveCount.active || historyCount !== this._lastSaveCount.history) {
+        console.log('💾 数据已保存到localStorage:', { 活跃: activeCount, 历史: historyCount })
+        this._lastSaveCount = { active: activeCount, history: historyCount }
+      }
     } catch (error) {
       console.error('保存讨论数据失败:', error)
     }
@@ -161,7 +169,14 @@ export class TavernService {
     if (!discussion) {
       console.error('❌ conductRound: 找不到讨论 ID:', discussionId)
       console.log('当前所有讨论 IDs:', Array.from(this.discussions.keys()))
-      return
+      // 尝试从localStorage恢复
+      this.loadFromStorage()
+      const restoredDiscussion = this.discussions.get(discussionId)
+      if (!restoredDiscussion) {
+        console.error('❌ 恢复后仍找不到讨论，停止处理')
+        return
+      }
+      console.log('✅ 从localStorage成功恢复讨论')
     }
 
     console.log('📋 找到讨论:', {
@@ -194,6 +209,10 @@ export class TavernService {
             timestamp: Date.now()
           })
           this.saveToStorage() // 保存每条消息
+          
+          // 触发自定义事件，通知界面更新
+          this.notifyMessageUpdate(discussion.id)
+          
           console.log(`💬 ${author.name}: ${message.substring(0, 50)}...`)
         }
         
@@ -221,7 +240,13 @@ export class TavernService {
     } else {
       // 继续下一轮讨论
       console.log(`⏱️ 准备开始第 ${discussion.currentRound + 1} 轮讨论...`)
-      setTimeout(() => this.conductRound(discussionId), 1000)
+      // 使用更安全的方式避免无限递归
+      if (discussion.currentRound < 10) { // 最多10轮，防止无限循环
+        setTimeout(() => this.conductRound(discussionId), 1000)
+      } else {
+        console.warn('⚠️ 讨论轮数过多，强制进入投票阶段')
+        await this.startVoting(discussionId)
+      }
     }
   }
 
@@ -240,7 +265,16 @@ export class TavernService {
       contextInfo += `相关背景：\n`
       for (const [key, value] of Object.entries(backgroundInfo)) {
         if (value) {
-          contextInfo += `- ${key}：${typeof value === 'string' ? value.substring(0, 200) : JSON.stringify(value).substring(0, 200)}\n`
+          // 🔧 修复：对于coreIdea等重要字段，不要截断，保持完整
+          if (key === 'coreIdea' && typeof value === 'string') {
+            contextInfo += `- ${key}：${value}\n` // 完整传递核心创意
+          } else if (typeof value === 'string') {
+            // 其他字段适当限制长度
+            const truncated = value.length > 300 ? value.substring(0, 300) + '...' : value
+            contextInfo += `- ${key}：${truncated}\n`
+          } else {
+            contextInfo += `- ${key}：${JSON.stringify(value).substring(0, 200)}\n`
+          }
         }
       }
     }
@@ -360,8 +394,10 @@ ${allMessages}
 
 请提取出具体的方案，每个方案应该：
 1. 有明确的核心思路
-2. 包含具体的实现建议
+2. 包含具体的实现建议  
 3. 体现不同的创意方向
+
+特别说明：如果是世界构建讨论，请尝试针对不同方面（基本架构、历史背景、文化传统、地理环境）提供多元化的方案。
 
 请以JSON格式返回方案列表：
 [
@@ -369,9 +405,20 @@ ${allMessages}
     "title": "方案标题",
     "core": "核心思路",
     "details": "具体内容",
-    "advantages": "优势特点"
+    "advantages": "优势特点",
+    "category": "方案类别（可选）"
   }
-]`
+]
+
+如果JSON格式有问题，也可以用以下格式：
+
+方案1：[标题]
+核心思路：[内容]
+具体实现：[内容] 
+优势特点：[内容]
+
+方案2：[标题]
+...`
 
     try {
       const response = await apiService.generateText(prompt, {
@@ -379,12 +426,91 @@ ${allMessages}
         temperature: 0.3
       })
 
-      const proposals = JSON.parse(response)
+      // 🔧 修复：智能解析AI返回的内容，支持多种格式
+      let proposals = []
+      try {
+        // 尝试直接解析JSON
+        proposals = JSON.parse(response)
+      } catch (jsonError) {
+        console.log('🔧 JSON解析失败，尝试智能提取方案...', jsonError.message)
+        proposals = this.parseProposalsFromText(response)
+      }
+      
       discussion.proposals = Array.isArray(proposals) ? proposals : []
+      console.log('📝 成功提取方案:', discussion.proposals.length, '个')
     } catch (error) {
       console.error('Failed to extract proposals:', error)
       // 备用方案：从消息中简单提取
       discussion.proposals = this.extractFallbackProposals(discussion)
+    }
+  }
+
+  /**
+   * 从文本中智能解析方案（当JSON解析失败时）
+   */
+  parseProposalsFromText(text) {
+    const proposals = []
+    
+    try {
+      // 尝试提取JSON部分
+      const jsonMatch = text.match(/\[[\s\S]*\]/)
+      if (jsonMatch) {
+        const jsonStr = jsonMatch[0]
+        return JSON.parse(jsonStr)
+      }
+      
+      // 如果没有JSON，尝试智能解析
+      const lines = text.split('\n').filter(line => line.trim())
+      let currentProposal = null
+      
+      for (const line of lines) {
+        const trimmed = line.trim()
+        
+        // 检测方案标题
+        if (trimmed.includes('方案') || trimmed.includes('建议') || trimmed.includes('思路') || 
+            trimmed.match(/^\d+[.\s]/)) {
+          if (currentProposal) proposals.push(currentProposal)
+          currentProposal = {
+            title: trimmed.replace(/^\d+[.\s]*/, '').substring(0, 50),
+            core: trimmed,
+            details: '',
+            advantages: ''
+          }
+        } else if (currentProposal && trimmed.length > 0) {
+          // 补充详细内容
+          if (currentProposal.details.length < 200) {
+            currentProposal.details += (currentProposal.details ? ' ' : '') + trimmed
+          } else if (!currentProposal.advantages) {
+            currentProposal.advantages = trimmed.substring(0, 100)
+          }
+        }
+      }
+      
+      if (currentProposal) proposals.push(currentProposal)
+      
+      // 如果还是没有有效方案，生成基础方案
+      if (proposals.length === 0) {
+        const sentences = text.split(/[。！？]/).filter(s => s.trim().length > 10)
+        for (let i = 0; i < Math.min(sentences.length, 3); i++) {
+          proposals.push({
+            title: `讨论方案${i + 1}`,
+            core: sentences[i].trim(),
+            details: sentences[i].trim(),
+            advantages: '基于讨论内容提取的观点'
+          })
+        }
+      }
+      
+      console.log('🎯 智能解析提取到方案:', proposals.length, '个')
+      return proposals.slice(0, 5) // 最多5个方案
+    } catch (error) {
+      console.error('智能解析方案失败:', error)
+      return [{
+        title: '综合讨论方案',
+        core: text.substring(0, 100),
+        details: text.substring(0, 200),
+        advantages: '从讨论中提取的综合观点'
+      }]
     }
   }
 
@@ -587,55 +713,68 @@ ${proposalsText}
   }
 
   /**
-   * 获取活跃的讨论列表
+   * 获取活跃的讨论列表 - 修复无限打印和性能问题
    */
   getActiveDiscussions() {
-    const allDiscussions = Array.from(this.discussions.values())
-    const activeDiscussions = allDiscussions.filter(d => d.status !== 'completed')
-    
-    // 只在有讨论或第一次调用时输出日志，避免刷屏
-    if (allDiscussions.length > 0 || !this._hasLoggedEmptyState) {
-      console.log('🔍 getActiveDiscussions 调用:')
-      console.log('- 总讨论数:', allDiscussions.length)
-      console.log('- 活跃讨论数:', activeDiscussions.length)
+    try {
+      const allDiscussions = Array.from(this.discussions.values())
+      const activeDiscussions = allDiscussions.filter(d => d && d.status && d.status !== 'completed')
       
-      if (allDiscussions.length > 0) {
-        console.log('- 所有讨论详情:', allDiscussions.map(d => ({
-          id: d.id, 
-          topic: d.topic, 
-          status: d.status,
-          authors: d.authors?.length || 0
-        })))
-        console.log('- 活跃讨论详情:', activeDiscussions.map(d => ({
-          id: d.id, 
-          topic: d.topic, 
-          status: d.status,
-          authors: d.authors?.length || 0
-        })))
+      // 减少日志输出频率，只在有意义的变化时输出
+      const currentCount = activeDiscussions.length
+      const totalCount = allDiscussions.length
+      
+      if (!this._lastActiveCount) {
+        this._lastActiveCount = 0
+        this._lastTotalCount = 0
       }
       
-      if (allDiscussions.length === 0) {
-        this._hasLoggedEmptyState = true
+      // 只在数量有变化或首次有讨论时输出日志
+      if ((currentCount !== this._lastActiveCount || totalCount !== this._lastTotalCount) && (currentCount > 0 || totalCount > 0)) {
+        console.log('🔍 活跃讨论状态更新:', {
+          活跃: currentCount,
+          总数: totalCount,
+          变化: currentCount !== this._lastActiveCount ? '活跃数变化' : '总数变化'
+        })
+        
+        this._lastActiveCount = currentCount
+        this._lastTotalCount = totalCount
       }
+      
+      return activeDiscussions
+    } catch (error) {
+      console.error('getActiveDiscussions error:', error)
+      return []
     }
-    
-    return activeDiscussions
   }
 
   /**
-   * 获取所有讨论（包括历史讨论）
+   * 获取所有讨论（包括历史讨论）- 优化性能，减少重复日志
    */
   getAllDiscussions() {
-    const activeDiscussions = Array.from(this.discussions.values())
-    const historyDiscussions = Array.from(this.discussionHistory.values())
-    const allDiscussions = [...activeDiscussions, ...historyDiscussions]
-    console.log('tavernService getAllDiscussions:', {
-      active: activeDiscussions.length,
-      history: historyDiscussions.length,
-      total: allDiscussions.length,
-      discussions: allDiscussions
-    })
-    return allDiscussions
+    try {
+      const activeDiscussions = Array.from(this.discussions.values())
+      const historyDiscussions = Array.from(this.discussionHistory.values())
+      const allDiscussions = [...activeDiscussions, ...historyDiscussions]
+      
+      // 只在开发环境且有意义的变化时输出日志
+      if (process.env.NODE_ENV === 'development') {
+        const totalCount = allDiscussions.length
+        if (!this._lastAllCount || this._lastAllCount !== totalCount) {
+          console.log('tavernService getAllDiscussions:', {
+            active: activeDiscussions.length,
+            history: historyDiscussions.length,
+            total: totalCount
+          })
+          this._lastAllCount = totalCount
+        }
+      }
+      
+      return allDiscussions
+    } catch (error) {
+      console.error('getAllDiscussions error:', error)
+      return []
+    }
   }
 
   /**
@@ -714,6 +853,31 @@ ${proposalsText}
     localStorage.removeItem('tavernDiscussions')
     localStorage.removeItem('tavernHistory')
     console.log('已清除所有酒馆讨论缓存')
+  }
+
+  /**
+   * 注册更新回调（用于实时通知界面更新）
+   */
+  onMessageUpdate(callback) {
+    this.updateCallbacks.add(callback)
+    
+    // 返回取消函数
+    return () => {
+      this.updateCallbacks.delete(callback)
+    }
+  }
+
+  /**
+   * 通知消息更新
+   */
+  notifyMessageUpdate(discussionId) {
+    for (const callback of this.updateCallbacks) {
+      try {
+        callback(discussionId)
+      } catch (error) {
+        console.error('更新回调执行失败:', error)
+      }
+    }
   }
 }
 

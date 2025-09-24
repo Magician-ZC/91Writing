@@ -192,6 +192,7 @@
       ref="tavernManagerRef"
       :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
       :enable-tavern-mode="isTavernMode"
+      :current-step="'plot'"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"

@@ -145,6 +145,7 @@
       ref="tavernManagerRef"
       :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
       :enable-tavern-mode="isTavernMode"
+      :current-step="'opening'"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"
@@ -356,6 +357,53 @@ const analyzeOpening = () => {
       analyzingOpening.value = false
     }
   })
+}
+
+// 🔧 缺失的酒馆讨论事件处理函数
+const onTavernModeChanged = (enabled) => {
+  console.log('开篇设计酒馆模式变化:', enabled)
+}
+
+const onAuthorsChanged = (authors) => {
+  console.log('开篇设计选中的作者已更新:', authors)
+}
+
+const onDiscussionStarted = (config) => {
+  console.log('开篇设计讨论开始:', config)
+}
+
+const onDiscussionCompleted = (result) => {
+  console.log('开篇设计讨论完成:', result)
+  if (result && result.topProposals && result.topProposals.length > 0) {
+    const topResult = result.topProposals[0]
+    
+    // 应用开篇设计结果
+    localData.hook = topResult.title || topResult.core || '酒馆讨论生成的开篇钩子'
+    localData.atmosphere = topResult.details || '讨论确定的氛围设定'
+    localData.openingScene = topResult.advantages || '经过作者们讨论的开场场景'
+    
+    // 更新界面数据
+    updateData('hook', localData.hook)
+    updateData('atmosphere', localData.atmosphere)
+    updateData('openingScene', localData.openingScene)
+    
+    ElMessage.success('酒馆讨论开篇设计已生成')
+  }
+}
+
+const onProposalSelected = (proposal) => {
+  console.log('开篇设计收到选择的方案:', proposal)
+  
+  // 应用选中的开篇设计方案
+  localData.hook = proposal.title || proposal.core
+  localData.atmosphere = proposal.details
+  localData.openingScene = proposal.advantages
+  
+  updateData('hook', localData.hook)
+  updateData('atmosphere', localData.atmosphere) 
+  updateData('openingScene', localData.openingScene)
+  
+  ElMessage.success(`已采用"${proposal.title}"开篇设计方案！`)
 }
 
 watch(() => props.stepData, (newData) => {

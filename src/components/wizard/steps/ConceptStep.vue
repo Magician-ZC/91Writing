@@ -191,6 +191,7 @@
       ref="tavernManagerRef"
       :genre="localData.selectedGenre || '玄幻'"
       :enable-tavern-mode="isTavernMode"
+      :current-step="'concept'"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"
@@ -677,6 +678,40 @@ const enhancedGenerateBrainstorm = async () => {
         generateBrainstorm()
       } else {
         console.log('✅ 酒馆讨论启动成功')
+        
+        // 🔧 关键修复：处理讨论结果
+        if (result && result.topProposals && result.topProposals.length > 0) {
+          console.log('📝 开始处理酒馆讨论结果...')
+          
+          // 将所有方案转换为脑洞格式
+          const brainstormFromTavern = result.topProposals.map((proposal, index) => ({
+            id: Date.now() + index,
+            title: proposal.title || `方案${index + 1}：酒馆讨论精选创意`,
+            description: proposal.core || proposal.details || '创意内容',
+            highlight: proposal.advantages || '经过多位大神作者讨论验证',
+            conflict: '可根据讨论建议进一步完善',
+            potential: `获得${proposal.score}分，${result.totalVotes}位作者投票`
+          }))
+          
+          console.log('🎯 转换后的脑洞结果:', brainstormFromTavern)
+          
+          // 更新界面数据
+          brainstormResults.value = brainstormFromTavern
+          updateData('brainstormResults', brainstormFromTavern)
+          
+          // 自动选择得分最高的方案作为核心创意
+          const topProposal = result.topProposals[0]
+          if (topProposal) {
+            const enhancedIdea = `${topProposal.core} ${topProposal.details}`.trim()
+            localData.coreIdea = enhancedIdea
+            updateData('coreIdea', enhancedIdea)
+            console.log('🎯 核心创意已更新:', enhancedIdea)
+          }
+          
+          ElMessage.success(`酒馆讨论完成！生成了${brainstormFromTavern.length}个优质创意方案`)
+        } else {
+          console.warn('⚠️ 讨论结果格式异常:', result)
+        }
       }
     } catch (error) {
       console.error('酒馆模式生成失败:', error)

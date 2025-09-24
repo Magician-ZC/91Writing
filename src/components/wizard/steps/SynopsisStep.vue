@@ -230,6 +230,7 @@
       ref="tavernManagerRef"
       :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
       :enable-tavern-mode="isTavernMode"
+      :current-step="'synopsis'"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"
@@ -486,6 +487,53 @@ const generateMarketingCopy = () => {
       generatingMarketing.value = false
     }
   })
+}
+
+// 🔧 缺失的酒馆讨论事件处理函数
+const onTavernModeChanged = (enabled) => {
+  console.log('简介撰写酒馆模式变化:', enabled)
+}
+
+const onAuthorsChanged = (authors) => {
+  console.log('简介撰写选中的作者已更新:', authors)
+}
+
+const onDiscussionStarted = (config) => {
+  console.log('简介撰写讨论开始:', config)
+}
+
+const onDiscussionCompleted = (result) => {
+  console.log('简介撰写讨论完成:', result)
+  if (result && result.topProposals && result.topProposals.length > 0) {
+    const topResult = result.topProposals[0]
+    
+    // 应用简介撰写结果
+    localData.shortSynopsis = topResult.core || topResult.title || '酒馆讨论生成的短简介'
+    localData.longSynopsis = topResult.details || '经过多位作者讨论的详细简介'
+    localData.logline = topResult.advantages || '讨论确定的卖点'
+    
+    // 更新界面数据
+    updateData('shortSynopsis', localData.shortSynopsis)
+    updateData('longSynopsis', localData.longSynopsis)
+    updateData('logline', localData.logline)
+    
+    ElMessage.success('酒馆讨论简介撰写已生成')
+  }
+}
+
+const onProposalSelected = (proposal) => {
+  console.log('简介撰写收到选择的方案:', proposal)
+  
+  // 应用选中的简介方案
+  localData.shortSynopsis = proposal.core || proposal.title
+  localData.longSynopsis = proposal.details
+  localData.logline = proposal.advantages
+  
+  updateData('shortSynopsis', localData.shortSynopsis)
+  updateData('longSynopsis', localData.longSynopsis)
+  updateData('logline', localData.logline)
+  
+  ElMessage.success(`已采用"${proposal.title}"简介方案！`)
 }
 
 watch(() => props.stepData, (newData) => {

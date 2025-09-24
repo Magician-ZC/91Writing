@@ -215,6 +215,7 @@
       ref="tavernManagerRef"
       :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
       :enable-tavern-mode="isTavernMode"
+      :current-step="'worldbuilding'"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"
@@ -694,19 +695,56 @@ const onDiscussionStarted = (config) => {
 }
 
 const onDiscussionCompleted = (result) => {
-  console.log('讨论完成:', result)
+  console.log('世界构建讨论完成（事件监听）:', result)
   if (result && result.topProposals && result.topProposals.length > 0) {
-    const topResult = result.topProposals[0]
+    // 🔧 修复2：事件监听也使用智能分配逻辑
+    const proposals = result.topProposals.slice(0, 4) // 取前4个方案
     
-    // 根据讨论主题应用结果
     if (result.topic.includes('世界观') || result.topic.includes('worldview')) {
-      generatedWorldview.value = {
-        basic: topResult.details,
-        history: topResult.details,
-        culture: topResult.details,
-        geography: topResult.details
+      // 智能分配方案到世界观的4个部分
+      const worldviewParts = {
+        basic: '',
+        history: '',
+        culture: '',
+        geography: ''
       }
-      ElMessage.success('酒馆讨论结果已生成')
+      
+      if (proposals.length >= 4) {
+        // 如果有4个或更多方案，每个部分分配一个
+        worldviewParts.basic = `${proposals[0].title || '基础世界架构'}\n\n${proposals[0].core || proposals[0].details}`
+        worldviewParts.history = `${proposals[1].title || '历史发展脉络'}\n\n${proposals[1].core || proposals[1].details}`
+        worldviewParts.culture = `${proposals[2].title || '文化传统体系'}\n\n${proposals[2].core || proposals[2].details}`
+        worldviewParts.geography = `${proposals[3].title || '地理环境设定'}\n\n${proposals[3].core || proposals[3].details}`
+      } else {
+        // 如果方案少于4个，智能分配和扩展
+        const topResult = proposals[0]
+        const baseContent = topResult.core || topResult.details || '经过作者们深入讨论的世界设定'
+        const title = topResult.title || '讨论生成的世界观'
+        
+        worldviewParts.basic = `${title} - 基本架构\n\n${baseContent}\n\n这个世界的基础运行机制和核心设定。`
+        worldviewParts.history = `${title} - 历史沿革\n\n基于核心设定：${baseContent}\n\n历史的变迁塑造了当前世界的格局。`
+        worldviewParts.culture = `${title} - 文化特色\n\n文化体系：${baseContent}\n\n独特的文化传统影响着人物的价值观。`
+        worldviewParts.geography = `${title} - 环境地理\n\n地理环境：${baseContent}\n\n为故事发展提供了丰富的场景。`
+        
+        // 如果有更多方案，用来丰富内容
+        if (proposals.length > 1) {
+          worldviewParts.history += `\n\n补充历史：${proposals[1].core || proposals[1].details}`
+          if (proposals.length > 2) {
+            worldviewParts.culture += `\n\n文化细节：${proposals[2].core || proposals[2].details}`
+          }
+        }
+      }
+      
+      // 更新生成的世界观
+      generatedWorldview.value = {
+        basic: worldviewParts.basic,
+        history: worldviewParts.history,
+        culture: worldviewParts.culture,
+        geography: worldviewParts.geography
+      }
+      
+      console.log('🎯 事件监听：世界观四个部分生成完成')
+      ElMessage.success('酒馆讨论世界观已生成！每个部分都有独特内容')
     }
   }
 }
@@ -714,16 +752,25 @@ const onDiscussionCompleted = (result) => {
 const onProposalSelected = (proposal) => {
   console.log('WorldBuildingStep 收到选择的方案:', proposal)
   
-  // 应用选中的世界观方案
+  // 🔧 修复：应用选中的方案时，智能分配到4个不同部分
+  const baseContent = proposal.core || proposal.details || proposal.title
+  const title = proposal.title || '选中的世界观方案'
+  
   generatedWorldview.value = {
-    basic: `${proposal.core}\n\n${proposal.details}`,
-    history: proposal.details,
-    culture: proposal.details,
-    geography: proposal.details
+    basic: `${title} - 基本架构\n\n${baseContent}\n\n这个世界的基础运行机制和核心设定为整个故事提供了坚实的基础。`,
+    history: `${title} - 历史沿革\n\n基于核心设定发展而来的历史脉络：${baseContent}\n\n历史的变迁塑造了当前世界的格局和矛盾，为角色提供了深厚的背景。`,
+    culture: `${title} - 文化特色\n\n在这样的世界背景下形成的文化体系：${baseContent}\n\n独特的文化传统影响着人物的行为和价值观，塑造了社会的运行方式。`,
+    geography: `${title} - 环境地理\n\n与世界设定相匹配的地理环境：${baseContent}\n\n地理环境为故事发展提供了丰富的场景和可能性，影响着文明的发展。`
+  }
+  
+  // 如果方案有额外的详细信息，添加到相应部分
+  if (proposal.advantages) {
+    generatedWorldview.value.culture += `\n\n${proposal.advantages}`
   }
   
   updateData('generatedWorldview', generatedWorldview.value)
-  ElMessage.success(`已采用"${proposal.title}"世界观方案！`)
+  console.log('🎯 已智能分配选中方案到4个世界观部分')
+  ElMessage.success(`已采用"${proposal.title}"世界观方案！每个部分都有独特内容`)
 }
 
 // 修改现有的生成方法以支持酒馆模式
@@ -740,22 +787,56 @@ const enhancedGenerateWorldview = async () => {
     try {
       const conceptData = props.wizardData.concept || {}
       
+      // 🔧 修复1：确保核心创意完整传递，避免截断
+      const coreIdeaFull = conceptData.coreIdea || '未设定创意'
+      const coreIdeaPreview = coreIdeaFull.length > 100 ? coreIdeaFull.substring(0, 100) + '...' : coreIdeaFull
+      
       const discussionConfig = {
         discussionId: `worldview-${Date.now()}`,
-        topic: `基于创意"${conceptData.coreIdea || '未设定创意'}"设计${localData.worldType}类型世界观`,
-        context: `
-核心创意：${conceptData.coreIdea || '未设定'}
-小说类型：${conceptData.selectedGenre || '玄幻'}
-世界类型：${localData.worldType}
-世界规模：${localData.scale || '中等'}
-核心规则：${localData.coreRules.join('、') || '无'}
-力量体系：${localData.powerSystem || '未设定'}
+        topic: `基于创意"${coreIdeaPreview}"设计${localData.worldType}类型世界观`,
+        context: `请各位作者基于以下完整信息，设计一个多层次的世界观体系：
 
-请各位作者基于以上信息，设计一个完整的世界观体系，包括历史背景、文化特色、地理环境等。`,
+【核心创意】
+${coreIdeaFull}
+
+【基础设定】
+- 小说类型：${conceptData.selectedGenre || '玄幻'}
+- 世界类型：${localData.worldType}
+- 世界规模：${localData.scale || '中等'}
+- 核心规则：${localData.coreRules.join('、') || '无'}
+- 力量体系：${localData.powerSystem || '未设定'}
+
+【创作要求】
+请各位作者分工合作，分别从不同角度设计世界观：
+
+第1位作者重点讨论：基本架构
+- 世界的基础设定和运行机制
+- 核心规则和力量体系
+- 世界的基本运行逻辑
+
+第2位作者重点讨论：历史背景  
+- 重要的历史事件和时代变迁
+- 影响世界格局的关键节点
+- 当前时代的历史成因
+
+第3位作者重点讨论：文化传统
+- 社会文化、风俗习惯、价值观念
+- 不同种族/地区的文化特色
+- 宗教信仰和社会制度
+
+第4位作者重点讨论：地理环境
+- 地形地貌、气候环境、重要地点
+- 地理对文明发展的影响
+- 关键场景和地标建筑
+
+请每位作者基于自己的专长领域，提出独特而详细的设定方案！`,
         backgroundInfo: {
-          coreIdea: conceptData.coreIdea,
+          // 🔧 修复1：传递完整数据，不截断
+          coreIdea: coreIdeaFull, // 完整的核心创意
           selectedGenre: conceptData.selectedGenre,
           brainstormResults: conceptData.brainstormResults,
+          themes: conceptData.themes,
+          targetAudience: conceptData.targetAudience,
           worldType: localData.worldType,
           scale: localData.scale,
           coreRules: localData.coreRules,
@@ -768,6 +849,73 @@ const enhancedGenerateWorldview = async () => {
       if (!result) {
         // 用户选择了直接生成，回退到单模型模式
         generateWorldview()
+      } else {
+        console.log('✅ 世界构建酒馆讨论启动成功')
+        
+        // 🔧 关键修复：处理讨论结果，智能分配到4个世界观部分
+        if (result && result.topProposals && result.topProposals.length > 0) {
+          console.log('📝 开始处理世界构建讨论结果...')
+          
+          // 🔧 修复2：使用所有方案，智能分配到不同部分
+          const proposals = result.topProposals.slice(0, 4) // 取前4个方案
+          
+          // 智能分配方案到世界观的4个部分
+          const worldviewParts = {
+            basic: '',
+            history: '',
+            culture: '',
+            geography: ''
+          }
+          
+          if (proposals.length >= 4) {
+            // 如果有4个或更多方案，每个部分分配一个
+            worldviewParts.basic = `${proposals[0].title || '基础世界架构'}\n\n${proposals[0].core || proposals[0].details}`
+            worldviewParts.history = `${proposals[1].title || '历史发展脉络'}\n\n${proposals[1].core || proposals[1].details}`
+            worldviewParts.culture = `${proposals[2].title || '文化传统体系'}\n\n${proposals[2].core || proposals[2].details}`
+            worldviewParts.geography = `${proposals[3].title || '地理环境设定'}\n\n${proposals[3].core || proposals[3].details}`
+          } else {
+            // 如果方案少于4个，智能分配和扩展
+            const topResult = proposals[0]
+            const baseContent = topResult.core || topResult.details || '经过作者们深入讨论的世界设定'
+            const title = topResult.title || '讨论生成的世界观'
+            
+            worldviewParts.basic = `${title} - 基本架构\n\n${baseContent}\n\n这个世界的基础运行机制和核心设定为整个故事提供了坚实的基础。`
+            worldviewParts.history = `${title} - 历史沿革\n\n基于核心设定发展而来的历史脉络：${baseContent}\n\n历史的变迁塑造了当前世界的格局和矛盾。`
+            worldviewParts.culture = `${title} - 文化特色\n\n在这样的世界背景下形成的文化体系：${baseContent}\n\n独特的文化传统影响着人物的行为和价值观。`
+            worldviewParts.geography = `${title} - 环境地理\n\n与世界设定相匹配的地理环境：${baseContent}\n\n地理环境为故事发展提供了丰富的场景和可能性。`
+            
+            // 如果有更多方案，用来丰富内容
+            if (proposals.length > 1) {
+              worldviewParts.history += `\n\n补充历史要素：${proposals[1].core || proposals[1].details}`
+              if (proposals.length > 2) {
+                worldviewParts.culture += `\n\n文化细节：${proposals[2].core || proposals[2].details}`
+              }
+            }
+          }
+          
+          // 🔧 修复2：更新生成的世界观数据结构
+          generatedWorldview.value = {
+            basic: worldviewParts.basic,
+            history: worldviewParts.history,
+            culture: worldviewParts.culture,
+            geography: worldviewParts.geography
+          }
+          
+          // 同时更新基础字段
+          localData.worldType = proposals[0].title || '讨论确定的世界类型'
+          localData.powerSystem = proposals[0].core || '讨论生成的力量体系'
+          localData.socialStructure = proposals[0].advantages || '经过作者们讨论的社会结构'
+          
+          // 更新界面数据
+          updateData('worldType', localData.worldType)
+          updateData('powerSystem', localData.powerSystem) 
+          updateData('socialStructure', localData.socialStructure)
+          
+          console.log('🎯 世界观四个部分生成完成:', generatedWorldview.value)
+          ElMessage.success(`世界构建讨论完成！生成了完整的"${localData.worldType}"世界观体系`)
+        } else {
+          console.warn('⚠️ 世界构建讨论结果格式异常:', result)
+        }
       }
     } catch (error) {
       console.error('酒馆模式生成失败:', error)

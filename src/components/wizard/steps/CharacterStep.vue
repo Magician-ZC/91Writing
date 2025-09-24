@@ -84,6 +84,7 @@
       ref="tavernManagerRef"
       :genre="props.wizardData.concept?.selectedGenre || '玄幻'"
       :enable-tavern-mode="isTavernMode"
+      :current-step="'characters'"
       @mode-changed="onTavernModeChanged"
       @authors-changed="onAuthorsChanged"
       @discussion-started="onDiscussionStarted"
@@ -425,6 +426,32 @@ const enhancedGenerateProtagonist = async () => {
       if (!result) {
         // 用户选择了直接生成，回退到单模型模式
         generateProtagonist()
+      } else {
+        console.log('✅ 角色设计酒馆讨论启动成功')
+        
+        // 🔧 关键修复：处理讨论结果（备用机制）
+        if (result && result.topProposals && result.topProposals.length > 0) {
+          console.log('📝 开始处理角色设计讨论结果...')
+          
+          const topResult = result.topProposals[0]
+          
+          // 根据讨论主题应用结果到角色设计
+          const characterData = {
+            name: topResult.title || '讨论生成角色',
+            background: topResult.core || topResult.details,
+            personality: topResult.advantages || '经过多位作者讨论确定的性格',
+            skills: '待进一步发展',
+            motivation: '根据讨论结果确定的动机'
+          }
+          
+          // 更新界面数据
+          localData.protagonist = characterData
+          updateData('protagonist', characterData)
+          
+          ElMessage.success(`角色设计讨论完成！生成了"${characterData.name}"角色`)
+        } else {
+          console.warn('⚠️ 角色讨论结果格式异常:', result)
+        }
       }
     } catch (error) {
       console.error('酒馆模式生成主角失败:', error)
