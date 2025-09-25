@@ -201,13 +201,20 @@ export class TavernService {
         console.log(`🎭 ${author.name} 正在发言中...`)
         const message = await this.generateAuthorMessage(author, discussion)
         if (message) {
-          discussion.messages.push({
+          const messageObj = {
             authorId: author.id,
             authorName: author.name,
             round: discussion.currentRound,
-            content: message,
+            content: typeof message === 'string' ? message : '消息内容解析错误', // 🔧 确保content是字符串
             timestamp: Date.now()
-          })
+          }
+          
+          // 🔧 调试：检查消息对象
+          if (typeof message !== 'string') {
+            console.warn('⚠️ 消息不是字符串类型:', typeof message, message)
+          }
+          
+          discussion.messages.push(messageObj)
           this.saveToStorage() // 保存每条消息
           
           // 触发自定义事件，通知界面更新
@@ -313,7 +320,12 @@ ${contextInfo}
         temperature: 0.8 // 提高创造性
       })
       
-      return response
+      // 🔧 修复：确保返回字符串而不是对象
+      if (typeof response === 'object') {
+        console.warn('⚠️ API返回了对象而不是字符串:', response)
+        return JSON.stringify(response)
+      }
+      return response || '我需要更多时间思考...'
     } catch (error) {
       console.error('Failed to generate author message:', error)
       // 返回基于作者特点的备用回应
@@ -491,7 +503,7 @@ ${allMessages}
       // 如果还是没有有效方案，生成基础方案
       if (proposals.length === 0) {
         const sentences = text.split(/[。！？]/).filter(s => s.trim().length > 10)
-        for (let i = 0; i < Math.min(sentences.length, 3); i++) {
+        for (let i = 0; i < Math.min(sentences.length, 5); i++) { // 🔧 修复：增加到5个方案
           proposals.push({
             title: `讨论方案${i + 1}`,
             core: sentences[i].trim(),
@@ -499,6 +511,17 @@ ${allMessages}
             advantages: '基于讨论内容提取的观点'
           })
         }
+      }
+      
+      // 🔧 修复：如果方案数量太少，生成更多方案
+      while (proposals.length < 3 && proposals.length > 0) {
+        const baseProposal = proposals[proposals.length - 1]
+        proposals.push({
+          title: `${baseProposal.title}的变体${proposals.length + 1}`,
+          core: `${baseProposal.core}的另一种思路`,
+          details: `基于${baseProposal.details}的扩展方案`,
+          advantages: `结合${baseProposal.advantages}的优化版本`
+        })
       }
       
       console.log('🎯 智能解析提取到方案:', proposals.length, '个')
@@ -521,22 +544,42 @@ ${allMessages}
     const messages = discussion.messages
     const proposals = []
     
-    // 简单提取每个作者的主要观点
+    // 🔧 修复：简单提取每个作者的主要观点，确保至少3个方案
     const authorViewpoints = new Map()
     
     for (const msg of messages) {
       if (!authorViewpoints.has(msg.authorId)) {
-        const author = discussion.authors.find(a => a.id === msg.authorId)
+        const author = discussion.authors.find(a => a.id === msg.authorId) || { name: '未知作者', style: '独特风格' }
+        const content = typeof msg.content === 'string' ? msg.content : '讨论观点'
+        
         proposals.push({
           title: `${author.name}的方案`,
-          core: msg.content.substring(0, 50) + '...',
-          details: msg.content,
+          core: content.length > 50 ? content.substring(0, 50) + '...' : content,
+          details: content.substring(0, 200),
           advantages: `体现了${author.style}的特色`
         })
         authorViewpoints.set(msg.authorId, true)
+        
+        // 确保有足够的方案数量
+        if (proposals.length >= 5) break
       }
     }
     
+    // 🔧 修复：如果方案不足，创建更多备用方案
+    while (proposals.length < 3) {
+      const baseIndex = proposals.length % Math.max(messages.length, 1)
+      const baseMsg = messages[baseIndex] || { content: '基础讨论内容' }
+      const content = typeof baseMsg.content === 'string' ? baseMsg.content : '讨论观点'
+      
+      proposals.push({
+        title: `综合方案${proposals.length + 1}`,
+        core: content.substring(0, 50) || '基于讨论的综合方案',
+        details: content.substring(0, 200) || '综合多方观点的详细方案',
+        advantages: '结合多位作者观点的综合优势'
+      })
+    }
+    
+    console.log('🔄 备用方案生成完成:', proposals.length, '个')
     return proposals.slice(0, 5)
   }
 

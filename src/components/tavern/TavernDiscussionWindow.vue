@@ -121,7 +121,11 @@
                   </div>
                   <div class="message-time">{{ formatTime(message.timestamp) }}</div>
                 </div>
-                <div class="message-content">{{ message.content }}</div>
+                <div class="message-content">{{ 
+                  typeof message.content === 'object' 
+                    ? JSON.stringify(message.content, null, 2) 
+                    : message.content 
+                }}</div>
               </div>
               
               <!-- 无消息状态 -->
