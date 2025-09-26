@@ -146,6 +146,37 @@
             <el-icon><Key /></el-icon>
             {{ isApiConfigured ? 'API已配置' : 'API配置' }}
           </el-button>
+
+          <!-- 用户菜单 -->
+          <el-dropdown @command="handleUserCommand" class="user-dropdown">
+            <div class="user-info">
+              <el-avatar 
+                :size="32" 
+                :src="userAvatar" 
+                class="user-avatar"
+              >
+                <el-icon><UserFilled /></el-icon>
+              </el-avatar>
+              <span class="username">{{ displayName }}</span>
+              <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
+            </div>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">
+                  <el-icon><User /></el-icon>
+                  个人资料
+                </el-dropdown-item>
+                <el-dropdown-item command="subscription" v-if="hasActiveSubscription">
+                  <el-icon><CreditCard /></el-icon>
+                  我的订阅
+                </el-dropdown-item>
+                <el-dropdown-item divided command="logout">
+                  <el-icon><SwitchButton /></el-icon>
+                  退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
       
@@ -173,10 +204,12 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
+import { useAuthStore } from '@/stores/authStore'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   House, Document, ChatLineSquare, Collection, Notebook, Aim, 
   CreditCard, Setting, Key, Tools, EditPen, DataAnalysis,
-  Expand, Fold, Notification 
+  Expand, Fold, Notification, UserFilled, User, ArrowDown, SwitchButton 
 } from '@element-plus/icons-vue'
 import ApiConfig from '@/components/ApiConfig.vue'
 import AnnouncementDialog from '@/components/AnnouncementDialog.vue'
@@ -186,6 +219,7 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const route = useRoute()
 const novelStore = useNovelStore()
+const authStore = useAuthStore()
 
 // 响应式数据
 const isCollapse = ref(false)
@@ -199,6 +233,11 @@ const forceUpdate = ref(0) // 用于强制更新计算属性
 
 // 计算属性
 const isApiConfigured = computed(() => novelStore.isApiConfigured)
+
+// 用户相关计算属性
+const displayName = computed(() => authStore.displayName)
+const userAvatar = computed(() => authStore.user?.avatar)
+const hasActiveSubscription = computed(() => authStore.hasActiveSubscription)
 
 // 获取当前API配置
 const currentApiConfig = computed(() => {
@@ -346,6 +385,42 @@ const toggleSidebar = () => {
 
 const handleMenuSelect = (index) => {
   router.push(index)
+}
+
+// 用户菜单处理
+const handleUserCommand = async (command) => {
+  switch (command) {
+    case 'profile':
+      // 创建一个用户资料页面的路由
+      router.push('/profile')
+      break
+    case 'subscription':
+      // 跳转到订阅管理页面
+      router.push('/subscription')
+      break
+    case 'logout':
+      try {
+        const confirmed = await ElMessageBox.confirm(
+          '确定要退出登录吗？',
+          '退出确认',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }
+        )
+        
+        if (confirmed) {
+          await authStore.logout()
+          router.push('/auth/login')
+        }
+      } catch (error) {
+        // 用户取消操作
+      }
+      break
+    default:
+      console.warn('未知的用户菜单命令:', command)
+  }
 }
 
 // 公告相关功能
