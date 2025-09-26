@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: 91writing-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123456
+      MYSQL_DATABASE: writing_platform
+      MYSQL_USER: writing
+      MYSQL_PASSWORD: writing123
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - writing_network
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: 91writing-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass "redis123"
+    networks:
+      - writing_network
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/api-gateway/Dockerfile
+    container_name: 91writing-api-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: "mysql://writing:writing123@mysql:3306/writing_platform"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis123
+      JWT_SECRET: 91writing_jwt_secret_dev_2024
+      JWT_EXPIRES_IN: 7d
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - writing_network
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run start:dev
+
+  # User Service
+  user-service:
+    build:
+      context: .
+      dockerfile: docker/user-service/Dockerfile
+    container_name: 91writing-user-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: "mysql://writing:writing123@mysql:3306/writing_platform"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis123
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - writing_network
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  # Adminer 数据库管理工具 (开发环境)
+  adminer:
+    image: adminer:4.8.1
+    container_name: 91writing-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    depends_on:
+      - mysql
+    networks:
+      - writing_network
+    profiles:
+      - dev
+
+  # Redis Commander (开发环境)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: 91writing-redis-commander
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:redis123
+    depends_on:
+      - redis
+    networks:
+      - writing_network
+    profiles:
+      - dev
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  writing_network:
+    driver: bridge
