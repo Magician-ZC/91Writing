@@ -1,3 +1,6 @@
+import { config } from 'dotenv';
+config(); // 加载环境变量
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';

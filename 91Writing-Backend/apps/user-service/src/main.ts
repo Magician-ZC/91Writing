@@ -1,9 +1,12 @@
+import { config } from 'dotenv';
+config(); // 加载环境变量
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
-import compression from 'compression';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 import { ResponseInterceptor } from './interceptors/response.interceptor';

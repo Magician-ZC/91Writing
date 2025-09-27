@@ -1,4 +1,5 @@
 import apiService from './api.js'
+import backendApi from './backendApi.js'
 
 /**
  * 记忆系统核心服务
@@ -11,6 +12,10 @@ class MemoryService {
     this.maxCoreMemoryTokens = 500
     this.maxSummaryTokens = 1000
     this.maxContextTokens = 1500
+    
+    // 云端同步配置
+    this.cloudSyncEnabled = false
+    this.currentNovelId = null
   }
 
   /**
@@ -541,6 +546,191 @@ ${chapterContent}
     }
     
     return Math.min(1.0, importance)
+  }
+
+  // ===== 云端同步功能 =====
+
+  /**
+   * 启用云端同步
+   */
+  enableCloudSync(novelId) {
+    this.cloudSyncEnabled = backendApi.isAuthenticated()
+    this.currentNovelId = novelId
+    return this.cloudSyncEnabled
+  }
+
+  /**
+   * 禁用云端同步
+   */
+  disableCloudSync() {
+    this.cloudSyncEnabled = false
+    this.currentNovelId = null
+  }
+
+  /**
+   * 同步记忆到云端
+   */
+  async syncMemoryToCloud(novelId, memoryData) {
+    if (!this.cloudSyncEnabled || !backendApi.isAuthenticated()) {
+      return { success: false, message: '云端同步未启用或用户未登录' }
+    }
+
+    try {
+      // 检查是否已初始化云端记忆系统
+      const memories = await backendApi.getNovelMemories(novelId, { limit: 1 })
+      
+      if (!memories.data || memories.data.length === 0) {
+        // 初始化云端记忆系统
+        await backendApi.initializeNovelMemory(novelId, {
+          title: memoryData.title,
+          genre: memoryData.genre,
+          theme: memoryData.theme,
+          intro: memoryData.intro
+        })
+      }
+
+      // 同步核心记忆
+      if (memoryData.coreMemory) {
+        await backendApi.createMemory(novelId, {
+          memoryType: 'CORE',
+          content: memoryData.coreMemory,
+          importance: 1.0,
+          chapterRange: 'all'
+        })
+      }
+
+      // 同步章节摘要
+      if (memoryData.chapterSummaries && memoryData.chapterSummaries.length > 0) {
+        for (const summary of memoryData.chapterSummaries) {
+          await backendApi.updateChapterSummary(
+            novelId,
+            summary.chapterNumber,
+            summary.summary,
+            summary.keyEvents || []
+          )
+        }
+      }
+
+      return { success: true, message: '记忆已同步到云端' }
+    } catch (error) {
+      console.error('同步记忆到云端失败:', error)
+      return { success: false, message: `同步失败: ${error.message}` }
+    }
+  }
+
+  /**
+   * 从云端加载记忆
+   */
+  async loadMemoryFromCloud(novelId) {
+    if (!backendApi.isAuthenticated()) {
+      throw new Error('用户未登录，无法从云端加载记忆')
+    }
+
+    try {
+      const memories = await backendApi.getNovelMemories(novelId)
+      
+      if (!memories.success || !memories.data || memories.data.length === 0) {
+        return this.createEmptyMemory(novelId)
+      }
+
+      // 构建本地记忆结构
+      const novelMemory = this.createEmptyMemory(novelId)
+      
+      for (const memory of memories.data) {
+        switch (memory.memoryType) {
+          case 'CORE':
+            if (memory.content.coreMemory) {
+              novelMemory.coreMemory = memory.content.coreMemory
+            }
+            break
+          case 'SUMMARY':
+            if (memory.content.chapterNumber && memory.content.summary) {
+              novelMemory.chapterSummaries.push({
+                chapterNumber: memory.content.chapterNumber,
+                summary: memory.content.summary,
+                keyEvents: memory.content.keyEvents || [],
+                importance: memory.importance || 0.5
+              })
+            }
+            break
+          case 'CONTEXT':
+            if (memory.content.recentChapters) {
+              novelMemory.contextManagement.recentChapters = memory.content.recentChapters
+            }
+            break
+        }
+      }
+
+      return novelMemory
+    } catch (error) {
+      console.error('从云端加载记忆失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取生成上下文（优先使用云端）
+   */
+  async getGenerationContext(novelId, chapterContext = null, options = {}) {
+    if (this.cloudSyncEnabled && backendApi.isAuthenticated()) {
+      try {
+        const response = await backendApi.getGenerationContext(novelId, {
+          maxTokens: options.maxTokens || 2000,
+          chapterContext,
+          includeTypes: options.includeTypes || ['CORE', 'SUMMARY', 'CONTEXT']
+        })
+
+        if (response.success) {
+          return {
+            formattedContext: response.data.formattedContext,
+            usedTokens: response.data.usedTokens,
+            memoryCount: response.data.memoryCount,
+            source: 'cloud'
+          }
+        }
+      } catch (error) {
+        console.warn('云端上下文获取失败，使用本地记忆:', error)
+      }
+    }
+
+    // 回退到本地记忆处理
+    // 这里可以实现本地记忆的上下文生成逻辑
+    return {
+      formattedContext: '本地记忆上下文（待实现）',
+      usedTokens: 0,
+      memoryCount: 0,
+      source: 'local'
+    }
+  }
+
+  /**
+   * 双模式操作：同时更新本地和云端
+   */
+  async updateMemoryBoth(novelId, localUpdateFn, cloudMemoryData) {
+    const results = {
+      local: { success: false, error: null },
+      cloud: { success: false, error: null }
+    }
+
+    // 更新本地记忆
+    try {
+      const localResult = await localUpdateFn()
+      results.local = { success: true, data: localResult }
+    } catch (error) {
+      results.local = { success: false, error: error.message }
+    }
+
+    // 更新云端记忆
+    if (this.cloudSyncEnabled && backendApi.isAuthenticated() && cloudMemoryData) {
+      try {
+        const cloudResult = await this.syncMemoryToCloud(novelId, cloudMemoryData)
+        results.cloud = cloudResult
+      } catch (error) {
+        results.cloud = { success: false, error: error.message }
+      }
+    }
+
+    return results
   }
 }
 

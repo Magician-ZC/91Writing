@@ -6,10 +6,9 @@ import {
   IsInt, 
   Min, 
   Max,
-  IsBoolean,
-  Transform
+  IsBoolean
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { UserRole, UserStatus } from '@prisma/client';
 
 export class QueryUserDto {

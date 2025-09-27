@@ -214,7 +214,6 @@ import {
 import ApiConfig from '@/components/ApiConfig.vue'
 import AnnouncementDialog from '@/components/AnnouncementDialog.vue'
 import { getLatestAnnouncement } from '@/config/announcements.js'
-import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()

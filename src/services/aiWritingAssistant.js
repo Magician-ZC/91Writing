@@ -4,6 +4,7 @@
  */
 
 import { apiService } from './api.js'
+import backendApi from './backendApi.js'
 import analysisService from './analysisService.js'
 import memoryService from './memoryService.js'
 import { useNovelStore } from '@/stores/novel.js'
@@ -14,6 +15,11 @@ class AIWritingAssistant {
     this.currentContext = null
     this.assistantPersonality = 'professional' // professional, creative, analytical
     this.writingSessionId = null
+    
+    // 云端集成配置
+    this.useCloudAssistant = false
+    this.cloudSessionId = null
+    
     this.loadAssistantData()
   }
 
@@ -31,24 +37,69 @@ class AIWritingAssistant {
       userPreferences: options.userPreferences || {}
     }
 
-    // 分析当前写作状态
-    const currentStatus = await this.analyzeWritingStatus()
+    // 检查是否启用云端助手
+    this.useCloudAssistant = backendApi.isAuthenticated() && novelData.id
+
+    let result
     
-    // 生成个性化欢迎消息
+    if (this.useCloudAssistant) {
+      try {
+        // 使用云端助手初始化会话
+        const cloudResult = await backendApi.initializeAssistantSession({
+          novelId: novelData.id,
+          currentChapter: options.currentChapter,
+          writingGoals: options.writingGoals,
+          userPreferences: options.userPreferences
+        })
+
+        if (cloudResult.success) {
+          this.cloudSessionId = cloudResult.data.sessionId
+          result = {
+            sessionId: this.writingSessionId,
+            cloudSessionId: this.cloudSessionId,
+            welcome: cloudResult.data.welcome,
+            status: cloudResult.data.status,
+            suggestions: cloudResult.data.suggestions,
+            source: 'cloud'
+          }
+          
+          // 同步云端会话历史到本地
+          this.addToHistory({
+            type: 'assistant',
+            content: cloudResult.data.welcome,
+            timestamp: new Date().toISOString(),
+            metadata: { 
+              event: 'session_start', 
+              status: cloudResult.data.status,
+              source: 'cloud'
+            }
+          })
+          
+          return result
+        }
+      } catch (error) {
+        console.warn('云端助手初始化失败，回退到本地模式:', error)
+        this.useCloudAssistant = false
+      }
+    }
+
+    // 本地模式初始化
+    const currentStatus = await this.analyzeWritingStatus()
     const welcomeMessage = await this.generateWelcomeMessage(currentStatus)
     
     this.addToHistory({
       type: 'assistant',
       content: welcomeMessage,
       timestamp: new Date().toISOString(),
-      metadata: { event: 'session_start', status: currentStatus }
+      metadata: { event: 'session_start', status: currentStatus, source: 'local' }
     })
 
     return {
       sessionId: this.writingSessionId,
       welcome: welcomeMessage,
       status: currentStatus,
-      suggestions: await this.getInitialSuggestions()
+      suggestions: await this.getInitialSuggestions(),
+      source: 'local'
     }
   }
 
@@ -66,18 +117,54 @@ class AIWritingAssistant {
       context
     })
 
-    // 分析用户意图
+    let response
+
+    // 优先使用云端助手
+    if (this.useCloudAssistant && this.cloudSessionId) {
+      try {
+        const cloudResult = await backendApi.chatWithAssistant({
+          message: userMessage,
+          sessionId: this.cloudSessionId,
+          novelId: this.currentContext?.novel?.id,
+          context
+        })
+
+        if (cloudResult.success) {
+          response = {
+            message: cloudResult.data.message,
+            actions: cloudResult.data.actions || [],
+            metadata: { ...cloudResult.data.metadata, source: 'cloud' }
+          }
+          
+          // 同步云端回应到本地
+          this.addToHistory({
+            type: 'assistant',
+            content: response.message,
+            timestamp: new Date().toISOString(),
+            metadata: response.metadata
+          })
+
+          return response
+        }
+      } catch (error) {
+        console.warn('云端助手对话失败，使用本地处理:', error)
+      }
+    }
+
+    // 本地模式处理
     const intent = await this.analyzeUserIntent(userMessage, context)
-    
-    // 根据意图生成回应
-    const response = await this.generateResponse(intent, userMessage, context)
+    response = await this.generateResponse(intent, userMessage, context)
     
     // 添加助手回应到历史
     this.addToHistory({
       type: 'assistant',
       content: response.message,
       timestamp: new Date().toISOString(),
-      metadata: { intent, actions: response.actions }
+      metadata: { 
+        intent, 
+        actions: response.actions,
+        source: 'local'
+      }
     })
 
     return response

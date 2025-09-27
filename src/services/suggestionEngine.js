@@ -4,11 +4,15 @@
  */
 
 import analysisService from './analysisService.js'
+import backendApi from './backendApi.js'
 
 class SuggestionEngine {
   constructor() {
     this.suggestionTemplates = this.initializeSuggestionTemplates()
     this.userInteractions = this.loadUserInteractions()
+    
+    // 云端建议配置
+    this.useCloudSuggestions = false
   }
 
   /**
