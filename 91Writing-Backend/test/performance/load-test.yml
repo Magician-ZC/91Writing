@@ -1,0 +1,280 @@
+config:
+  target: 'http://localhost:3003'
+  phases:
+    # 热身阶段：逐渐增加负载
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up phase"
+    
+    # 正常负载测试：模拟正常用户访问
+    - duration: 300
+      arrivalRate: 10
+      name: "Normal load phase"
+    
+    # 峰值负载测试：模拟高峰期访问
+    - duration: 120
+      arrivalRate: 25
+      name: "Peak load phase"
+    
+    # 稳定性测试：长时间稳定负载
+    - duration: 600
+      arrivalRate: 15
+      name: "Stability test phase"
+
+  # 全局默认值
+  defaults:
+    headers:
+      Authorization: 'Bearer mock-jwt-token'
+      Content-Type: 'application/json'
+
+  # 性能指标阈值
+  ensure:
+    # 99%的请求响应时间小于1秒
+    p99: 1000
+    # 平均响应时间小于500ms
+    mean: 500
+    # 错误率小于1%
+    maxErrorRate: 1
+
+  # 插件配置
+  plugins:
+    metrics-by-endpoint: {}
+    publish-metrics:
+      - type: statsd
+        host: localhost
+        port: 8125
+
+# 测试场景
+scenarios:
+  # 小说管理操作流程
+  - name: "Novel Management Flow"
+    weight: 40
+    flow:
+      # 获取小说列表
+      - get:
+          url: "/novels"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data.novels"
+          capture:
+            - json: "$.data.novels[0].id"
+              as: "novelId"
+      
+      # 创建新小说
+      - post:
+          url: "/novels"
+          json:
+            title: "性能测试小说 - {{ $randomString() }}"
+            description: "用于负载测试的小说描述，包含一些基本的内容信息。"
+            genre: "{{ $randomPick(['奇幻', '科幻', '悬疑', '爱情', '历史']) }}"
+            status: "DRAFT"
+            settings:
+              characters:
+                - name: "主角{{ $randomInt(1, 100) }}"
+                  personality: "勇敢、聪明"
+                  abilities: ["魔法", "剑术"]
+              worldview:
+                setting: "奇幻世界"
+                technology_level: "中世纪"
+          expect:
+            - statusCode: 201
+            - hasProperty: "data.id"
+          capture:
+            - json: "$.data.id"
+              as: "newNovelId"
+      
+      # 获取新创建小说的详情
+      - get:
+          url: "/novels/{{ newNovelId }}"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data.title"
+      
+      # 更新小说信息
+      - patch:
+          url: "/novels/{{ newNovelId }}"
+          json:
+            title: "更新后的小说标题 - {{ $randomString() }}"
+            status: "WRITING"
+          expect:
+            - statusCode: 200
+      
+      # 获取小说设置
+      - get:
+          url: "/novels/{{ newNovelId }}/settings"
+          expect:
+            - statusCode: 200
+
+  # 章节管理操作流程
+  - name: "Chapter Management Flow"
+    weight: 35
+    flow:
+      # 先获取一个小说ID
+      - get:
+          url: "/novels"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.data.novels[0].id"
+              as: "novelId"
+      
+      # 如果没有小说，创建一个
+      - post:
+          url: "/novels"
+          json:
+            title: "章节测试小说 - {{ $randomString() }}"
+            description: "用于章节功能测试的小说"
+            genre: "奇幻"
+          ifTrue: "{{ novelId === null }}"
+          capture:
+            - json: "$.data.id"
+              as: "novelId"
+      
+      # 获取章节列表
+      - get:
+          url: "/novels/{{ novelId }}/chapters"
+          expect:
+            - statusCode: 200
+      
+      # 创建新章节
+      - post:
+          url: "/novels/{{ novelId }}/chapters"
+          json:
+            title: "第{{ $randomInt(1, 100) }}章：新的冒险"
+            content: |
+              这是一个性能测试章节的内容。包含了足够的文本来模拟真实的章节内容。
+              
+              故事在这里展开，主角面临着新的挑战和机遇。通过不断的努力和学习，
+              他们逐渐成长为更强大的存在。
+              
+              这个章节的内容需要足够长，以便测试系统处理大文本的能力。
+              我们会添加更多的段落来增加内容的长度和复杂性。
+              
+              在这个魔法世界中，每个角色都有自己独特的能力和背景故事。
+              他们的冒险充满了惊险和刺激，同时也有深刻的情感和成长。
+            chapterNumber: "{{ $randomInt(1, 1000) }}"
+            status: "DRAFT"
+          expect:
+            - statusCode: 201
+          capture:
+            - json: "$.data.id"
+              as: "chapterId"
+      
+      # 获取章节详情
+      - get:
+          url: "/novels/{{ novelId }}/chapters/{{ chapterId }}"
+          expect:
+            - statusCode: 200
+      
+      # 更新章节内容
+      - patch:
+          url: "/novels/{{ novelId }}/chapters/{{ chapterId }}/content"
+          json:
+            content: |
+              这是更新后的章节内容，包含了更多的细节和情节发展。
+              
+              更新后的内容展现了更加丰富的世界观和角色发展。
+              每个细节都经过精心设计，为读者提供沉浸式的阅读体验。
+          expect:
+            - statusCode: 200
+
+  # 记忆系统操作流程
+  - name: "Memory Management Flow"
+    weight: 20
+    flow:
+      # 获取小说ID
+      - get:
+          url: "/novels"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.data.novels[0].id"
+              as: "novelId"
+      
+      # 创建核心记忆
+      - post:
+          url: "/novels/{{ novelId }}/memories"
+          json:
+            memoryType: "CORE"
+            content:
+              type: "character_profile"
+              character: "性能测试角色{{ $randomInt(1, 100) }}"
+              details:
+                name: "测试角色{{ $randomInt(1, 100) }}"
+                age: "{{ $randomInt(16, 30) }}"
+                personality: "勇敢、聪明、好奇"
+                background: "来自普通家庭的年轻人，拥有特殊的能力"
+                abilities: ["{{ $randomPick(['火魔法', '水魔法', '风魔法', '土魔法']) }}", "剑术", "治愈术"]
+                goals: ["成为强大的魔法师", "保护重要的人", "探索世界的秘密"]
+            importance: "{{ $randomFloat(0.7, 1.0) }}"
+            tokenCost: "{{ $randomInt(100, 200) }}"
+            chapterRange: "1-{{ $randomInt(3, 10) }}"
+          expect:
+            - statusCode: 201
+          capture:
+            - json: "$.data.id"
+              as: "memoryId"
+      
+      # 创建情节摘要记忆
+      - post:
+          url: "/novels/{{ novelId }}/memories"
+          json:
+            memoryType: "SUMMARY"
+            content:
+              type: "plot_summary"
+              chapters: "1-{{ $randomInt(2, 5) }}"
+              summary: "性能测试的情节摘要，描述了故事的主要发展和关键事件。"
+              key_events:
+                - "故事开始"
+                - "主角觉醒能力"
+                - "遇到导师"
+                - "面临第一个挑战"
+              character_development: "主角从懵懂少年成长为有责任感的冒险者"
+            importance: "{{ $randomFloat(0.6, 0.8) }}"
+            tokenCost: "{{ $randomInt(80, 150) }}"
+          expect:
+            - statusCode: 201
+      
+      # 获取记忆列表
+      - get:
+          url: "/novels/{{ novelId }}/memories"
+          expect:
+            - statusCode: 200
+            - hasProperty: "data"
+
+  # 只读操作测试（高频访问）
+  - name: "Read Only Operations"
+    weight: 5
+    flow:
+      # 获取小说列表（带筛选）
+      - get:
+          url: "/novels"
+          qs:
+            status: "{{ $randomPick(['DRAFT', 'WRITING', 'COMPLETED']) }}"
+            page: "{{ $randomInt(1, 3) }}"
+            limit: "{{ $randomInt(10, 20) }}"
+          expect:
+            - statusCode: 200
+      
+      # 按类型筛选小说
+      - get:
+          url: "/novels"
+          qs:
+            genre: "{{ $randomPick(['奇幻', '科幻', '悬疑']) }}"
+          expect:
+            - statusCode: 200
+      
+      # 获取随机小说详情
+      - get:
+          url: "/novels"
+          expect:
+            - statusCode: 200
+          capture:
+            - json: "$.data.novels[{{ $randomInt(0, 2) }}].id"
+              as: "randomNovelId"
+      
+      - get:
+          url: "/novels/{{ randomNovelId }}"
+          expect:
+            - statusCode: 200
+          ifTrue: "{{ randomNovelId !== undefined }}"

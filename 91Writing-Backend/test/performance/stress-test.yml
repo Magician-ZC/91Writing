@@ -1,0 +1,92 @@
+config:
+  target: 'http://localhost:3003'
+  phases:
+    # 极限压力测试：快速增加到高并发
+    - duration: 60
+      arrivalRate: 50
+      rampTo: 100
+      name: "Ramp up to extreme load"
+    
+    # 极限负载维持：维持高并发一段时间
+    - duration: 300
+      arrivalRate: 100
+      name: "Extreme load sustained"
+    
+    # 突发负载：模拟突发访问
+    - duration: 30
+      arrivalRate: 200
+      name: "Spike test"
+    
+    # 恢复阶段：逐渐降低负载
+    - duration: 120
+      arrivalRate: 100
+      rampTo: 10
+      name: "Cool down phase"
+
+  defaults:
+    headers:
+      Authorization: 'Bearer mock-jwt-token'
+      Content-Type: 'application/json'
+
+  # 压力测试的性能指标阈值（更宽松）
+  ensure:
+    # 99%的请求响应时间小于3秒
+    p99: 3000
+    # 95%的请求响应时间小于2秒
+    p95: 2000
+    # 平均响应时间小于1.5秒
+    mean: 1500
+    # 错误率小于5%（压力测试允许更高错误率）
+    maxErrorRate: 5
+
+scenarios:
+  # 简化的读操作压力测试
+  - name: "Read Heavy Load"
+    weight: 60
+    flow:
+      - get:
+          url: "/novels"
+          qs:
+            page: "{{ $randomInt(1, 5) }}"
+            limit: "10"
+      
+      - think: 1
+      
+      - get:
+          url: "/novels"
+          qs:
+            status: "{{ $randomPick(['DRAFT', 'WRITING']) }}"
+
+  # 写操作压力测试
+  - name: "Write Heavy Load"
+    weight: 30
+    flow:
+      - post:
+          url: "/novels"
+          json:
+            title: "压力测试小说{{ $randomInt(1, 10000) }}"
+            description: "压力测试描述"
+            genre: "{{ $randomPick(['奇幻', '科幻']) }}"
+          capture:
+            - json: "$.data.id"
+              as: "novelId"
+      
+      - post:
+          url: "/novels/{{ novelId }}/chapters"
+          json:
+            title: "压力测试章节"
+            content: "简短的压力测试内容"
+            chapterNumber: 1
+          ifTrue: "{{ novelId !== undefined }}"
+
+  # 数据库密集操作
+  - name: "Database Intensive"
+    weight: 10
+    flow:
+      - get:
+          url: "/novels"
+          qs:
+            genre: "奇幻"
+            status: "DRAFT"
+            page: 1
+            limit: 50

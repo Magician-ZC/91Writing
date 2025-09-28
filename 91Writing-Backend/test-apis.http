@@ -1,0 +1,338 @@
+### 91Writing API 接口测试
+### Week 3.1 数据模型 API 测试
+
+# 1. 认证测试 - 先获取Token
+POST http://localhost:3002/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "123456"
+}
+
+### 保存响应的token到变量中
+@authToken = {{login.response.body.data.token}}
+
+### ===== 小说管理接口测试 =====
+
+# 2. 创建小说
+POST http://localhost:3003/novels
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "测试小说标题",
+  "description": "这是一本测试小说的描述，用于验证数据模型的正确性。",
+  "genre": "奇幻",
+  "status": "DRAFT",
+  "settings": {
+    "characters": [
+      {
+        "name": "艾莉亚",
+        "age": 18,
+        "personality": "勇敢、聪明、有点倔强",
+        "background": "来自北方的战士",
+        "skills": ["剑术", "魔法"]
+      },
+      {
+        "name": "萨姆",
+        "age": 25,
+        "personality": "忠诚、幽默",
+        "background": "艾莉亚的伙伴",
+        "skills": ["弓箭", "追踪"]
+      }
+    ],
+    "worldview": {
+      "setting": "中世纪奇幻世界",
+      "kingdoms": ["北方王国", "南方帝国"],
+      "magic": {
+        "exists": true,
+        "types": ["元素魔法", "治愈魔法", "黑暗魔法"]
+      },
+      "geography": {
+        "continents": ["阿尔卑斯大陆"],
+        "important_cities": ["王都", "魔法学院", "边境要塞"]
+      }
+    },
+    "plot_outline": {
+      "act1": "艾莉亚发现自己的魔法天赋",
+      "act2": "与萨姆一起踏上冒险之旅",
+      "act3": "面对最终的黑暗势力"
+    }
+  }
+}
+
+### 保存小说ID
+@novelId = {{创建小说.response.body.id}}
+
+# 3. 获取小说列表
+GET http://localhost:3003/novels
+Authorization: Bearer {{authToken}}
+
+# 4. 按状态筛选小说
+GET http://localhost:3003/novels?status=DRAFT&page=1&limit=10
+Authorization: Bearer {{authToken}}
+
+# 5. 按类型筛选小说
+GET http://localhost:3003/novels?genre=奇幻
+Authorization: Bearer {{authToken}}
+
+# 6. 获取单个小说详情
+GET http://localhost:3003/novels/{{novelId}}
+Authorization: Bearer {{authToken}}
+
+# 7. 更新小说信息
+PATCH http://localhost:3003/novels/{{novelId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "更新后的小说标题",
+  "description": "更新后的描述信息",
+  "status": "WRITING"
+}
+
+# 8. 获取小说设置
+GET http://localhost:3003/novels/{{novelId}}/settings
+Authorization: Bearer {{authToken}}
+
+# 9. 更新小说设置
+PATCH http://localhost:3003/novels/{{novelId}}/settings
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "characters": [
+    {
+      "name": "艾莉亚",
+      "age": 19,
+      "personality": "勇敢、聪明、更加成熟",
+      "background": "来自北方的战士，现在是魔法学徒",
+      "skills": ["剑术", "火系魔法", "治愈术"],
+      "relationships": [
+        {
+          "character": "萨姆",
+          "type": "伙伴",
+          "description": "信任的冒险伙伴"
+        }
+      ]
+    }
+  ],
+  "current_chapter_notes": "主角开始学习新的魔法技能"
+}
+
+### ===== 章节管理接口测试 =====
+
+# 10. 创建第一章
+POST http://localhost:3003/novels/{{novelId}}/chapters
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "第一章：觉醒",
+  "content": "夜幕降临，艾莉亚站在悬崖边缘，感受着体内涌动的神秘力量。这股力量从她十八岁生日那天开始出现，如今已经无法控制。\n\n\"这到底是什么？\"她喃喃自语，看着自己发光的双手。\n\n突然，身后传来脚步声。萨姆出现在她身后，脸上带着担忧的表情。\n\n\"艾莉亚，你又在这里。村长说你三天没回村了。\"\n\n艾莉亚转过身，眼中闪烁着不寻常的光芒。\"萨姆，我觉得我变了。我能感受到周围所有生物的气息，甚至能听到风在说话。\"\n\n萨姆皱起眉头，\"这听起来像是魔法。但是我们村里从来没有出现过魔法师...\"\n\n\"也许是时候去魔法学院寻找答案了。\"艾莉亚下定决心说道。",
+  "chapterNumber": 1,
+  "wordCount": 238
+}
+
+### 保存章节ID
+@chapterId1 = {{创建第一章.response.body.id}}
+
+# 11. 创建第二章
+POST http://localhost:3003/novels/{{novelId}}/chapters
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "第二章：启程",
+  "content": "清晨，艾莉亚和萨姆准备踏上前往魔法学院的旅程。村长为他们准备了干粮和基本的旅行用品。\n\n\"孩子，路上小心。\"村长拍了拍艾莉亚的肩膀，\"如果你真的有魔法天赋，那就是神的恩赐。但记住，力量越大，责任越大。\"\n\n艾莉亚点点头，收拾好行囊。萨姆检查着他的弓箭和匕首，\"准备好了吗？\"\n\n\"嗯，我们走吧。\"\n\n两人踏出村庄的边界，开始了他们的冒险之旅。前方的路虽然充满未知，但艾莉亚心中燃烧着寻找真相的决心。\n\n走了几个小时后，他们遇到了一群强盗。\"站住！把值钱的东西都交出来！\"强盗头目挥舞着生锈的剑。\n\n这时，艾莉亚感到体内的力量再次涌动...",
+  "chapterNumber": 2,
+  "wordCount": 267
+}
+
+### 保存章节ID
+@chapterId2 = {{创建第二章.response.body.id}}
+
+# 12. 获取小说的所有章节
+GET http://localhost:3003/novels/{{novelId}}/chapters
+Authorization: Bearer {{authToken}}
+
+# 13. 获取单个章节详情
+GET http://localhost:3003/novels/{{novelId}}/chapters/{{chapterId1}}
+Authorization: Bearer {{authToken}}
+
+# 14. 获取章节内容
+GET http://localhost:3003/novels/{{novelId}}/chapters/{{chapterId1}}/content
+Authorization: Bearer {{authToken}}
+
+# 15. 更新章节内容
+PATCH http://localhost:3003/novels/{{novelId}}/chapters/{{chapterId1}}/content
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "content": "夜幕降临，艾莉亚站在悬崖边缘，感受着体内涌动的神秘力量。这股力量从她十八岁生日那天开始出现，如今已经愈发强烈。\n\n\"这到底是什么？\"她喃喃自语，看着自己发光的双手。光芒呈现淡蓝色，温暖而纯净。\n\n突然，身后传来熟悉的脚步声。萨姆出现在她身后，脸上带着担忧的表情。他们从小一起长大，萨姆总是能在她最需要的时候出现。\n\n\"艾莉亚，你又在这里。村长说你三天没回村了，大家都很担心你。\"\n\n艾莉亚转过身，眼中闪烁着不寻常的光芒。\"萨姆，我觉得我变了。我能感受到周围所有生物的气息，甚至能听到风在诉说古老的秘密。这种感觉既美妙又可怕。\"\n\n萨姆皱起眉头，仔细观察着她的变化。\"这听起来像是魔法。但是我们村里从来没有出现过魔法师，甚至连传说都很少提及...\"\n\n\"也许是时候去魔法学院寻找答案了。\"艾莉亚下定决心说道，\"我不能再这样困惑下去，我需要知道自己是谁，这力量意味着什么。\""
+}
+
+# 16. 更新章节信息
+PATCH http://localhost:3003/novels/{{novelId}}/chapters/{{chapterId1}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "第一章：觉醒之夜",
+  "wordCount": 456,
+  "status": "PUBLISHED"
+}
+
+# 17. 批量更新章节状态
+PATCH http://localhost:3003/novels/{{novelId}}/chapters/status
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "chapterIds": ["{{chapterId1}}", "{{chapterId2}}"],
+  "status": "PUBLISHED"
+}
+
+# 18. 章节重新排序
+PATCH http://localhost:3003/novels/{{novelId}}/chapters/reorder
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "chapterOrders": [
+    {
+      "id": "{{chapterId1}}",
+      "chapterNumber": 1
+    },
+    {
+      "id": "{{chapterId2}}",
+      "chapterNumber": 2
+    }
+  ]
+}
+
+### ===== 记忆系统接口测试 =====
+
+# 19. 创建核心记忆
+POST http://localhost:3003/novels/{{novelId}}/memories
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "memoryType": "CORE",
+  "content": {
+    "type": "character_profile",
+    "character": "艾莉亚",
+    "details": {
+      "name": "艾莉亚·晨光",
+      "age": 18,
+      "appearance": "长发飘逸，眼神坚定，身材修长",
+      "personality": "勇敢、好奇、有强烈的正义感",
+      "abilities": ["火系魔法觉醒", "敏锐的直觉", "天生的领导力"],
+      "background": "北方小村庄的普通少女，在18岁生日时觉醒了魔法能力",
+      "goals": ["掌握自己的魔法力量", "保护村民", "寻找生命的真相"],
+      "relationships": {
+        "萨姆": "青梅竹马，最信任的伙伴",
+        "村长": "如父亲般的长辈"
+      }
+    }
+  },
+  "importance": 0.95,
+  "tokenCost": 150,
+  "chapterRange": "1-2"
+}
+
+# 20. 创建情节摘要记忆
+POST http://localhost:3003/novels/{{novelId}}/memories
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "memoryType": "SUMMARY",
+  "content": {
+    "type": "plot_summary",
+    "chapters": "1-2",
+    "summary": "艾莉亚在18岁生日后觉醒了神秘的魔法力量，在好友萨姆的陪伴下决定前往魔法学院寻找答案。途中遇到强盗，准备首次使用魔法战斗。",
+    "key_events": [
+      "艾莉亚魔法觉醒",
+      "与萨姆商量去魔法学院",
+      "离开村庄开始冒险",
+      "遇到强盗危机"
+    ],
+    "character_development": "艾莉亚从困惑到决心寻找真相的转变"
+  },
+  "importance": 0.8,
+  "tokenCost": 120,
+  "chapterRange": "1-2"
+}
+
+# 21. 创建上下文记忆
+POST http://localhost:3003/novels/{{novelId}}/memories
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "memoryType": "CONTEXT",
+  "content": {
+    "type": "world_building",
+    "location": "北方村庄",
+    "description": "一个宁静的小村庄，位于王国北部边境，很少有魔法师出现",
+    "atmosphere": "淳朴、安全、与世隔绝",
+    "important_places": [
+      "悬崖边：艾莉亚经常思考的地方",
+      "村长家：村子的中心",
+      "通往魔法学院的路：冒险的起点"
+    ],
+    "cultural_notes": "村民对魔法既好奇又畏惧，认为是神的恩赐"
+  },
+  "importance": 0.6,
+  "tokenCost": 80,
+  "chapterRange": "1"
+}
+
+# 22. 获取小说的所有记忆
+GET http://localhost:3003/novels/{{novelId}}/memories
+Authorization: Bearer {{authToken}}
+
+# 23. 按重要性排序获取记忆
+GET http://localhost:3003/novels/{{novelId}}/memories?sortBy=importance&order=desc
+Authorization: Bearer {{authToken}}
+
+### ===== 统计和管理功能测试 =====
+
+# 24. 更新小说统计信息
+POST http://localhost:3003/novels/{{novelId}}/stats/update
+Authorization: Bearer {{authToken}}
+
+# 25. 删除章节
+DELETE http://localhost:3003/novels/{{novelId}}/chapters/{{chapterId2}}
+Authorization: Bearer {{authToken}}
+
+# 26. 删除小说（会级联删除所有章节和记忆）
+DELETE http://localhost:3003/novels/{{novelId}}
+Authorization: Bearer {{authToken}}
+
+### ===== 错误测试 =====
+
+# 27. 测试未授权访问
+GET http://localhost:3003/novels
+
+# 28. 测试访问不存在的小说
+GET http://localhost:3003/novels/non-existent-id
+Authorization: Bearer {{authToken}}
+
+# 29. 测试无效数据创建
+POST http://localhost:3003/novels
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "title": "",
+  "description": "x".repeat(10000)
+}
+
+# 30. 测试跨用户访问（应该被拒绝）
+GET http://localhost:3003/novels/other-user-novel-id
+Authorization: Bearer {{authToken}}
