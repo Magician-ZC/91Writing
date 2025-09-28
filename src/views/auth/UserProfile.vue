@@ -86,13 +86,13 @@
             </el-form-item>
 
             <el-form-item label="用户角色">
-              <el-tag :type="getRoleType(userInfo.role)">
+              <el-tag :type="getRoleType(userInfo.role) || 'info'">
                 {{ getRoleText(userInfo.role) }}
               </el-tag>
             </el-form-item>
 
             <el-form-item label="账户状态">
-              <el-tag :type="getStatusType(userInfo.status)">
+              <el-tag :type="getStatusType(userInfo.status) || 'info'">
                 {{ getStatusText(userInfo.status) }}
               </el-tag>
             </el-form-item>
@@ -191,6 +191,129 @@
       </el-form>
     </el-card>
 
+    <!-- 邀请码管理卡片 -->
+    <el-card class="invite-card">
+      <template #header>
+        <div class="card-header">
+          <h3>邀请码管理</h3>
+          <el-button 
+            type="primary" 
+            size="small" 
+            @click="refreshInviteData"
+            :loading="inviteLoading"
+          >
+            刷新数据
+          </el-button>
+        </div>
+      </template>
+
+      <div class="invite-content">
+        <!-- 我的邀请码 -->
+        <div class="invite-code-section">
+          <h4>我的专属邀请码</h4>
+          <div class="invite-code-display">
+            <div class="code-box">
+              <span class="invite-code">{{ inviteInfo.inviteCode || '加载中...' }}</span>
+              <el-button 
+                type="primary" 
+                size="small"
+                :icon="CopyDocument"
+                @click="copyInviteCode"
+              >
+                复制邀请码
+              </el-button>
+            </div>
+            <div class="share-link">
+              <el-input 
+                v-model="shareUrl" 
+                readonly 
+                size="small"
+                placeholder="邀请链接生成中..."
+              >
+                <template #suffix>
+                  <el-button 
+                    type="text" 
+                    size="small"
+                    :icon="Link"
+                    @click="copyShareLink"
+                  >
+                    复制链接
+                  </el-button>
+                </template>
+              </el-input>
+            </div>
+          </div>
+        </div>
+
+        <!-- 邀请统计 -->
+        <div class="invite-stats-section">
+          <h4>邀请统计</h4>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-number">{{ inviteStats.totalInvites || 0 }}</div>
+              <div class="stat-label">总邀请人数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ inviteStats.successfulInvites || 0 }}</div>
+              <div class="stat-label">成功注册</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ inviteStats.totalRewards || 0 }}</div>
+              <div class="stat-label">累计奖励</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">{{ inviteStats.pendingRewards || 0 }}</div>
+              <div class="stat-label">待领取奖励</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 邀请的用户列表 -->
+        <div class="invitees-section">
+          <div class="section-header">
+            <h4>邀请的用户</h4>
+            <el-button 
+              type="text" 
+              size="small"
+              @click="showInviteesDialog = true"
+            >
+              查看全部
+            </el-button>
+          </div>
+          
+          <div v-if="!Array.isArray(invitees) || invitees.length === 0" class="empty-state">
+            <el-empty description="暂无邀请用户" :image-size="80" />
+          </div>
+          
+          <div v-else class="invitees-preview">
+            <div 
+              v-for="invitee in (Array.isArray(invitees) ? invitees.slice(0, 3) : [])" 
+              :key="invitee.id"
+              class="invitee-item"
+            >
+              <el-avatar :size="32" :src="invitee.avatar">
+                <el-icon><UserFilled /></el-icon>
+              </el-avatar>
+              <div class="invitee-info">
+                <div class="invitee-name">{{ invitee.nickname || invitee.email }}</div>
+                <div class="invitee-date">{{ formatDate(invitee.registeredAt) }}</div>
+              </div>
+              <el-tag 
+                :type="invitee.status === 'ACTIVE' ? 'success' : 'warning'"
+                size="small"
+              >
+                {{ invitee.status === 'ACTIVE' ? '已激活' : '未激活' }}
+              </el-tag>
+            </div>
+            
+            <div v-if="Array.isArray(invitees) && invitees.length > 3" class="more-indicator">
+              还有 {{ invitees.length - 3 }} 个用户...
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-card>
+
     <!-- 订阅信息卡片 -->
     <el-card v-if="subscription" class="subscription-card">
       <template #header>
@@ -221,6 +344,59 @@
         </el-descriptions>
       </div>
     </el-card>
+
+    <!-- 邀请用户详情对话框 -->
+    <el-dialog
+      v-model="showInviteesDialog"
+      title="邀请用户详情"
+      width="600px"
+    >
+      <div class="invitees-dialog">
+        <div class="dialog-stats">
+          <el-descriptions :column="3" size="small">
+            <el-descriptions-item label="总邀请数">{{ invitees.length }}</el-descriptions-item>
+            <el-descriptions-item label="成功注册">
+              {{ invitees.filter(i => i.status === 'ACTIVE').length }}
+            </el-descriptions-item>
+            <el-descriptions-item label="待激活">
+              {{ invitees.filter(i => i.status !== 'ACTIVE').length }}
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <div class="invitees-list">
+          <div 
+            v-for="invitee in invitees" 
+            :key="invitee.id"
+            class="invitee-detail-item"
+          >
+            <el-avatar :size="40" :src="invitee.avatar">
+              <el-icon><UserFilled /></el-icon>
+            </el-avatar>
+            <div class="invitee-detail-info">
+              <div class="invitee-name">{{ invitee.nickname || invitee.email }}</div>
+              <div class="invitee-email">{{ invitee.email }}</div>
+              <div class="invitee-date">注册时间：{{ formatDate(invitee.registeredAt) }}</div>
+            </div>
+            <div class="invitee-status">
+              <el-tag 
+                :type="invitee.status === 'ACTIVE' ? 'success' : 'warning'"
+              >
+                {{ invitee.status === 'ACTIVE' ? '已激活' : '未激活' }}
+              </el-tag>
+              <div v-if="invitee.rewardStatus" class="reward-status">
+                <el-tag 
+                  :type="invitee.rewardStatus === 'GRANTED' ? 'success' : 'info'"
+                  size="small"
+                >
+                  {{ invitee.rewardStatus === 'GRANTED' ? '已获得奖励' : '待发放奖励' }}
+                </el-tag>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -228,8 +404,9 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
 import { ElMessage } from 'element-plus'
-import { UserFilled, Camera } from '@element-plus/icons-vue'
+import { UserFilled, Camera, CopyDocument, Link } from '@element-plus/icons-vue'
 import { validatePassword } from '@/services/authService'
+import inviteService from '@/services/inviteService'
 
 // 状态管理
 const authStore = useAuthStore()
@@ -266,6 +443,31 @@ const passwordForm = reactive({
 
 // 订阅信息
 const subscription = computed(() => authStore.subscription)
+
+// 邀请码相关数据
+const inviteLoading = ref(false)
+const showInviteesDialog = ref(false)
+
+const inviteInfo = reactive({
+  inviteCode: '',
+  inviteCount: 0,
+  shareUrl: ''
+})
+
+const inviteStats = reactive({
+  totalInvites: 0,
+  successfulInvites: 0,
+  totalRewards: 0,
+  pendingRewards: 0
+})
+
+const invitees = ref([])
+const shareUrl = computed(() => {
+  if (inviteInfo.inviteCode) {
+    return `${window.location.origin}/#/register?invite=${inviteInfo.inviteCode}`
+  }
+  return ''
+})
 
 // 上传配置
 const uploadUrl = ref(`${import.meta.env.VITE_API_BASE_URL}/api/upload/avatar`)
@@ -524,9 +726,78 @@ const handleAvatarSuccess = (response) => {
   }
 }
 
+// 邀请码相关方法
+const loadInviteData = async () => {
+  inviteLoading.value = true
+  try {
+    // 并行获取邀请码相关数据
+    const [codeResult, statsResult, inviteesResult] = await Promise.all([
+      inviteService.getMyInviteCode(),
+      inviteService.getInviteStats(),
+      inviteService.getInvitees()
+    ])
+
+    // 处理邀请码信息
+    if (codeResult.success) {
+      Object.assign(inviteInfo, codeResult.data)
+    }
+
+    // 处理邀请统计
+    if (statsResult.success) {
+      Object.assign(inviteStats, statsResult.data)
+    }
+
+  // 处理邀请用户列表
+  if (inviteesResult.success) {
+    invitees.value = Array.isArray(inviteesResult.data) ? inviteesResult.data : []
+  } else {
+    invitees.value = []
+  }
+  } catch (error) {
+    console.error('加载邀请数据失败:', error)
+    ElMessage.error('加载邀请数据失败')
+  } finally {
+    inviteLoading.value = false
+  }
+}
+
+const refreshInviteData = async () => {
+  await loadInviteData()
+  ElMessage.success('邀请数据已刷新')
+}
+
+const copyInviteCode = async () => {
+  if (!inviteInfo.inviteCode) {
+    ElMessage.warning('邀请码还未加载完成')
+    return
+  }
+  
+  const result = await inviteService.copyInviteLink(inviteInfo.inviteCode)
+  if (result.success) {
+    ElMessage.success(result.message)
+  } else {
+    ElMessage.error(result.message)
+  }
+}
+
+const copyShareLink = async () => {
+  if (!shareUrl.value) {
+    ElMessage.warning('分享链接还未生成')
+    return
+  }
+  
+  const result = await inviteService.copyInviteLink(inviteInfo.inviteCode)
+  if (result.success) {
+    ElMessage.success('分享链接已复制到剪贴板')
+  } else {
+    ElMessage.error(result.message)
+  }
+}
+
 // 组件挂载时
 onMounted(() => {
   loadUserInfo()
+  loadInviteData()
 })
 </script>
 
@@ -641,6 +912,196 @@ onMounted(() => {
   padding: 16px 0;
 }
 
+/* 邀请码相关样式 */
+.invite-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.invite-content h4 {
+  margin: 0 0 12px 0;
+  color: #303133;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 邀请码展示 */
+.invite-code-section {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.invite-code-display {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.code-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.invite-code {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c5aa0;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+}
+
+.share-link {
+  margin-top: 8px;
+}
+
+/* 统计网格 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 16px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c5aa0;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.3;
+}
+
+/* 邀请用户列表 */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.invitees-preview {
+  margin-top: 12px;
+}
+
+.invitee-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.invitee-info {
+  flex: 1;
+}
+
+.invitee-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #303133;
+  margin-bottom: 2px;
+}
+
+.invitee-date {
+  font-size: 12px;
+  color: #909399;
+}
+
+.more-indicator {
+  text-align: center;
+  padding: 8px;
+  font-size: 12px;
+  color: #909399;
+  background: #f5f7fa;
+  border-radius: 4px;
+  margin-top: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 24px 12px;
+}
+
+/* 对话框样式 */
+.invitees-dialog {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.dialog-stats {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.invitees-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invitee-detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.invitee-detail-info {
+  flex: 1;
+}
+
+.invitee-detail-info .invitee-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.invitee-email {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.invitee-detail-info .invitee-date {
+  font-size: 12px;
+  color: #999;
+}
+
+.invitee-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.reward-status {
+  margin-top: 4px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .user-profile-container {
@@ -660,6 +1121,34 @@ onMounted(() => {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .code-box {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .invitee-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .invitee-detail-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .invitee-status {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 }
 </style>

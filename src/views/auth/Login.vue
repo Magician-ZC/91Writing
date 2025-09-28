@@ -145,7 +145,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -226,9 +226,20 @@ const handleLogin = async () => {
     const result = await authStore.login(loginForm)
     
     if (result.success) {
-      // 登录成功，重定向到目标页面或首页
-      const redirect = route.query.redirect || '/'
-      router.push(redirect)
+      // 登录成功，延迟跳转确保状态更新完成
+      await nextTick()
+      
+      const redirect = route.query.redirect || '/home'
+      console.log('登录成功，准备跳转到:', redirect)
+      
+      try {
+        await router.push(redirect)
+        console.log('路由跳转完成')
+      } catch (routeError) {
+        console.error('路由跳转失败:', routeError)
+        // 回退到首页
+        await router.push('/home')
+      }
     }
   } catch (error) {
     console.error('登录失败:', error)
@@ -250,8 +261,8 @@ const handleDemoLogin = async () => {
     
     if (confirmed) {
       // 使用预设的演示账户
-      loginForm.email = 'demo@91writing.com'
-      loginForm.password = 'Demo123456'
+      loginForm.email = 'test@91writing.com'
+      loginForm.password = 'password123'
       loginForm.rememberMe = false
       
       await handleLogin()
@@ -288,7 +299,7 @@ const handleForgotPassword = async () => {
 onMounted(() => {
   // 如果已经登录，直接跳转
   if (authStore.isAuthenticated) {
-    const redirect = route.query.redirect || '/'
+    const redirect = route.query.redirect || '/home'
     router.push(redirect)
   }
   

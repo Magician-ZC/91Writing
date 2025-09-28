@@ -210,14 +210,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { Edit, Message, User, Lock, Ticket } from '@element-plus/icons-vue'
 import { validateEmail, validatePassword } from '@/services/authService'
 
 // 路由和状态管理
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 // 响应式数据
@@ -278,7 +279,7 @@ const registerRules = {
       validator: (rule, value, callback) => {
         const validation = validatePassword(value)
         if (!validation.isValid) {
-          callback(new Error('密码必须包含大小写字母和数字'))
+          callback(new Error('密码必须包含字母和数字'))
         } else {
           callback()
         }
@@ -350,7 +351,9 @@ const handleRegister = async () => {
     const valid = await registerFormRef.value.validate()
     if (!valid) return
     
-    const result = await authStore.register(registerForm)
+    // 移除confirmPassword字段，后端不需要
+    const { confirmPassword, ...registerData } = registerForm
+    const result = await authStore.register(registerData)
     
     if (result.success) {
       // 注册成功，跳转到登录页面
@@ -363,6 +366,15 @@ const handleRegister = async () => {
     console.error('注册失败:', error)
   }
 }
+
+// 组件挂载时初始化邀请码
+onMounted(() => {
+  // 从URL参数中获取邀请码
+  if (route.query.invite) {
+    registerForm.inviteCode = route.query.invite
+    console.log('从URL参数获取到邀请码:', route.query.invite)
+  }
+})
 </script>
 
 <style scoped>

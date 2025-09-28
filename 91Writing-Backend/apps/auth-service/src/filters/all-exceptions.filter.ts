@@ -53,6 +53,30 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const status = exception.getStatus();
       const response = exception.getResponse();
       
+      // 特别处理验证错误
+      if (status === HttpStatus.BAD_REQUEST && typeof response === 'object') {
+        const responseObj = response as any;
+        
+        // 记录详细的验证错误信息
+        this.logger.error(
+          `Validation Error Details:`,
+          JSON.stringify(responseObj, null, 2)
+        );
+        
+        return {
+          success: false,
+          error: {
+            code: status.toString(),
+            message: responseObj.message || 'Validation failed',
+            details: responseObj,
+            timestamp,
+            path,
+            method,
+            requestId,
+          },
+        };
+      }
+      
       return {
         success: false,
         error: {

@@ -1468,8 +1468,8 @@ __decorate([
     (0, class_validator_1.IsString)({ message: '密码必须是字符串' }),
     (0, class_validator_1.MinLength)(8, { message: '密码至少需要8个字符' }),
     (0, class_validator_1.MaxLength)(50, { message: '密码不能超过50个字符' }),
-    (0, class_validator_1.Matches)(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-        message: '密码必须包含大小写字母和数字'
+    (0, class_validator_1.Matches)(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+        message: '密码必须包含字母和数字'
     }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "password", void 0);
@@ -2713,6 +2713,22 @@ let AllExceptionsFilter = AllExceptionsFilter_1 = class AllExceptionsFilter {
         if (exception instanceof common_1.HttpException) {
             const status = exception.getStatus();
             const response = exception.getResponse();
+            if (status === common_1.HttpStatus.BAD_REQUEST && typeof response === 'object') {
+                const responseObj = response;
+                this.logger.error(`Validation Error Details:`, JSON.stringify(responseObj, null, 2));
+                return {
+                    success: false,
+                    error: {
+                        code: status.toString(),
+                        message: responseObj.message || 'Validation failed',
+                        details: responseObj,
+                        timestamp,
+                        path,
+                        method,
+                        requestId,
+                    },
+                };
+            }
             return {
                 success: false,
                 error: {

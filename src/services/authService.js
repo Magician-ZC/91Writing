@@ -69,17 +69,20 @@ authApi.interceptors.response.use(
     
     switch (status) {
       case 400:
-        errorMessage = data?.message || '请求参数错误'
+        errorMessage = data?.message || data?.error?.message || '请求参数错误'
         errorCode = 'BAD_REQUEST'
         break
       case 401:
-        errorMessage = '认证失败，请重新登录'
+        // 优先使用后端返回的具体错误信息
+        errorMessage = data?.message || data?.error?.message || '认证失败，请重新登录'
         errorCode = 'UNAUTHORIZED'
-        // 自动清除认证信息
-        localStorage.removeItem('auth-tokens')
-        localStorage.removeItem('auth-user')
-        sessionStorage.removeItem('auth-tokens')
-        sessionStorage.removeItem('auth-user')
+        // 如果不是登录错误，才清除认证信息
+        if (!data?.message?.includes('密码错误') && !data?.message?.includes('邮箱')) {
+          localStorage.removeItem('auth-tokens')
+          localStorage.removeItem('auth-user')
+          sessionStorage.removeItem('auth-tokens')
+          sessionStorage.removeItem('auth-user')
+        }
         break
       case 403:
         errorMessage = '权限不足'
@@ -246,7 +249,7 @@ export const validatePassword = (password) => {
   const passedChecks = Object.values(checks).filter(Boolean).length
   
   return {
-    isValid: checks.length && checks.uppercase && checks.lowercase && checks.number,
+    isValid: checks.length && (checks.uppercase || checks.lowercase) && checks.number,
     strength: passedChecks >= 4 ? 'strong' : passedChecks >= 3 ? 'medium' : 'weak',
     checks,
   }

@@ -30,8 +30,8 @@ export class RegisterDto {
   @IsString({ message: '密码必须是字符串' })
   @MinLength(8, { message: '密码至少需要8个字符' })
   @MaxLength(50, { message: '密码不能超过50个字符' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
-    message: '密码必须包含大小写字母和数字'
+  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+    message: '密码必须包含字母和数字'
   })
   password: string;
 

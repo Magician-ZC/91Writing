@@ -276,7 +276,7 @@
 
 - [ ] **Task 1.7.2**: 会员权限控制中间件
 - [ ] **Task 1.7.3**: 套餐选择界面开发
-- [ ] **Task 1.7.4**: 激活码系统实现
+- [ ] **Task 1.7.4**: 用户邀请码推荐系统完善
 
 ##### Week 8: 支付集成
 - [ ] **Task 1.8.1**: 支付宝SDK集成
@@ -590,21 +590,37 @@ CREATE TABLE subscriptions (
   INDEX idx_end_date (end_date)
 );
 
--- 激活码表
-CREATE TABLE activation_codes (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  code VARCHAR(32) UNIQUE NOT NULL,
-  package_id INT NOT NULL,
-  status ENUM('unused', 'used', 'expired') DEFAULT 'unused',
-  used_by INT NULL,
-  used_at TIMESTAMP NULL,
-  expires_at TIMESTAMP NULL,
-  created_by INT NOT NULL, -- 创建者ID (管理员)
+-- 用户邀请系统表
+CREATE TABLE user_invites (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  inviter_id VARCHAR(36) NOT NULL,
+  invitee_id VARCHAR(36) NOT NULL,
+  status ENUM('PENDING', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
+  reward_status ENUM('PENDING', 'GRANTED', 'CANCELLED') DEFAULT 'PENDING',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (package_id) REFERENCES packages(id),
-  FOREIGN KEY (used_by) REFERENCES users(id),
-  INDEX idx_code (code),
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (inviter_id) REFERENCES users(id),
+  FOREIGN KEY (invitee_id) REFERENCES users(id),
+  INDEX idx_inviter (inviter_id),
+  INDEX idx_invitee (invitee_id),
   INDEX idx_status (status)
+);
+
+-- 邀请奖励记录表
+CREATE TABLE invite_rewards (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  user_id VARCHAR(36) NOT NULL,
+  invite_id VARCHAR(36) NOT NULL,
+  reward_type ENUM('DAYS', 'CREDITS', 'FEATURES') NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  status ENUM('PENDING', 'GRANTED', 'CANCELLED') DEFAULT 'PENDING',
+  description TEXT,
+  granted_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (invite_id) REFERENCES user_invites(id),
+  INDEX idx_user_status (user_id, status),
+  INDEX idx_invite (invite_id)
 );
 
 -- 支付订单表
@@ -614,7 +630,7 @@ CREATE TABLE payment_orders (
   user_id INT NOT NULL,
   package_id INT NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
-  payment_method ENUM('alipay', 'wechat', 'activation_code') NOT NULL,
+  payment_method ENUM('alipay', 'wechat', 'invite_reward') NOT NULL,
   status ENUM('pending', 'paid', 'failed', 'cancelled') DEFAULT 'pending',
   paid_at TIMESTAMP NULL,
   expires_at TIMESTAMP NOT NULL,
@@ -902,7 +918,7 @@ const apiRoutes = {
   - [ ] 7.1 套餐系统数据模型
   - [ ] 7.2 会员权限中间件
   - [ ] 7.3 套餐选择界面
-  - [ ] 7.4 激活码功能
+  - [ ] 7.4 用户邀请码推荐系统优化
 
 - [ ] **Week 8**: 
   - [ ] 8.1 支付宝集成

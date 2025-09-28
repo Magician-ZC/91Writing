@@ -151,12 +151,26 @@ class DataSyncService {
    */
   async getAllChapters() {
     try {
-      const novels = await apiManager.getNovels()
+      const response = await apiManager.getNovels()
       const allChapters = []
       
-      for (const novel of novels.data || []) {
-        const chapters = await apiManager.getChapters(novel.id)
-        allChapters.push(...(chapters.data || []))
+      // 确保数据结构正确
+      const novels = response?.data || response || []
+      if (!Array.isArray(novels)) {
+        console.warn('getNovels返回的数据不是数组:', novels)
+        return []
+      }
+      
+      for (const novel of novels) {
+        try {
+          const chaptersResponse = await apiManager.getChapters(novel.id)
+          const chapters = chaptersResponse?.data || chaptersResponse || []
+          if (Array.isArray(chapters)) {
+            allChapters.push(...chapters)
+          }
+        } catch (chapterError) {
+          console.warn(`获取小说${novel.id}的章节失败:`, chapterError)
+        }
       }
       
       return allChapters
@@ -171,12 +185,26 @@ class DataSyncService {
    */
   async getAllMemories() {
     try {
-      const novels = await apiManager.getNovels()
+      const response = await apiManager.getNovels()
       const allMemories = []
       
-      for (const novel of novels.data || []) {
-        const memories = await apiManager.getMemories(novel.id)
-        allMemories.push(...(memories.data || []))
+      // 确保数据结构正确
+      const novels = response?.data || response || []
+      if (!Array.isArray(novels)) {
+        console.warn('getNovels返回的数据不是数组:', novels)
+        return []
+      }
+      
+      for (const novel of novels) {
+        try {
+          const memoriesResponse = await apiManager.getMemories(novel.id)
+          const memories = memoriesResponse?.data || memoriesResponse || []
+          if (Array.isArray(memories)) {
+            allMemories.push(...memories)
+          }
+        } catch (memoryError) {
+          console.warn(`获取小说${novel.id}的记忆失败:`, memoryError)
+        }
       }
       
       return allMemories
@@ -214,8 +242,12 @@ class DataSyncService {
    * 合并数组数据
    */
   async mergeArray(localArray, cloudArray, keyField) {
-    const localMap = new Map(localArray.map(item => [item[keyField], item]))
-    const cloudMap = new Map(cloudArray.map(item => [item[keyField], item]))
+    // 确保输入都是数组
+    const safeLocalArray = Array.isArray(localArray) ? localArray : []
+    const safeCloudArray = Array.isArray(cloudArray) ? cloudArray : []
+    
+    const localMap = new Map(safeLocalArray.map(item => [item[keyField], item]))
+    const cloudMap = new Map(safeCloudArray.map(item => [item[keyField], item]))
     const merged = new Map()
     
     // 处理云端数据

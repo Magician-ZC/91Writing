@@ -110,6 +110,9 @@
     "typescript": "^5.1.3",
     "webpack-cli": "^6.0.1"
   },
+  "prisma": {
+    "seed": "npx ts-node prisma/seed.ts"
+  },
   "jest": {
     "moduleFileExtensions": [
       "js",

@@ -20,6 +20,14 @@ import Register from '../views/auth/Register.vue'
 import { useAuthStore } from '@/stores/authStore'
 
 const routes = [
+  // 顶级注册路由（支持邀请链接）
+  {
+    path: '/register',
+    name: 'Register',
+    component: Register,
+    meta: { requiresGuest: true, title: '注册 - 91Writing' }
+  },
+  
   // 认证路由（不需要登录）
   {
     path: '/auth',
@@ -34,7 +42,7 @@ const routes = [
       },
       {
         path: 'register',
-        name: 'Register', 
+        name: 'AuthRegister', 
         component: Register,
         meta: { title: '注册 - 91Writing' }
       }
@@ -200,7 +208,7 @@ router.beforeEach(async (to, from, next) => {
   // 检查是否需要游客状态（未登录）
   if (to.meta.requiresGuest && authStore.isAuthenticated) {
     // 已登录用户访问登录/注册页面，重定向到首页
-    next('/')
+    next('/home')
     return
   }
   
