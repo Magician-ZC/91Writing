@@ -2509,16 +2509,12 @@ async function bootstrap() {
     const configService = app.get(config_1.ConfigService);
     const logger = new common_2.Logger('AuthService');
     app.setGlobalPrefix('api/v1/auth');
-    app.enableVersioning({
-        type: common_1.VersioningType.URI,
-        defaultVersion: '1',
-    });
     app.use((0, helmet_1.default)());
     app.use(compression());
     app.enableCors({
         origin: process.env.NODE_ENV === 'production'
             ? ['https://91writing.com', 'https://www.91writing.com']
-            : ['http://localhost:3000', 'http://localhost:5173'],
+            : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:7520'],
         credentials: true,
     });
     app.useGlobalPipes(new common_1.ValidationPipe({

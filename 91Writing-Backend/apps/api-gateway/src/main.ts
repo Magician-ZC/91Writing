@@ -19,7 +19,9 @@ async function bootstrap() {
 
   // 跨域配置
   app.enableCors({
-    origin: ['http://localhost:3000', 'https://91writing.com'],
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://91writing.com', 'https://www.91writing.com']
+      : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:7520'],
     credentials: true,
   });
 

@@ -2243,7 +2243,9 @@ async function bootstrap() {
     app.useGlobalFilters(new all_exceptions_filter_1.AllExceptionsFilter());
     app.useGlobalInterceptors(new response_interceptor_1.ResponseInterceptor());
     app.enableCors({
-        origin: process.env.CORS_ORIGIN || ['http://localhost:3000', 'http://localhost:5173'],
+        origin: process.env.NODE_ENV === 'production'
+            ? ['https://91writing.com', 'https://www.91writing.com']
+            : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:7520'],
         credentials: true,
     });
     const port = process.env.PORT || 3003;

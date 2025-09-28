@@ -2,8 +2,8 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 // API基础URL配置
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
-const AUTH_API_URL = `${BASE_URL}/api/auth`
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002'
+const AUTH_API_URL = `${BASE_URL}/api/v1/auth`
 
 // 创建axios实例
 const authApi = axios.create({
