@@ -13,6 +13,44 @@ export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * 生成唯一的用户邀请码
+   */
+  private async generateUniqueInviteCode(): Promise<string> {
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      // 生成6位大写字母+数字的邀请码
+      const code = this.generateRandomCode(6);
+      
+      // 检查是否已存在
+      const existing = await this.prisma.user.findUnique({
+        where: { inviteCode: code }
+      });
+
+      if (!existing) {
+        return code;
+      }
+      
+      attempts++;
+    }
+
+    throw new Error('生成邀请码失败，请重试');
+  }
+
+  /**
+   * 生成随机代码
+   */
+  private generateRandomCode(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
    * 创建用户
    */
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
@@ -29,6 +67,9 @@ export class UserService {
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(createUserDto.password, saltRounds);
 
+    // 生成用户专属邀请码
+    const inviteCode = await this.generateUniqueInviteCode();
+
     // 创建用户
     const user = await this.prisma.user.create({
       data: {
@@ -39,6 +80,7 @@ export class UserService {
         status: createUserDto.status || UserStatus.ACTIVE,
         isActive: true,
         tenantId: createUserDto.tenantId,
+        inviteCode,
       },
       include: {
         profile: true,

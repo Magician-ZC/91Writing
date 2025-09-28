@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PackageStatus, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -111,7 +111,7 @@ async function createPackages() {
         priority: 'low'
       },
       sortOrder: 1,
-      status: 'ACTIVE',
+      status: PackageStatus.ACTIVE,
     },
     {
       name: '专业版',
@@ -133,7 +133,7 @@ async function createPackages() {
         collaboration: false
       },
       sortOrder: 2,
-      status: 'ACTIVE',
+      status: PackageStatus.ACTIVE,
     },
     {
       name: '创作家版',
@@ -157,7 +157,7 @@ async function createPackages() {
         api: true
       },
       sortOrder: 3,
-      status: 'ACTIVE',
+      status: PackageStatus.ACTIVE,
     },
   ];
 
@@ -335,8 +335,9 @@ async function createTestUser() {
     email: 'test@91writing.com',
     username: 'testuser',
     passwordHash: await bcrypt.hash('password123', 10),
-    status: 'ACTIVE' as const,
+    status: UserStatus.ACTIVE,
     emailVerified: true,
+    inviteCode: 'TEST01',
     profile: {
       create: {
         nickname: '测试用户',

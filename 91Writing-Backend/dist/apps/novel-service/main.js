@@ -21,6 +21,12 @@ module.exports = require("@nestjs/common");
 
 /***/ }),
 /* 4 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/swagger");
+
+/***/ }),
+/* 5 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -33,29 +39,69 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppModule = void 0;
 const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(5);
-const novel_module_1 = __webpack_require__(10);
-const chapter_module_1 = __webpack_require__(21);
-const memory_module_1 = __webpack_require__(25);
-const health_module_1 = __webpack_require__(29);
+const config_1 = __webpack_require__(6);
+const jwt_1 = __webpack_require__(7);
+const passport_1 = __webpack_require__(8);
+const database_1 = __webpack_require__(9);
+const novel_module_1 = __webpack_require__(13);
+const chapter_module_1 = __webpack_require__(23);
+const memory_module_1 = __webpack_require__(27);
+const health_module_1 = __webpack_require__(31);
+const jwt_strategy_1 = __webpack_require__(34);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                envFilePath: ['.env.local', '.env'],
+            }),
+            passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET', '91writing_default_secret'),
+                    signOptions: {
+                        expiresIn: configService.get('JWT_EXPIRES_IN', '7d'),
+                    },
+                }),
+                inject: [config_1.ConfigService],
+            }),
             database_1.DatabaseModule,
             novel_module_1.NovelModule,
             chapter_module_1.ChapterModule,
             memory_module_1.MemoryModule,
             health_module_1.HealthModule,
         ],
+        providers: [
+            jwt_strategy_1.JwtStrategy,
+        ],
     })
 ], AppModule);
 
 
 /***/ }),
-/* 5 */
+/* 6 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/config");
+
+/***/ }),
+/* 7 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/jwt");
+
+/***/ }),
+/* 8 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/passport");
+
+/***/ }),
+/* 9 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -74,12 +120,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(6), exports);
-__exportStar(__webpack_require__(8), exports);
+__exportStar(__webpack_require__(10), exports);
+__exportStar(__webpack_require__(11), exports);
 
 
 /***/ }),
-/* 6 */
+/* 10 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -92,8 +138,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(3);
-const config_1 = __webpack_require__(7);
-const prisma_service_1 = __webpack_require__(8);
+const config_1 = __webpack_require__(6);
+const prisma_service_1 = __webpack_require__(11);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -108,13 +154,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 7 */
-/***/ ((module) => {
-
-module.exports = require("@nestjs/config");
-
-/***/ }),
-/* 8 */
+/* 11 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -132,8 +172,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(3);
-const config_1 = __webpack_require__(7);
-const client_1 = __webpack_require__(9);
+const config_1 = __webpack_require__(6);
+const client_1 = __webpack_require__(12);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -225,22 +265,25 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
                     },
                 },
             });
-            const expiredCodes = await this.activationCode.deleteMany({
+            const expiredRewards = await this.inviteReward.updateMany({
                 where: {
-                    expiresAt: {
-                        lt: new Date(),
+                    status: 'PENDING',
+                    createdAt: {
+                        lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
                     },
-                    status: 'UNUSED',
+                },
+                data: {
+                    status: 'CANCELLED',
                 },
             });
             this.logger.log(`数据清理完成: 
         - 用户活动日志: ${deletedActivities.count}条
         - AI使用日志: ${deletedAILogs.count}条  
-        - 过期激活码: ${expiredCodes.count}条`);
+        - 过期邀请奖励: ${expiredRewards.count}条`);
             return {
                 deletedActivities: deletedActivities.count,
                 deletedAILogs: deletedAILogs.count,
-                expiredCodes: expiredCodes.count,
+                expiredRewards: expiredRewards.count,
             };
         }
         catch (error) {
@@ -257,13 +300,13 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 9 */
+/* 12 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 10 */
+/* 13 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -276,8 +319,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NovelModule = void 0;
 const common_1 = __webpack_require__(3);
-const novel_service_1 = __webpack_require__(11);
-const novel_controller_1 = __webpack_require__(12);
+const novel_service_1 = __webpack_require__(14);
+const novel_controller_1 = __webpack_require__(15);
 let NovelModule = class NovelModule {
 };
 exports.NovelModule = NovelModule;
@@ -291,7 +334,7 @@ exports.NovelModule = NovelModule = __decorate([
 
 
 /***/ }),
-/* 11 */
+/* 14 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -308,7 +351,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NovelService = void 0;
 const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(5);
+const database_1 = __webpack_require__(9);
 let NovelService = class NovelService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -505,7 +548,7 @@ exports.NovelService = NovelService = __decorate([
 
 
 /***/ }),
-/* 12 */
+/* 15 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -525,11 +568,12 @@ var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NovelController = void 0;
 const common_1 = __webpack_require__(3);
-const guards_1 = __webpack_require__(13);
-const novel_service_1 = __webpack_require__(11);
-const create_novel_dto_1 = __webpack_require__(17);
-const update_novel_dto_1 = __webpack_require__(19);
-const client_1 = __webpack_require__(9);
+const swagger_1 = __webpack_require__(4);
+const guards_1 = __webpack_require__(16);
+const novel_service_1 = __webpack_require__(14);
+const create_novel_dto_1 = __webpack_require__(19);
+const update_novel_dto_1 = __webpack_require__(21);
+const client_1 = __webpack_require__(12);
 let NovelController = class NovelController {
     constructor(novelService) {
         this.novelService = novelService;
@@ -567,6 +611,63 @@ let NovelController = class NovelController {
 };
 exports.NovelController = NovelController;
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: '创建小说',
+        description: '创建一个新的小说项目，支持设置标题、描述、类型、状态和复杂的世界观设置'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '小说创建成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', example: 'cm1234567890' },
+                        title: { type: 'string', example: '魔法学院编年史' },
+                        description: { type: 'string' },
+                        genre: { type: 'string', example: '奇幻' },
+                        status: { type: 'string', enum: ['DRAFT', 'WRITING', 'COMPLETED', 'PUBLISHED'] },
+                        wordCount: { type: 'number', example: 0 },
+                        chapterCount: { type: 'number', example: 0 },
+                        user: {
+                            type: 'object',
+                            properties: {
+                                id: { type: 'string' },
+                                username: { type: 'string' },
+                                email: { type: 'string' }
+                            }
+                        },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: '请求参数错误',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: false },
+                error: {
+                    type: 'object',
+                    properties: {
+                        code: { type: 'string', example: 'VALIDATION_ERROR' },
+                        message: { type: 'string', example: '参数验证失败' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 401,
+        description: '未授权访问'
+    }),
     (0, common_1.Post)(),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
@@ -575,6 +676,54 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], NovelController.prototype, "create", null);
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: '获取小说列表',
+        description: '获取当前用户的所有小说，支持按状态、类型筛选和分页'
+    }),
+    (0, swagger_1.ApiQuery)({ name: 'status', required: false, enum: client_1.NovelStatus, description: '按状态筛选' }),
+    (0, swagger_1.ApiQuery)({ name: 'genre', required: false, type: String, description: '按类型筛选' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, type: Number, description: '页码，默认1' }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, type: Number, description: '每页数量，默认20' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        novels: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    title: { type: 'string' },
+                                    description: { type: 'string' },
+                                    genre: { type: 'string' },
+                                    status: { type: 'string' },
+                                    wordCount: { type: 'number' },
+                                    chapterCount: { type: 'number' },
+                                    updatedAt: { type: 'string', format: 'date-time' }
+                                }
+                            }
+                        },
+                        pagination: {
+                            type: 'object',
+                            properties: {
+                                page: { type: 'number' },
+                                limit: { type: 'number' },
+                                total: { type: 'number' },
+                                totalPages: { type: 'number' }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
     (0, common_1.Get)(),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Query)('status')),
@@ -586,6 +735,48 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], NovelController.prototype, "findAll", null);
 __decorate([
+    (0, swagger_1.ApiOperation)({
+        summary: '获取小说详情',
+        description: '获取指定小说的详细信息，包括章节列表和记忆数据'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '小说ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        title: { type: 'string' },
+                        description: { type: 'string' },
+                        settings: { type: 'object' },
+                        chapters: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    title: { type: 'string' },
+                                    chapterNumber: { type: 'number' },
+                                    wordCount: { type: 'number' },
+                                    status: { type: 'string' }
+                                }
+                            }
+                        },
+                        memories: {
+                            type: 'array',
+                            description: '前10个最重要的记忆'
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在或无权访问' }),
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
@@ -636,6 +827,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], NovelController.prototype, "updateSettings", null);
 exports.NovelController = NovelController = __decorate([
+    (0, swagger_1.ApiTags)('novels'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('novels'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
     __metadata("design:paramtypes", [typeof (_a = typeof novel_service_1.NovelService !== "undefined" && novel_service_1.NovelService) === "function" ? _a : Object])
@@ -643,7 +836,7 @@ exports.NovelController = NovelController = __decorate([
 
 
 /***/ }),
-/* 13 */
+/* 16 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -662,12 +855,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(14), exports);
-__exportStar(__webpack_require__(16), exports);
+__exportStar(__webpack_require__(17), exports);
+__exportStar(__webpack_require__(18), exports);
 
 
 /***/ }),
-/* 14 */
+/* 17 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -680,7 +873,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.JwtAuthGuard = void 0;
 const common_1 = __webpack_require__(3);
-const passport_1 = __webpack_require__(15);
+const passport_1 = __webpack_require__(8);
 let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
     handleRequest(err, user, info) {
         if (err || !user) {
@@ -696,13 +889,7 @@ exports.JwtAuthGuard = JwtAuthGuard = __decorate([
 
 
 /***/ }),
-/* 15 */
-/***/ ((module) => {
-
-module.exports = require("@nestjs/passport");
-
-/***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -733,7 +920,7 @@ exports.TenantGuard = TenantGuard = __decorate([
 
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -749,8 +936,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateNovelDto = void 0;
-const class_validator_1 = __webpack_require__(18);
-const client_1 = __webpack_require__(9);
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
 class CreateNovelDto {
     constructor() {
         this.status = client_1.NovelStatus.DRAFT;
@@ -758,34 +946,101 @@ class CreateNovelDto {
 }
 exports.CreateNovelDto = CreateNovelDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说标题',
+        example: '魔法学院编年史',
+        maxLength: 200,
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(200),
     __metadata("design:type", String)
 ], CreateNovelDto.prototype, "title", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '小说描述',
+        example: '这是一个关于年轻魔法师在学院中成长、冒险，最终拯救世界的故事。主角艾莉亚从一个普通的村庄女孩，成长为强大的魔法师。',
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateNovelDto.prototype, "description", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '小说类型/题材',
+        example: '奇幻',
+        maxLength: 50,
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(50),
     __metadata("design:type", String)
 ], CreateNovelDto.prototype, "genre", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '小说状态',
+        enum: client_1.NovelStatus,
+        example: client_1.NovelStatus.DRAFT,
+        default: client_1.NovelStatus.DRAFT,
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(client_1.NovelStatus),
     __metadata("design:type", typeof (_a = typeof client_1.NovelStatus !== "undefined" && client_1.NovelStatus) === "function" ? _a : Object)
 ], CreateNovelDto.prototype, "status", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '封面图片URL',
+        example: 'https://example.com/covers/novel-cover.jpg',
+        maxLength: 500,
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(500),
     __metadata("design:type", String)
 ], CreateNovelDto.prototype, "coverUrl", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '小说设置(角色、世界观等JSON数据)',
+        type: 'object',
+        example: {
+            characters: [
+                {
+                    name: '艾莉亚',
+                    age: 18,
+                    personality: '勇敢、聪明、好奇心强',
+                    background: '来自北方小村庄的普通少女',
+                    abilities: ['火系魔法天赋', '剑术基础', '治愈魔法'],
+                    relationships: [
+                        { name: '萨姆', relation: '青梅竹马', description: '最信任的伙伴' }
+                    ]
+                }
+            ],
+            worldview: {
+                setting: '中世纪奇幻世界',
+                continent: '阿尔卑斯大陆',
+                kingdoms: ['北方王国', '南方帝国', '东方联邦'],
+                magic_system: {
+                    types: ['元素魔法', '治愈魔法', '黑暗魔法', '时空魔法'],
+                    learning: '需要通过魔法学院系统学习',
+                    restrictions: '每人只能精通2-3种魔法类型'
+                },
+                important_locations: [
+                    '魔法学院：大陆最权威的魔法教育机构',
+                    '北方村庄：艾莉亚的故乡',
+                    '王都：政治中心',
+                    '古老遗迹：隐藏着古代魔法秘密'
+                ]
+            },
+            plot_structure: {
+                act1: '发现魔法天赋，进入学院',
+                act2: '学习成长，结识伙伴，面对挑战',
+                act3: '揭开身世秘密，对抗黑暗势力',
+                climax: '最终决战，拯救世界'
+            },
+            themes: ['成长', '友谊', '责任', '选择与牺牲'],
+            tone: '轻松幽默中带有深刻思考'
+        }
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
@@ -793,13 +1048,13 @@ __decorate([
 
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ ((module) => {
 
 module.exports = require("class-validator");
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -814,9 +1069,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateNovelDto = void 0;
-const mapped_types_1 = __webpack_require__(20);
-const class_validator_1 = __webpack_require__(18);
-const create_novel_dto_1 = __webpack_require__(17);
+const mapped_types_1 = __webpack_require__(22);
+const class_validator_1 = __webpack_require__(20);
+const create_novel_dto_1 = __webpack_require__(19);
 class UpdateNovelDto extends (0, mapped_types_1.PartialType)(create_novel_dto_1.CreateNovelDto) {
 }
 exports.UpdateNovelDto = UpdateNovelDto;
@@ -835,13 +1090,13 @@ __decorate([
 
 
 /***/ }),
-/* 20 */
+/* 22 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/mapped-types");
 
 /***/ }),
-/* 21 */
+/* 23 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -854,8 +1109,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChapterModule = void 0;
 const common_1 = __webpack_require__(3);
-const chapter_service_1 = __webpack_require__(22);
-const chapter_controller_1 = __webpack_require__(23);
+const chapter_service_1 = __webpack_require__(24);
+const chapter_controller_1 = __webpack_require__(25);
 let ChapterModule = class ChapterModule {
 };
 exports.ChapterModule = ChapterModule;
@@ -869,7 +1124,7 @@ exports.ChapterModule = ChapterModule = __decorate([
 
 
 /***/ }),
-/* 22 */
+/* 24 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -886,7 +1141,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChapterService = void 0;
 const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(5);
+const database_1 = __webpack_require__(9);
 let ChapterService = class ChapterService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -1145,7 +1400,7 @@ exports.ChapterService = ChapterService = __decorate([
 
 
 /***/ }),
-/* 23 */
+/* 25 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1165,9 +1420,9 @@ var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChapterController = void 0;
 const common_1 = __webpack_require__(3);
-const guards_1 = __webpack_require__(13);
-const chapter_service_1 = __webpack_require__(22);
-const create_chapter_dto_1 = __webpack_require__(24);
+const guards_1 = __webpack_require__(16);
+const chapter_service_1 = __webpack_require__(24);
+const create_chapter_dto_1 = __webpack_require__(26);
 let ChapterController = class ChapterController {
     constructor(chapterService) {
         this.chapterService = chapterService;
@@ -1286,7 +1541,7 @@ exports.ChapterController = ChapterController = __decorate([
 
 
 /***/ }),
-/* 24 */
+/* 26 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1302,8 +1557,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateChapterDto = void 0;
-const class_validator_1 = __webpack_require__(18);
-const client_1 = __webpack_require__(9);
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
 class CreateChapterDto {
     constructor() {
         this.status = client_1.ChapterStatus.DRAFT;
@@ -1311,22 +1567,56 @@ class CreateChapterDto {
 }
 exports.CreateChapterDto = CreateChapterDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '章节标题',
+        example: '第一章：魔法的觉醒',
+        maxLength: 200,
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.MaxLength)(200),
     __metadata("design:type", String)
 ], CreateChapterDto.prototype, "title", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '章节内容',
+        example: `夜幕降临，艾莉亚站在宿舍窗前，望着远方闪烁的星辰。今天是她进入魔法学院的第一天，心中既兴奋又忐忑。
+
+"艾莉亚，你还不睡吗？"室友莉娜从床上探出头来，"明天还有早课呢。"
+
+"我有些睡不着。"艾莉亚轻声回答，"总觉得有什么大事要发生。"
+
+就在这时，她的手突然发出微弱的蓝光。艾莉亚吓了一跳，连忙握紧双手。
+
+"这是什么？"她心中暗想，"难道这就是传说中的魔法力量觉醒？"
+
+第二天一早，艾莉亚怀着忐忑的心情来到了第一堂课——魔法基础理论。老师是一位慈祥的老魔法师，名叫梅林教授。
+
+"同学们，魔法不仅仅是力量，更是责任。"梅林教授的话语深深印在了艾莉亚心中，"每一位魔法师都肩负着保护这个世界的使命。"
+
+课后，艾莉亚独自留在教室里练习基础法术。突然，门外传来急促的脚步声...`,
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateChapterDto.prototype, "content", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '章节序号',
+        example: 1,
+        minimum: 1,
+    }),
     (0, class_validator_1.IsInt)(),
     (0, class_validator_1.Min)(1),
     __metadata("design:type", Number)
 ], CreateChapterDto.prototype, "chapterNumber", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节状态',
+        enum: client_1.ChapterStatus,
+        example: client_1.ChapterStatus.DRAFT,
+        default: client_1.ChapterStatus.DRAFT,
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(client_1.ChapterStatus),
     __metadata("design:type", typeof (_a = typeof client_1.ChapterStatus !== "undefined" && client_1.ChapterStatus) === "function" ? _a : Object)
@@ -1334,7 +1624,7 @@ __decorate([
 
 
 /***/ }),
-/* 25 */
+/* 27 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1347,8 +1637,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MemoryModule = void 0;
 const common_1 = __webpack_require__(3);
-const memory_service_1 = __webpack_require__(26);
-const memory_controller_1 = __webpack_require__(27);
+const memory_service_1 = __webpack_require__(28);
+const memory_controller_1 = __webpack_require__(29);
 let MemoryModule = class MemoryModule {
 };
 exports.MemoryModule = MemoryModule;
@@ -1362,7 +1652,7 @@ exports.MemoryModule = MemoryModule = __decorate([
 
 
 /***/ }),
-/* 26 */
+/* 28 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1379,8 +1669,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MemoryService = void 0;
 const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(5);
-const client_1 = __webpack_require__(9);
+const database_1 = __webpack_require__(9);
+const client_1 = __webpack_require__(12);
 let MemoryService = class MemoryService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -1760,7 +2050,7 @@ exports.MemoryService = MemoryService = __decorate([
 
 
 /***/ }),
-/* 27 */
+/* 29 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1780,10 +2070,10 @@ var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MemoryController = void 0;
 const common_1 = __webpack_require__(3);
-const guards_1 = __webpack_require__(13);
-const memory_service_1 = __webpack_require__(26);
-const create_memory_dto_1 = __webpack_require__(28);
-const client_1 = __webpack_require__(9);
+const guards_1 = __webpack_require__(16);
+const memory_service_1 = __webpack_require__(28);
+const create_memory_dto_1 = __webpack_require__(30);
+const client_1 = __webpack_require__(12);
 let MemoryController = class MemoryController {
     constructor(memoryService) {
         this.memoryService = memoryService;
@@ -1934,7 +2224,7 @@ exports.MemoryController = MemoryController = __decorate([
 
 
 /***/ }),
-/* 28 */
+/* 30 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1950,8 +2240,9 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateMemoryDto = void 0;
-const class_validator_1 = __webpack_require__(18);
-const client_1 = __webpack_require__(9);
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
 class CreateMemoryDto {
     constructor() {
         this.importance = 0.5;
@@ -1960,16 +2251,101 @@ class CreateMemoryDto {
 }
 exports.CreateMemoryDto = CreateMemoryDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '记忆类型',
+        enum: client_1.MemoryType,
+        example: client_1.MemoryType.CORE,
+        enumName: 'MemoryType'
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsEnum)(client_1.MemoryType),
     __metadata("design:type", typeof (_a = typeof client_1.MemoryType !== "undefined" && client_1.MemoryType) === "function" ? _a : Object)
 ], CreateMemoryDto.prototype, "memoryType", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '记忆内容(JSON对象，根据类型存储不同结构的数据)',
+        type: 'object',
+        examples: {
+            core_character: {
+                summary: '核心角色记忆示例',
+                value: {
+                    type: 'character_profile',
+                    character: '艾莉亚',
+                    details: {
+                        name: '艾莉亚·晨光',
+                        age: 18,
+                        appearance: '长发飘逸，眼神坚定，身材修长',
+                        personality: '勇敢、好奇心强、有强烈的正义感',
+                        background: '北方小村庄的普通少女，在18岁时觉醒了强大的魔法能力',
+                        abilities: ['火系魔法', '治愈术', '敏锐的直觉'],
+                        relationships: {
+                            '萨姆': '青梅竹马，最信任的伙伴',
+                            '梅林教授': '魔法导师，亦师亦父'
+                        },
+                        goals: ['掌握自己的魔法力量', '保护所爱的人', '寻找生命的真谛'],
+                        fears: ['失控的力量伤害他人', '辜负大家的期望']
+                    }
+                }
+            },
+            summary_plot: {
+                summary: '情节摘要记忆示例',
+                value: {
+                    type: 'plot_summary',
+                    chapters: '1-3',
+                    summary: '艾莉亚觉醒魔法能力后进入学院学习，结识了室友莉娜和导师梅林教授，在第一次魔法课上展现出惊人天赋，但也引起了同学的嫉妒',
+                    key_events: [
+                        '魔法觉醒',
+                        '进入魔法学院',
+                        '遇见室友莉娜',
+                        '梅林教授的第一课',
+                        '展现魔法天赋'
+                    ],
+                    character_development: '从紧张不安到逐渐适应学院生活',
+                    conflicts: ['同学的嫉妒和排斥', '对自己力量的恐惧'],
+                    resolutions: ['通过努力获得认可', '学会控制魔法力量']
+                }
+            },
+            context_world: {
+                summary: '世界观上下文记忆示例',
+                value: {
+                    type: 'world_context',
+                    location: '魔法学院',
+                    description: '大陆最权威的魔法教育机构，坐落在圣山之巅，建筑宏伟，充满魔法气息',
+                    atmosphere: '庄严神圣，但又充满活力和希望',
+                    important_npcs: [
+                        {
+                            name: '梅林教授',
+                            role: '魔法基础理论教师',
+                            personality: '慈祥睿智，对学生要求严格但关爱有加'
+                        },
+                        {
+                            name: '院长',
+                            role: '学院最高管理者',
+                            mystery: '传说中的大魔法师，很少露面'
+                        }
+                    ],
+                    rules_and_customs: [
+                        '学院内禁止私斗',
+                        '每周进行魔法测试',
+                        '优秀学生可获得特殊指导'
+                    ],
+                    secrets: '学院地下隐藏着古代魔法遗迹'
+                }
+            }
+        }
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], CreateMemoryDto.prototype, "content", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '记忆重要性权重(0.0-1.0，越高越重要)',
+        example: 0.8,
+        minimum: 0,
+        maximum: 1,
+        default: 0.5
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
@@ -1977,12 +2353,27 @@ __decorate([
     __metadata("design:type", Number)
 ], CreateMemoryDto.prototype, "importance", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'AI处理此记忆消耗的Token数量',
+        example: 150,
+        minimum: 0,
+        default: 0
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateMemoryDto.prototype, "tokenCost", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '相关章节范围',
+        example: '1-5',
+        examples: {
+            single: { value: '3', summary: '单个章节' },
+            range: { value: '1-5', summary: '章节范围' },
+            multiple: { value: '1,3,5', summary: '多个章节' }
+        }
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
@@ -1990,7 +2381,7 @@ __decorate([
 
 
 /***/ }),
-/* 29 */
+/* 31 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2003,8 +2394,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(3);
-const health_controller_1 = __webpack_require__(30);
-const health_service_1 = __webpack_require__(31);
+const health_controller_1 = __webpack_require__(32);
+const health_service_1 = __webpack_require__(33);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -2017,7 +2408,7 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 30 */
+/* 32 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2034,7 +2425,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(3);
-const health_service_1 = __webpack_require__(31);
+const health_service_1 = __webpack_require__(33);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -2057,7 +2448,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 31 */
+/* 33 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2088,7 +2479,85 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 32 */
+/* 34 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JwtStrategy = void 0;
+const common_1 = __webpack_require__(3);
+const config_1 = __webpack_require__(6);
+const passport_1 = __webpack_require__(8);
+const passport_jwt_1 = __webpack_require__(35);
+const database_1 = __webpack_require__(9);
+let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
+    constructor(configService, prisma) {
+        super({
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            ignoreExpiration: false,
+            secretOrKey: configService.get('JWT_SECRET', '91writing_default_secret'),
+        });
+        this.configService = configService;
+        this.prisma = prisma;
+    }
+    async validate(payload) {
+        const { sub, email, role } = payload;
+        const user = await this.prisma.user.findUnique({
+            where: { id: sub },
+            include: {
+                profile: true,
+                subscription: {
+                    include: {
+                        package: true,
+                    },
+                },
+            },
+        });
+        if (!user) {
+            throw new common_1.UnauthorizedException('用户不存在');
+        }
+        if (user.status !== 'ACTIVE') {
+            throw new common_1.UnauthorizedException('用户账号已被禁用');
+        }
+        return {
+            id: user.id,
+            email: user.email,
+            nickname: user.nickname,
+            role: user.role,
+            status: user.status,
+            isActive: user.isActive,
+            tenantId: user.tenantId,
+            profile: user.profile,
+            subscription: user.subscription,
+            lastLoginAt: user.lastLoginAt,
+        };
+    }
+};
+exports.JwtStrategy = JwtStrategy;
+exports.JwtStrategy = JwtStrategy = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object, typeof (_b = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _b : Object])
+], JwtStrategy);
+
+
+/***/ }),
+/* 35 */
+/***/ ((module) => {
+
+module.exports = require("passport-jwt");
+
+/***/ }),
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2151,7 +2620,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = __decorate([
 
 
 /***/ }),
-/* 33 */
+/* 37 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2164,7 +2633,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(34);
+const operators_1 = __webpack_require__(38);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -2187,7 +2656,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 34 */
+/* 38 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2230,9 +2699,10 @@ const dotenv_1 = __webpack_require__(1);
 (0, dotenv_1.config)();
 const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
-const app_module_1 = __webpack_require__(4);
-const all_exceptions_filter_1 = __webpack_require__(32);
-const response_interceptor_1 = __webpack_require__(33);
+const swagger_1 = __webpack_require__(4);
+const app_module_1 = __webpack_require__(5);
+const all_exceptions_filter_1 = __webpack_require__(36);
+const response_interceptor_1 = __webpack_require__(37);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.useGlobalPipes(new common_1.ValidationPipe({
@@ -2242,15 +2712,84 @@ async function bootstrap() {
     }));
     app.useGlobalFilters(new all_exceptions_filter_1.AllExceptionsFilter());
     app.useGlobalInterceptors(new response_interceptor_1.ResponseInterceptor());
+    app.setGlobalPrefix('api/v1');
     app.enableCors({
         origin: process.env.NODE_ENV === 'production'
             ? ['https://91writing.com', 'https://www.91writing.com']
             : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:7520'],
         credentials: true,
     });
+    const config = new swagger_1.DocumentBuilder()
+        .setTitle('91Writing Novel Service API')
+        .setDescription(`
+      91Writing 小说服务API文档
+      
+      ## 功能模块
+      
+      ### 🔐 认证说明
+      - 所有API都需要JWT认证
+      - 请在请求头中添加: Authorization: Bearer <token>
+      - 用户只能操作自己的数据
+      
+      ### 📚 小说管理
+      - 创建、编辑、删除小说
+      - 小说设置管理(角色、世界观等)
+      - 统计信息自动计算
+      
+      ### 📝 章节管理  
+      - 章节内容的CRUD操作
+      - 章节排序和状态管理
+      - 大文本内容优化处理
+      
+      ### 🧠 记忆系统
+      - AI辅助创作的上下文管理
+      - 按重要性分级存储
+      - 支持多种记忆类型
+      
+      ## 数据模型
+      - Novel: 小说主体信息
+      - Chapter: 章节内容
+      - NovelMemory: 记忆数据
+      
+      ## 版本信息
+      - 服务版本: v1.0
+      - API版本: v1
+      - 更新时间: 2024年12月
+    `)
+        .setVersion('1.0')
+        .addTag('novels', '小说管理')
+        .addTag('chapters', '章节管理')
+        .addTag('memories', '记忆系统')
+        .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+    }, 'JWT-auth')
+        .addServer('http://localhost:3003', '开发环境')
+        .addServer('https://api.91writing.com', '生产环境')
+        .build();
+    const document = swagger_1.SwaggerModule.createDocument(app, config);
+    swagger_1.SwaggerModule.setup('api-docs', app, document, {
+        swaggerOptions: {
+            persistAuthorization: true,
+            tagsSorter: 'alpha',
+            operationsSorter: 'alpha',
+        },
+        customfavIcon: 'https://91writing.com/favicon.ico',
+        customSiteTitle: '91Writing API文档',
+        customCss: `
+      .swagger-ui .topbar { display: none; }
+      .swagger-ui .info { margin: 20px 0; }
+      .swagger-ui .info h1 { color: #2c5aa0; }
+    `,
+    });
     const port = process.env.PORT || 3003;
     await app.listen(port);
     console.log(`Novel Service is running on: http://localhost:${port}`);
+    console.log(`API Documentation: http://localhost:${port}/api-docs`);
 }
 bootstrap();
 

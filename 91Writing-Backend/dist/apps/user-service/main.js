@@ -246,22 +246,25 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
                     },
                 },
             });
-            const expiredCodes = await this.activationCode.deleteMany({
+            const expiredRewards = await this.inviteReward.updateMany({
                 where: {
-                    expiresAt: {
-                        lt: new Date(),
+                    status: 'PENDING',
+                    createdAt: {
+                        lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
                     },
-                    status: 'UNUSED',
+                },
+                data: {
+                    status: 'CANCELLED',
                 },
             });
             this.logger.log(`数据清理完成: 
         - 用户活动日志: ${deletedActivities.count}条
         - AI使用日志: ${deletedAILogs.count}条  
-        - 过期激活码: ${expiredCodes.count}条`);
+        - 过期邀请奖励: ${expiredRewards.count}条`);
             return {
                 deletedActivities: deletedActivities.count,
                 deletedAILogs: deletedAILogs.count,
-                expiredCodes: expiredCodes.count,
+                expiredRewards: expiredRewards.count,
             };
         }
         catch (error) {
@@ -656,6 +659,29 @@ let UserService = class UserService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async generateUniqueInviteCode() {
+        let attempts = 0;
+        const maxAttempts = 10;
+        while (attempts < maxAttempts) {
+            const code = this.generateRandomCode(6);
+            const existing = await this.prisma.user.findUnique({
+                where: { inviteCode: code }
+            });
+            if (!existing) {
+                return code;
+            }
+            attempts++;
+        }
+        throw new Error('生成邀请码失败，请重试');
+    }
+    generateRandomCode(length) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result;
+    }
     async create(createUserDto) {
         const existingUser = await this.prisma.user.findUnique({
             where: { email: createUserDto.email },
@@ -665,6 +691,7 @@ let UserService = class UserService {
         }
         const saltRounds = 12;
         const passwordHash = await bcrypt.hash(createUserDto.password, saltRounds);
+        const inviteCode = await this.generateUniqueInviteCode();
         const user = await this.prisma.user.create({
             data: {
                 email: createUserDto.email,
@@ -674,6 +701,7 @@ let UserService = class UserService {
                 status: createUserDto.status || client_1.UserStatus.ACTIVE,
                 isActive: true,
                 tenantId: createUserDto.tenantId,
+                inviteCode,
             },
             include: {
                 profile: true,

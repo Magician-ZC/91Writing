@@ -7,7 +7,8 @@
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "nest build && npx nest build auth-service && npx nest build user-service && npx nest build novel-service && npx nest build ai-service",
+    "build": "nest build && npm run build:services",
+    "build:services": "npx nest build api-gateway && npx nest build auth-service && npx nest build user-service && npx nest build novel-service && npx nest build ai-service",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -23,7 +24,7 @@
     "start:ai:dev": "nest start ai-service --watch",
     "start:gateway": "node dist/apps/api-gateway/main",
     "start:gateway:dev": "nest start api-gateway --watch",
-    "start:all": "concurrently \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:user\" \"npm run start:novel\" \"npm run start:ai\"",
+    "start:all": "npm run build:services && concurrently \"npm run start:gateway\" \"npm run start:auth\" \"npm run start:user\" \"npm run start:novel\" \"npm run start:ai\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",

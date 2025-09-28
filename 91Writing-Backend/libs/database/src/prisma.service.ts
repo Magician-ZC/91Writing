@@ -118,25 +118,28 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         },
       });
 
-      // 清理过期的激活码
-      const expiredCodes = await this.activationCode.deleteMany({
+      // 清理过期的邀请奖励记录
+      const expiredRewards = await this.inviteReward.updateMany({
         where: {
-          expiresAt: {
-            lt: new Date(),
+          status: 'PENDING',
+          createdAt: {
+            lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30天前
           },
-          status: 'UNUSED',
+        },
+        data: {
+          status: 'CANCELLED',
         },
       });
 
       this.logger.log(`数据清理完成: 
         - 用户活动日志: ${deletedActivities.count}条
         - AI使用日志: ${deletedAILogs.count}条  
-        - 过期激活码: ${expiredCodes.count}条`);
+        - 过期邀请奖励: ${expiredRewards.count}条`);
 
       return {
         deletedActivities: deletedActivities.count,
         deletedAILogs: deletedAILogs.count,
-        expiredCodes: expiredCodes.count,
+        expiredRewards: expiredRewards.count,
       };
     } catch (error) {
       this.logger.error('数据清理失败', error);

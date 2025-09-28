@@ -10,8 +10,18 @@ import localStorageManager from './localStorageManager'
 class ApiManager {
   constructor() {
     this.mode = 'hybrid' // 'cloud', 'local', 'hybrid'
-    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002'
+    this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
     this.isOnline = navigator.onLine
+    
+    // 微服务端点配置
+    this.services = {
+      auth: 'http://localhost:3002',
+      user: 'http://localhost:3001', 
+      novel: 'http://localhost:3003',
+      ai: 'http://localhost:3004',
+      gateway: 'http://localhost:3000'
+    }
+    
     this.setupAxios()
     this.setupOnlineListener()
   }
@@ -156,6 +166,24 @@ class ApiManager {
   }
 
   /**
+   * 获取服务端点URL
+   */
+  getServiceUrl(endpoint) {
+    // 根据端点路径确定使用哪个微服务
+    if (endpoint.includes('/auth/') || endpoint.includes('/invite/')) {
+      return 'http://localhost:3002'
+    } else if (endpoint.includes('/user')) {
+      return 'http://localhost:3001'
+    } else if (endpoint.includes('/novel') || endpoint.includes('/chapter') || endpoint.includes('/memor')) {
+      return 'http://localhost:3003'
+    } else if (endpoint.includes('/ai/')) {
+      return 'http://localhost:3004'
+    } else {
+      return 'http://localhost:3000'
+    }
+  }
+
+  /**
    * 设置运行模式
    */
   setMode(mode) {
@@ -187,18 +215,29 @@ class ApiManager {
     // 优先尝试云端API
     if (this.shouldUseCloud()) {
       try {
-        const response = await this.api({
-          url: endpoint,
+        // 获取正确的服务URL
+        const serviceUrl = this.getServiceUrl(endpoint)
+        const fullUrl = serviceUrl + endpoint
+        
+        const response = await axios({
+          url: fullUrl,
           method,
           data,
+          headers: {
+            'Authorization': this.getAuthToken() ? `Bearer ${this.getAuthToken()}` : undefined,
+            'Content-Type': 'application/json'
+          }
         })
         
+        // 处理响应数据
+        const responseData = response.data
+        
         // 成功响应，缓存到本地
-        if (response.success && method === 'GET' && fallbackLocal) {
-          localStorageManager.cacheApiResponse(endpoint, response.data)
+        if (responseData.success && method === 'GET' && fallbackLocal) {
+          localStorageManager.cacheApiResponse(endpoint, responseData.data)
         }
         
-        return response
+        return responseData
       } catch (error) {
         // 如果是网络错误且允许本地回退，尝试本地数据
         if (error.useLocal && fallbackLocal) {

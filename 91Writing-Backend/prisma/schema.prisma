@@ -13,20 +13,25 @@ datasource db {
 // ===== 用户系统 =====
 // 用户基础表
 model User {
-  id           String      @id @default(cuid())
-  email        String      @unique
-  username     String?     @unique
-  nickname     String?
-  passwordHash String      @map("password_hash")
-  role         UserRole    @default(USER)
-  status       UserStatus  @default(ACTIVE)
-  isActive     Boolean     @default(true) @map("is_active")
+  id            String     @id @default(cuid())
+  email         String     @unique
+  username      String?    @unique
+  nickname      String?
+  passwordHash  String     @map("password_hash")
+  role          UserRole   @default(USER)
+  status        UserStatus @default(ACTIVE)
+  isActive      Boolean    @default(true) @map("is_active")
   emailVerified Boolean    @default(false) @map("email_verified")
-  lastLoginAt  DateTime?   @map("last_login_at")
-  
+  lastLoginAt   DateTime?  @map("last_login_at")
+
+  // 邀请系统字段
+  inviteCode  String  @unique @map("invite_code") // 用户专属邀请码
+  invitedBy   String? @map("invited_by") // 邀请者ID
+  inviteCount Int     @default(0) @map("invite_count") // 邀请人数统计
+
   // 多租户字段 (暂时保留，后续可能用于企业版)
-  tenantId     String?     @map("tenant_id")
-  
+  tenantId String? @map("tenant_id")
+
   // 关联
   profile         UserProfile?
   subscription    Subscription?
@@ -34,19 +39,27 @@ model User {
   activities      UserActivity[]
   materials       Material[]
   prompts         Prompt[]
-  activationCodes ActivationCode[]
   paymentOrders   PaymentOrder[]
   aiUsageLogs     AIUsageLog[]
-  
+
+  // 邀请关系
+  inviter         User?          @relation("UserInvites", fields: [invitedBy], references: [id])
+  invitees        User[]         @relation("UserInvites")
+  sentInvites     UserInvite[]   @relation("InviterRelation")
+  receivedInvites UserInvite[]   @relation("InviteeRelation")
+  inviteRewards   InviteReward[]
+
   // 时间戳
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  
-  @@map("users")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([email])
   @@index([username])
   @@index([status])
   @@index([tenantId])
+  @@index([inviteCode])
+  @@index([invitedBy])
+  @@map("users")
 }
 
 // 用户资料表
@@ -55,111 +68,87 @@ model UserProfile {
   nickname     String?
   avatar       String?
   bio          String? @db.Text
-  preferences  Json?   // 用户偏好设置
+  preferences  Json? // 用户偏好设置
   writingStats Json?   @map("writing_stats") // 写作统计
-  
+
   // 关联
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("user_profiles")
 }
 
 // ===== 商业系统 =====
 // 套餐配置表
 model Package {
-  id          Int            @id @default(autoincrement())
-  name        String         @unique
-  description String?        @db.Text
-  price       Decimal        @db.Decimal(10, 2)
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  description  String?       @db.Text
+  price        Decimal       @db.Decimal(10, 2)
   durationDays Int           @map("duration_days")
-  features    Json           // 套餐功能配置
-  sortOrder   Int            @default(0) @map("sort_order")
-  status      PackageStatus  @default(ACTIVE)
-  
+  features     Json // 套餐功能配置
+  sortOrder    Int           @default(0) @map("sort_order")
+  status       PackageStatus @default(ACTIVE)
+
   // 关联
   subscriptions   Subscription[]
-  activationCodes ActivationCode[]
   paymentOrders   PaymentOrder[]
-  
+
   // 时间戳
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@map("packages")
 }
 
 // 用户订阅表
 model Subscription {
-  id          String             @id @default(cuid())
-  userId      String             @unique @map("user_id")
-  packageId   Int                @map("package_id")
-  status      SubscriptionStatus @default(ACTIVE)
-  startDate   DateTime           @map("start_date") @db.Date
-  endDate     DateTime           @map("end_date") @db.Date
-  autoRenew   Boolean            @default(false) @map("auto_renew")
-  
+  id        String             @id @default(cuid())
+  userId    String             @unique @map("user_id")
+  packageId Int                @map("package_id")
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime           @map("start_date") @db.Date
+  endDate   DateTime           @map("end_date") @db.Date
+  autoRenew Boolean            @default(false) @map("auto_renew")
+
   // 关联
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  package     Package            @relation(fields: [packageId], references: [id])
-  
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package Package @relation(fields: [packageId], references: [id])
+
   // 时间戳
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  
-  @@map("subscriptions")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([status])
   @@index([endDate])
+  @@map("subscriptions")
 }
 
-// 激活码表
-model ActivationCode {
-  id          Int                    @id @default(autoincrement())
-  code        String                 @unique
-  packageId   Int                    @map("package_id")
-  status      ActivationCodeStatus   @default(UNUSED)
-  usedBy      String?                @map("used_by")
-  usedAt      DateTime?              @map("used_at")
-  expiresAt   DateTime?              @map("expires_at")
-  createdBy   String                 @map("created_by") // 创建者ID (管理员)
-  
-  // 关联
-  package     Package                @relation(fields: [packageId], references: [id])
-  user        User?                  @relation(fields: [usedBy], references: [id])
-  
-  // 时间戳
-  createdAt   DateTime               @default(now()) @map("created_at")
-  
-  @@map("activation_codes")
-  @@index([code])
-  @@index([status])
-  @@index([expiresAt])
-}
 
 // 支付订单表
 model PaymentOrder {
-  id            Int                @id @default(autoincrement())
-  orderNo       String             @unique @map("order_no")
-  userId        String             @map("user_id")
-  packageId     Int                @map("package_id")
-  amount        Decimal            @db.Decimal(10, 2)
-  paymentMethod PaymentMethod      @map("payment_method")
-  status        PaymentStatus      @default(PENDING)
-  paidAt        DateTime?          @map("paid_at")
-  expiresAt     DateTime           @map("expires_at")
-  transactionId String?            @map("transaction_id") // 第三方支付流水号
-  
+  id            Int           @id @default(autoincrement())
+  orderNo       String        @unique @map("order_no")
+  userId        String        @map("user_id")
+  packageId     Int           @map("package_id")
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentMethod PaymentMethod @map("payment_method")
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?     @map("paid_at")
+  expiresAt     DateTime      @map("expires_at")
+  transactionId String?       @map("transaction_id") // 第三方支付流水号
+
   // 关联
-  user          User               @relation(fields: [userId], references: [id])
-  package       Package            @relation(fields: [packageId], references: [id])
-  
+  user    User    @relation(fields: [userId], references: [id])
+  package Package @relation(fields: [packageId], references: [id])
+
   // 时间戳
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
-  
-  @@map("payment_orders")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([orderNo])
   @@index([userId, status])
   @@index([status])
+  @@map("payment_orders")
 }
 
 // ===== 创作系统 =====
@@ -174,21 +163,21 @@ model Novel {
   coverUrl     String?     @map("cover_url") @db.VarChar(500)
   wordCount    Int         @default(0) @map("word_count")
   chapterCount Int         @default(0) @map("chapter_count")
-  settings     Json?       // 小说设置(角色、世界观等)
-  
+  settings     Json? // 小说设置(角色、世界观等)
+
   // 关联
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chapters     Chapter[]
-  memories     NovelMemory[]
-  
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapters Chapter[]
+  memories NovelMemory[]
+
   // 时间戳
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  
-  @@map("novels")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([userId, status])
   @@index([genre])
   @@index([status])
+  @@map("novels")
 }
 
 // 章节表
@@ -200,17 +189,17 @@ model Chapter {
   wordCount     Int           @default(0) @map("word_count")
   chapterNumber Int           @map("chapter_number")
   status        ChapterStatus @default(DRAFT)
-  
+
   // 关联
-  novel         Novel         @relation(fields: [novelId], references: [id], onDelete: Cascade)
-  
+  novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
   // 时间戳
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  
-  @@map("chapters")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@unique([novelId, chapterNumber])
   @@index([novelId, status])
+  @@map("chapters")
 }
 
 // 记忆系统表
@@ -219,20 +208,20 @@ model NovelMemory {
   novelId      String     @map("novel_id")
   memoryType   MemoryType @map("memory_type")
   content      Json
-  importance   Decimal    @db.Decimal(3, 2) @default(0.5)
+  importance   Decimal    @default(0.5) @db.Decimal(3, 2)
   tokenCost    Int        @default(0) @map("token_cost")
   chapterRange String?    @map("chapter_range") @db.VarChar(50)
-  
+
   // 关联
-  novel        Novel      @relation(fields: [novelId], references: [id], onDelete: Cascade)
-  
+  novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
   // 时间戳
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
-  
-  @@map("novel_memories")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([novelId, memoryType])
   @@index([importance])
+  @@map("novel_memories")
 }
 
 // ===== 素材系统 =====
@@ -248,107 +237,107 @@ model Material {
   description String?      @db.Text
   tags        Json?
   usageCount  Int          @default(0) @map("usage_count")
-  
+
   // 关联
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // 时间戳
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  
-  @@map("materials")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([userId, type])
   @@index([category])
   @@index([type])
+  @@map("materials")
 }
 
 // 提示词表
 model Prompt {
-  id        String   @id @default(cuid())
-  userId    String?  @map("user_id") // null表示系统提示词
-  title     String   @db.VarChar(200)
-  content   String   @db.Text
-  category  String?  @db.VarChar(50)
-  tags      Json?
-  isPublic  Boolean  @default(false) @map("is_public")
+  id         String  @id @default(cuid())
+  userId     String? @map("user_id") // null表示系统提示词
+  title      String  @db.VarChar(200)
+  content    String  @db.Text
+  category   String? @db.VarChar(50)
+  tags       Json?
+  isPublic   Boolean @default(false) @map("is_public")
   usageCount Int     @default(0) @map("usage_count")
-  rating    Decimal  @default(0) @db.Decimal(3, 2)
-  
+  rating     Decimal @default(0) @db.Decimal(3, 2)
+
   // 关联
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
-  @@map("prompts")
+
   @@index([category])
   @@index([isPublic])
   @@index([rating])
   @@index([userId])
+  @@map("prompts")
 }
 
 // ===== 统计分析 =====
 // 用户行为日志表
 model UserActivity {
-  id         BigInt    @id @default(autoincrement())
-  userId     String?   @map("user_id")
-  action     String    @db.VarChar(100)
-  targetType String?   @map("target_type") @db.VarChar(50)
-  targetId   String?   @map("target_id")
+  id         BigInt  @id @default(autoincrement())
+  userId     String? @map("user_id")
+  action     String  @db.VarChar(100)
+  targetType String? @map("target_type") @db.VarChar(50)
+  targetId   String? @map("target_id")
   details    Json?
-  ipAddress  String?   @map("ip_address") @db.VarChar(45)
-  userAgent  String?   @map("user_agent") @db.Text
-  
+  ipAddress  String? @map("ip_address") @db.VarChar(45)
+  userAgent  String? @map("user_agent") @db.Text
+
   // 关联
-  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   // 时间戳
-  createdAt  DateTime  @default(now()) @map("created_at")
-  
-  @@map("user_activities")
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@index([userId, action])
   @@index([createdAt])
   @@index([action])
+  @@map("user_activities")
 }
 
 // AI使用统计表
 model AIUsageLog {
-  id           BigInt    @id @default(autoincrement())
-  userId       String?   @map("user_id")
-  model        String    @db.VarChar(50)
-  functionType String    @map("function_type") @db.VarChar(50)
-  inputTokens  Int       @default(0) @map("input_tokens")
-  outputTokens Int       @default(0) @map("output_tokens")
-  cost         Decimal   @default(0) @db.Decimal(10, 4)
-  responseTime Int?      @map("response_time") // 响应时间 (毫秒)
-  success      Boolean   @default(true)
-  
+  id           BigInt  @id @default(autoincrement())
+  userId       String? @map("user_id")
+  model        String  @db.VarChar(50)
+  functionType String  @map("function_type") @db.VarChar(50)
+  inputTokens  Int     @default(0) @map("input_tokens")
+  outputTokens Int     @default(0) @map("output_tokens")
+  cost         Decimal @default(0) @db.Decimal(10, 4)
+  responseTime Int?    @map("response_time") // 响应时间 (毫秒)
+  success      Boolean @default(true)
+
   // 关联
-  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   // 时间戳
-  createdAt    DateTime  @default(now()) @map("created_at")
-  
-  @@map("ai_usage_logs")
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@index([userId, functionType])
   @@index([createdAt])
   @@index([model])
+  @@map("ai_usage_logs")
 }
 
 // 系统配置表
 model SystemConfig {
-  id          Int      @id @default(autoincrement())
-  configKey   String   @unique @map("config_key") @db.VarChar(100)
-  configValue Json     @map("config_value")
-  description String?  @db.Text
-  
+  id          Int     @id @default(autoincrement())
+  configKey   String  @unique @map("config_key") @db.VarChar(100)
+  configValue Json    @map("config_value")
+  description String? @db.Text
+
   // 时间戳
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  @@map("system_configs")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@index([configKey])
+  @@map("system_configs")
 }
 
 // ===== 枚举定义 =====
@@ -376,16 +365,10 @@ enum SubscriptionStatus {
   PENDING
 }
 
-enum ActivationCodeStatus {
-  UNUSED
-  USED
-  EXPIRED
-}
 
 enum PaymentMethod {
   ALIPAY
   WECHAT
-  ACTIVATION_CODE
 }
 
 enum PaymentStatus {
@@ -419,4 +402,75 @@ enum MaterialType {
   AUDIO
   VIDEO
   TEXT
+}
+
+// ===== 邀请系统表 =====
+// 邀请记录表
+model UserInvite {
+  id           String       @id @default(cuid())
+  inviterId    String       @map("inviter_id") // 邀请者ID
+  inviteeId    String       @map("invitee_id") // 被邀请者ID
+  status       InviteStatus @default(PENDING)
+  rewardStatus RewardStatus @default(PENDING) @map("reward_status")
+
+  // 关联
+  inviter User           @relation("InviterRelation", fields: [inviterId], references: [id])
+  invitee User           @relation("InviteeRelation", fields: [inviteeId], references: [id])
+  rewards InviteReward[]
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([inviterId, inviteeId])
+  @@index([inviterId])
+  @@index([inviteeId])
+  @@index([status])
+  @@map("user_invites")
+}
+
+// 邀请奖励记录表
+model InviteReward {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id") // 获得奖励的用户ID
+  inviteId    String       @map("invite_id") // 邀请记录ID
+  rewardType  RewardType   @map("reward_type") // 奖励类型
+  amount      Decimal      @db.Decimal(10, 2) // 奖励数量
+  status      RewardStatus @default(PENDING)
+  description String? // 奖励描述
+
+  // 关联
+  user   User       @relation(fields: [userId], references: [id])
+  invite UserInvite @relation(fields: [inviteId], references: [id])
+
+  // 时间戳
+  createdAt DateTime  @default(now()) @map("created_at")
+  grantedAt DateTime? @map("granted_at") // 奖励发放时间
+
+  @@index([userId])
+  @@index([inviteId])
+  @@index([status])
+  @@map("invite_rewards")
+}
+
+// ===== 邀请系统枚举 =====
+enum InviteStatus {
+  PENDING // 待确认
+  ACCEPTED // 已接受
+  REJECTED // 已拒绝
+  EXPIRED // 已过期
+}
+
+enum RewardStatus {
+  PENDING // 待发放
+  GRANTED // 已发放
+  FAILED // 发放失败
+  CANCELLED // 已取消
+}
+
+enum RewardType {
+  POINTS // 积分奖励
+  DAYS // 天数奖励
+  PACKAGE // 套餐奖励
+  CASH // 现金奖励
 }

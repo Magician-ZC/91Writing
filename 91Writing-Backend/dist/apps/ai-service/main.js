@@ -5,19 +5,19 @@
 /* 1 */
 /***/ ((module) => {
 
-module.exports = require("dotenv");
+module.exports = require("@nestjs/core");
 
 /***/ }),
 /* 2 */
 /***/ ((module) => {
 
-module.exports = require("@nestjs/core");
+module.exports = require("@nestjs/common");
 
 /***/ }),
 /* 3 */
 /***/ ((module) => {
 
-module.exports = require("@nestjs/common");
+module.exports = require("@nestjs/swagger");
 
 /***/ }),
 /* 4 */
@@ -32,7 +32,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppModule = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const database_1 = __webpack_require__(5);
 const assistant_module_1 = __webpack_require__(10);
 const generation_module_1 = __webpack_require__(19);
@@ -93,7 +93,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(7);
 const prisma_service_1 = __webpack_require__(8);
 let DatabaseModule = class DatabaseModule {
@@ -133,7 +133,7 @@ var PrismaService_1;
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(7);
 const client_1 = __webpack_require__(9);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
@@ -227,22 +227,25 @@ let PrismaService = PrismaService_1 = class PrismaService extends client_1.Prism
                     },
                 },
             });
-            const expiredCodes = await this.activationCode.deleteMany({
+            const expiredRewards = await this.inviteReward.updateMany({
                 where: {
-                    expiresAt: {
-                        lt: new Date(),
+                    status: 'PENDING',
+                    createdAt: {
+                        lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
                     },
-                    status: 'UNUSED',
+                },
+                data: {
+                    status: 'CANCELLED',
                 },
             });
             this.logger.log(`数据清理完成: 
         - 用户活动日志: ${deletedActivities.count}条
         - AI使用日志: ${deletedAILogs.count}条  
-        - 过期激活码: ${expiredCodes.count}条`);
+        - 过期邀请奖励: ${expiredRewards.count}条`);
             return {
                 deletedActivities: deletedActivities.count,
                 deletedAILogs: deletedAILogs.count,
-                expiredCodes: expiredCodes.count,
+                expiredRewards: expiredRewards.count,
             };
         }
         catch (error) {
@@ -277,7 +280,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssistantModule = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const assistant_service_1 = __webpack_require__(11);
 const assistant_controller_1 = __webpack_require__(14);
 let AssistantModule = class AssistantModule {
@@ -309,7 +312,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssistantService = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const database_1 = __webpack_require__(5);
 const conversation_dto_1 = __webpack_require__(12);
 let AssistantService = class AssistantService {
@@ -954,7 +957,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssistantController = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const guards_1 = __webpack_require__(15);
 const assistant_service_1 = __webpack_require__(11);
 const conversation_dto_1 = __webpack_require__(12);
@@ -1051,7 +1054,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.JwtAuthGuard = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const passport_1 = __webpack_require__(17);
 let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
     handleRequest(err, user, info) {
@@ -1086,7 +1089,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TenantGuard = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 let TenantGuard = class TenantGuard {
     async canActivate(context) {
         const request = context.switchToHttp().getRequest();
@@ -1117,7 +1120,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenerationModule = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const generation_service_1 = __webpack_require__(20);
 const generation_controller_1 = __webpack_require__(21);
 let GenerationModule = class GenerationModule {
@@ -1149,7 +1152,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenerationService = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const database_1 = __webpack_require__(5);
 let GenerationService = class GenerationService {
     constructor(prisma) {
@@ -1235,7 +1238,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenerationController = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const guards_1 = __webpack_require__(15);
 const generation_service_1 = __webpack_require__(20);
 const conversation_dto_1 = __webpack_require__(12);
@@ -1276,7 +1279,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionModule = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const suggestion_service_1 = __webpack_require__(23);
 const suggestion_controller_1 = __webpack_require__(25);
 let SuggestionModule = class SuggestionModule {
@@ -1308,7 +1311,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionService = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const database_1 = __webpack_require__(5);
 const suggestion_dto_1 = __webpack_require__(24);
 let SuggestionService = class SuggestionService {
@@ -1832,7 +1835,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionController = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const guards_1 = __webpack_require__(15);
 const suggestion_service_1 = __webpack_require__(23);
 const suggestion_dto_1 = __webpack_require__(24);
@@ -1905,7 +1908,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WizardModule = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 let WizardModule = class WizardModule {
 };
 exports.WizardModule = WizardModule;
@@ -1927,7 +1930,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const health_controller_1 = __webpack_require__(28);
 const health_service_1 = __webpack_require__(29);
 let HealthModule = class HealthModule {
@@ -1958,7 +1961,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 const health_service_1 = __webpack_require__(29);
 let HealthController = class HealthController {
     constructor(healthService) {
@@ -1994,7 +1997,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthService = void 0;
-const common_1 = __webpack_require__(3);
+const common_1 = __webpack_require__(2);
 let HealthService = class HealthService {
     check() {
         return {
@@ -2011,111 +2014,6 @@ exports.HealthService = HealthService = __decorate([
     (0, common_1.Injectable)()
 ], HealthService);
 
-
-/***/ }),
-/* 30 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AllExceptionsFilter = void 0;
-const common_1 = __webpack_require__(3);
-let AllExceptionsFilter = class AllExceptionsFilter {
-    catch(exception, host) {
-        const ctx = host.switchToHttp();
-        const response = ctx.getResponse();
-        const request = ctx.getRequest();
-        let status = common_1.HttpStatus.INTERNAL_SERVER_ERROR;
-        let message = 'Internal server error';
-        let error = 'Internal Server Error';
-        if (exception instanceof common_1.HttpException) {
-            status = exception.getStatus();
-            const exceptionResponse = exception.getResponse();
-            if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-                message = exceptionResponse.message || exception.message;
-                error = exceptionResponse.error || exception.name;
-            }
-            else {
-                message = exceptionResponse;
-                error = exception.name;
-            }
-        }
-        else if (exception instanceof Error) {
-            message = exception.message;
-            error = exception.name;
-        }
-        console.error('AI Service Exception:', {
-            timestamp: new Date().toISOString(),
-            path: request.url,
-            method: request.method,
-            status,
-            error,
-            message,
-            stack: exception instanceof Error ? exception.stack : undefined,
-        });
-        response.status(status).json({
-            success: false,
-            statusCode: status,
-            error,
-            message,
-            timestamp: new Date().toISOString(),
-            path: request.url,
-        });
-    }
-};
-exports.AllExceptionsFilter = AllExceptionsFilter;
-exports.AllExceptionsFilter = AllExceptionsFilter = __decorate([
-    (0, common_1.Catch)()
-], AllExceptionsFilter);
-
-
-/***/ }),
-/* 31 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ResponseInterceptor = void 0;
-const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(32);
-let ResponseInterceptor = class ResponseInterceptor {
-    intercept(context, next) {
-        return next.handle().pipe((0, operators_1.map)((data) => {
-            if (data && typeof data === 'object' && 'success' in data) {
-                return data;
-            }
-            return {
-                success: true,
-                data,
-                message: 'Success',
-                timestamp: new Date().toISOString(),
-            };
-        }));
-    }
-};
-exports.ResponseInterceptor = ResponseInterceptor;
-exports.ResponseInterceptor = ResponseInterceptor = __decorate([
-    (0, common_1.Injectable)()
-], ResponseInterceptor);
-
-
-/***/ }),
-/* 32 */
-/***/ ((module) => {
-
-module.exports = require("rxjs/operators");
 
 /***/ })
 /******/ 	]);
@@ -2151,13 +2049,10 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const dotenv_1 = __webpack_require__(1);
-(0, dotenv_1.config)();
-const core_1 = __webpack_require__(2);
-const common_1 = __webpack_require__(3);
+const core_1 = __webpack_require__(1);
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
 const app_module_1 = __webpack_require__(4);
-const all_exceptions_filter_1 = __webpack_require__(30);
-const response_interceptor_1 = __webpack_require__(31);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.useGlobalPipes(new common_1.ValidationPipe({
@@ -2165,17 +2060,32 @@ async function bootstrap() {
         forbidNonWhitelisted: true,
         transform: true,
     }));
-    app.useGlobalFilters(new all_exceptions_filter_1.AllExceptionsFilter());
-    app.useGlobalInterceptors(new response_interceptor_1.ResponseInterceptor());
     app.enableCors({
-        origin: process.env.NODE_ENV === 'production'
-            ? ['https://91writing.com', 'https://www.91writing.com']
-            : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:7520'],
+        origin: process.env.FRONTEND_URL || 'http://localhost:7520',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
     });
-    const port = process.env.PORT || 3004;
+    const config = new swagger_1.DocumentBuilder()
+        .setTitle('91Writing AI服务API')
+        .setDescription('91Writing AI服务API文档')
+        .setVersion('1.0')
+        .addTag('ai', 'AI服务')
+        .addBearerAuth({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+    }, 'JWT-auth')
+        .build();
+    const document = swagger_1.SwaggerModule.createDocument(app, config);
+    swagger_1.SwaggerModule.setup('api/docs/ai', app, document);
+    const port = process.env.AI_SERVICE_PORT || 3004;
     await app.listen(port);
-    console.log(`AI Service is running on: http://localhost:${port}`);
+    console.log(`🤖 AI服务运行在: http://localhost:${port}`);
+    console.log(`📖 API文档地址: http://localhost:${port}/api/docs/ai`);
 }
 bootstrap();
 

@@ -26,7 +26,7 @@ import {
 } from '../../dto/auth-response.dto';
 import { plainToClass } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
-import { UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus, SubscriptionStatus, InviteStatus, RewardStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -55,46 +55,69 @@ export class AuthService {
     }
 
     // 验证邀请码（如果提供）
-    if (inviteCode) {
-      await this.validateInviteCode(inviteCode);
+    let inviterData = null;
+    this.logger.log(`注册请求 - 邮箱: ${email}, 邀请码: "${inviteCode}", 类型: ${typeof inviteCode}, 长度: ${inviteCode ? inviteCode.length : 'N/A'}`);
+    
+    if (inviteCode && inviteCode.trim().length > 0) {
+      this.logger.log(`开始验证用户邀请码: "${inviteCode}"`);
+      inviterData = await this.validateInviteCode(inviteCode.trim());
+    } else {
+      this.logger.log(`跳过邀请码验证 - 邀请码为空或无效: "${inviteCode}"`);
     }
 
     // 生成密码哈希
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // 创建用户
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        nickname: nickname || email.split('@')[0],
-        role: UserRole.USER,
-        status: UserStatus.ACTIVE,
-        isActive: true,
-        // 创建用户配置
-        profile: {
-          create: {
-            preferences: {
-              theme: 'light',
-              language: 'zh-CN',
-              notifications: {
-                email: true,
-                push: false,
+    // 生成用户专属邀请码
+    const userInviteCode = await this.generateUniqueInviteCode();
+
+    // 创建用户（使用事务确保数据一致性）
+    const user = await this.prisma.$transaction(async (tx) => {
+      // 创建用户
+      const newUser = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          nickname: nickname || email.split('@')[0],
+          role: UserRole.USER,
+          status: UserStatus.ACTIVE,
+          isActive: true,
+          inviteCode: userInviteCode,
+          invitedBy: inviterData?.id || null,
+          // 创建用户配置
+          profile: {
+            create: {
+              preferences: {
+                theme: 'light',
+                language: 'zh-CN',
+                notifications: {
+                  email: true,
+                  push: false,
+                },
               },
-            },
-            writingStats: {
-              totalWords: 0,
-              totalChapters: 0,
-              writingDays: 0,
+              writingStats: {
+                totalWords: 0,
+                totalChapters: 0,
+                writingDays: 0,
+              },
             },
           },
         },
-      },
-      include: {
-        profile: true,
-      },
+        include: {
+          profile: true,
+        },
+      });
+
+      this.logger.log(`用户注册成功: ${email}, 专属邀请码: ${userInviteCode}`);
+
+      return newUser;
     });
+
+    // 如果使用了邀请码，创建邀请关系并发放奖励
+    if (inviterData) {
+      await this.createInviteRelation(inviterData.id, user.id);
+    }
 
     // 生成邮箱验证令牌
     const verificationToken = this.generateVerificationToken();
@@ -421,11 +444,125 @@ export class AuthService {
   }
 
   /**
-   * 验证邀请码
+   * 验证用户邀请码
    */
-  private async validateInviteCode(inviteCode: string): Promise<void> {
-    // TODO: 实现邀请码验证逻辑
-    // 这里可以检查激活码表或者其他邀请码机制
+  private async validateInviteCode(inviteCode: string): Promise<any> {
+    // 查找邀请用户
+    const inviter = await this.prisma.user.findUnique({
+      where: { inviteCode: inviteCode.trim() },
+      select: { 
+        id: true, 
+        email: true, 
+        nickname: true, 
+        inviteCode: true,
+        status: true,
+        isActive: true
+      }
+    });
+
+    if (!inviter) {
+      throw new BadRequestException('邀请码不存在');
+    }
+
+    // 检查邀请者账户状态
+    if (inviter.status !== UserStatus.ACTIVE || !inviter.isActive) {
+      throw new BadRequestException('邀请者账户异常，无法使用此邀请码');
+    }
+
+    this.logger.log(`邀请码验证通过: ${inviteCode} - 邀请者: ${inviter.email}`);
+    
+    return inviter;
+  }
+
+  /**
+   * 生成唯一的用户邀请码
+   */
+  private async generateUniqueInviteCode(): Promise<string> {
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      // 生成6位大写字母+数字的邀请码
+      const code = this.generateRandomCode(6);
+      
+      // 检查是否已存在
+      const existing = await this.prisma.user.findUnique({
+        where: { inviteCode: code }
+      });
+
+      if (!existing) {
+        return code;
+      }
+      
+      attempts++;
+    }
+
+    throw new Error('生成邀请码失败，请重试');
+  }
+
+  /**
+   * 生成随机代码
+   */
+  private generateRandomCode(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
+   * 创建邀请关系并发放奖励
+   */
+  private async createInviteRelation(inviterId: string, inviteeId: string): Promise<void> {
+    // 创建邀请记录
+    const invite = await this.prisma.userInvite.create({
+      data: {
+        inviterId,
+        inviteeId,
+        status: InviteStatus.ACCEPTED,
+        rewardStatus: RewardStatus.PENDING
+      }
+    });
+
+    // 更新邀请者的邀请统计
+    await this.prisma.user.update({
+      where: { id: inviterId },
+      data: { 
+        inviteCount: { increment: 1 }
+      }
+    });
+
+    // 发放邀请奖励（示例：7天会员）
+    await this.grantInviteReward(inviterId, invite.id);
+
+    this.logger.log(`邀请关系创建成功: ${inviterId} -> ${inviteeId}`);
+  }
+
+  /**
+   * 发放邀请奖励
+   */
+  private async grantInviteReward(userId: string, inviteId: string): Promise<void> {
+    // 创建奖励记录
+    await this.prisma.inviteReward.create({
+      data: {
+        userId,
+        inviteId,
+        rewardType: 'DAYS',
+        amount: 7,
+        description: '邀请好友注册奖励：7天会员',
+        status: RewardStatus.GRANTED,
+        grantedAt: new Date()
+      }
+    });
+
+    // TODO: 这里可以实际执行奖励发放逻辑，比如：
+    // - 延长用户订阅时间
+    // - 增加用户积分
+    // - 发送通知等
+
+    this.logger.log(`邀请奖励发放成功: 用户 ${userId} 获得7天会员`);
   }
 
   /**

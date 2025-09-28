@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { DatabaseModule } from '@app/database';
 import { AuthModule } from './modules/auth/auth.module';
+import { InviteModule } from './modules/invite/invite.module';
 import { HealthModule } from './modules/health/health.module';
 
 @Module({
@@ -34,6 +35,7 @@ import { HealthModule } from './modules/health/health.module';
 
     // 功能模块
     AuthModule,
+    InviteModule,
     HealthModule,
   ],
   controllers: [],

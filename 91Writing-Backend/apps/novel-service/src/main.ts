@@ -24,6 +24,9 @@ async function bootstrap() {
   // 全局拦截器
   app.useGlobalInterceptors(new ResponseInterceptor());
   
+  // 全局前缀
+  app.setGlobalPrefix('api/v1');
+  
   // CORS
   app.enableCors({
     origin: process.env.NODE_ENV === 'production' 
