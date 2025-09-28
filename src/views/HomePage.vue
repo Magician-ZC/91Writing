@@ -150,7 +150,7 @@
             <div class="action-grid">
               <div class="action-item" @click="openPrompts">
                 <div class="action-icon">
-                  <el-icon><ChatLineSquare /></el-icon>
+                  <el-icon><Message /></el-icon>
                 </div>
                 <span>提示词库</span>
               </div>
@@ -236,7 +236,7 @@ import { useRouter } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
 import { 
   Plus, Edit, Document, EditPen, Notebook, CreditCard, 
-  ChatLineSquare, Trophy 
+  Message, Trophy 
 } from '@element-plus/icons-vue'
 import WritingGoals from '@/components/WritingGoals.vue'
 import billingService from '@/services/billing.js'

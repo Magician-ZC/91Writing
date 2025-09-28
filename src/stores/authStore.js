@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { authService } from '@/services/authService'
+import apiManager from '@/services/apiManager'
 import { ElMessage } from 'element-plus'
 
 export const useAuthStore = defineStore('auth', {
@@ -84,7 +85,8 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials) {
       this.loading = true
       try {
-        const response = await authService.login(credentials)
+        // 使用新的统一API管理器
+        const response = await apiManager.login(credentials)
         
         if (response.success) {
           const { user, tokens, subscription } = response.data
@@ -117,7 +119,8 @@ export const useAuthStore = defineStore('auth', {
     async register(userData) {
       this.loading = true
       try {
-        const response = await authService.register(userData)
+        // 使用新的统一API管理器
+        const response = await apiManager.register(userData)
         
         if (response.success) {
           ElMessage.success('注册成功！请检查邮箱完成验证')
@@ -192,7 +195,8 @@ export const useAuthStore = defineStore('auth', {
     // 获取当前用户信息
     async fetchCurrentUser() {
       try {
-        const response = await authService.getCurrentUser()
+        // 使用新的统一API管理器
+        const response = await apiManager.getCurrentUser()
         if (response.success) {
           this.user = response.data
           this.saveAuthData()
@@ -206,7 +210,8 @@ export const useAuthStore = defineStore('auth', {
     async changePassword(passwordData) {
       this.loading = true
       try {
-        const response = await authService.changePassword(passwordData)
+        // 使用新的统一API管理器
+        const response = await apiManager.changePassword(passwordData)
         
         if (response.success) {
           ElMessage.success('密码修改成功')

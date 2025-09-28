@@ -136,6 +136,12 @@ const routes = [
         name: 'UserProfile',
         component: () => import('../views/auth/UserProfile.vue'),
         meta: { title: '个人资料 - 91Writing' }
+      },
+      {
+        path: 'data-migration',
+        name: 'DataMigration',
+        component: () => import('../views/DataMigrationPage.vue'),
+        meta: { title: '数据迁移 - 91Writing' }
       }
     ]
   },

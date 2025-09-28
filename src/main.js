@@ -26,8 +26,18 @@ async function initApp() {
     const { useAuthStore } = await import('./stores/authStore')
     const authStore = useAuthStore()
     
-    // 设置token拦截器
+    // 初始化API管理器和数据同步服务
+    const { default: apiManager } = await import('./services/apiManager')
+    const { default: dataSyncService } = await import('./services/dataSync')
+    
+    // 设置token拦截器（保留兼容性）
     authStore.setupTokenInterceptor()
+    
+    // 如果是混合模式且在线，执行自动同步
+    if (apiManager.getMode() === 'hybrid' && navigator.onLine) {
+      // 延迟执行同步，避免阻塞应用启动
+      setTimeout(() => dataSyncService.autoSync(), 2000)
+    }
     
     // 挂载应用
     app.mount('#app')

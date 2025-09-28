@@ -24,7 +24,7 @@
         </el-menu-item>
         
         <el-menu-item index="/prompts">
-          <el-icon><ChatLineSquare /></el-icon>
+          <el-icon><Message /></el-icon>
           <template #title>提示词库</template>
         </el-menu-item>
         
@@ -39,7 +39,7 @@
         </el-menu-item>
         
         <el-menu-item index="/goals">
-          <el-icon><Aim /></el-icon>
+          <el-icon><Position /></el-icon>
           <template #title>写作目标</template>
         </el-menu-item>
         
@@ -61,6 +61,11 @@
         <el-menu-item index="/book-analysis">
           <el-icon><DataAnalysis /></el-icon>
           <template #title>拆书工具</template>
+        </el-menu-item>
+        
+        <el-menu-item index="/data-migration">
+          <el-icon><Switch /></el-icon>
+          <template #title>数据迁移</template>
         </el-menu-item>
         
         <el-menu-item index="/settings">
@@ -147,6 +152,9 @@
             {{ isApiConfigured ? 'API已配置' : 'API配置' }}
           </el-button>
 
+          <!-- 模式切换器 -->
+          <ModeSwitch />
+
           <!-- 用户菜单 -->
           <el-dropdown @command="handleUserCommand" class="user-dropdown">
             <div class="user-info">
@@ -165,6 +173,10 @@
                 <el-dropdown-item command="profile">
                   <el-icon><User /></el-icon>
                   个人资料
+                </el-dropdown-item>
+                <el-dropdown-item command="data-migration">
+                  <el-icon><Switch /></el-icon>
+                  数据迁移
                 </el-dropdown-item>
                 <el-dropdown-item command="subscription" v-if="hasActiveSubscription">
                   <el-icon><CreditCard /></el-icon>
@@ -207,12 +219,13 @@ import { useNovelStore } from '@/stores/novel'
 import { useAuthStore } from '@/stores/authStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  House, Document, ChatLineSquare, Collection, Notebook, Aim, 
+  House, Document, Message, Collection, Notebook, Position, 
   CreditCard, Setting, Key, Tools, EditPen, DataAnalysis,
-  Expand, Fold, Notification, UserFilled, User, ArrowDown, SwitchButton 
+  Expand, Fold, Notification, UserFilled, User, ArrowDown, SwitchButton, Switch 
 } from '@element-plus/icons-vue'
 import ApiConfig from '@/components/ApiConfig.vue'
 import AnnouncementDialog from '@/components/AnnouncementDialog.vue'
+import ModeSwitch from '@/components/ModeSwitch.vue'
 import { getLatestAnnouncement } from '@/config/announcements.js'
 
 const router = useRouter()
@@ -344,6 +357,7 @@ const pageTitle = computed(() => {
     '/tools': '工具库',
     '/short-story': '短文写作',
     '/book-analysis': '拆书工具',
+    '/data-migration': '数据迁移',
     '/settings': '系统设置'
   }
   return titleMap[route.path] || '首页'
@@ -392,6 +406,10 @@ const handleUserCommand = async (command) => {
     case 'profile':
       // 创建一个用户资料页面的路由
       router.push('/profile')
+      break
+    case 'data-migration':
+      // 跳转到数据迁移页面
+      router.push('/data-migration')
       break
     case 'subscription':
       // 跳转到订阅管理页面

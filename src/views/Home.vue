@@ -27,7 +27,7 @@
           章节管理
         </el-button>
         <el-button @click="showWritingGoalsDialog = true">
-          <el-icon class="mr-2"><Aim /></el-icon>
+          <el-icon class="mr-2"><Position /></el-icon>
           写作目标
         </el-button>
         <el-button @click="showBackupDialog = true">
@@ -395,7 +395,7 @@
 import { ref, computed, onMounted, shallowRef, onBeforeUnmount, watch } from 'vue'
 import { useNovelStore } from '@/stores/novel'
 import { ElMessage } from 'element-plus'
-import { DataAnalysis, Collection, Setting, Key, Document, Loading, Notebook, Aim, FolderOpened, Notification } from '@element-plus/icons-vue'
+import { DataAnalysis, Collection, Setting, Key, Document, Loading, Notebook, Position, FolderOpened, Notification } from '@element-plus/icons-vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { createEditor, createToolbar } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'

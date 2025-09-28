@@ -146,7 +146,7 @@
                       查看详情
                     </el-dropdown-item>
                     <el-dropdown-item command="suggestion">
-                      <el-icon><ChatLineSquare /></el-icon>
+                      <el-icon><Message /></el-icon>
                       获取建议
                     </el-dropdown-item>
                     <el-dropdown-item command="ignore" divided>
@@ -308,7 +308,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  MoreFilled, View, ChatLineSquare, Hide, Delete
+  MoreFilled, View, Message, Hide, Delete
 } from '@element-plus/icons-vue'
 
 // Props

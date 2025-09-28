@@ -531,7 +531,7 @@
               
               <div class="config-item">
                 <label class="config-label">
-                  <el-icon><Tickets /></el-icon>
+                  <el-icon><Ticket /></el-icon>
                   续写字数
                 </label>
                 <el-slider
@@ -837,7 +837,7 @@
 <script setup>
 import { ref, reactive, computed, shallowRef, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { MagicStick, Refresh, EditPen, Download, Check, Loading, Plus, Setting, List, DocumentCopy, Switch, Delete, Search, InfoFilled } from '@element-plus/icons-vue'
+import { MagicStick, Refresh, EditPen, Download, Check, Loading, Plus, Setting, List, DocumentCopy, Switch, Delete, Search, InfoFilled, Ticket } from '@element-plus/icons-vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
 import { useNovelStore } from '@/stores/novel'

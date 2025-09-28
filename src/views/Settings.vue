@@ -70,7 +70,7 @@
                     小说数据
                   </el-button>
                   <el-button @click="exportPrompts">
-                    <el-icon><ChatLineSquare /></el-icon>
+                    <el-icon><Message /></el-icon>
                     提示词库
                   </el-button>
                   <el-button @click="exportGenres">
@@ -333,7 +333,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, Upload, Document, Setting, Delete, ChatLineSquare, Collection } from '@element-plus/icons-vue'
+import { Download, Upload, Document, Setting, Delete, Message, Collection } from '@element-plus/icons-vue'
 import ApiConfig from '@/components/ApiConfig.vue'
 
 // 响应式数据
