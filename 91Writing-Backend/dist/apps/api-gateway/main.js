@@ -45,7 +45,8 @@ const cache_manager_1 = __webpack_require__(8);
 const auth_module_1 = __webpack_require__(9);
 const proxy_module_1 = __webpack_require__(12);
 const health_module_1 = __webpack_require__(15);
-const database_1 = __webpack_require__(18);
+const payment_module_1 = __webpack_require__(18);
+const database_1 = __webpack_require__(23);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -87,6 +88,7 @@ exports.AppModule = AppModule = __decorate([
             database_1.DatabaseModule,
             auth_module_1.AuthModule,
             proxy_module_1.ProxyModule,
+            payment_module_1.PaymentModule,
             health_module_1.HealthModule,
         ],
         controllers: [],
@@ -306,10 +308,11 @@ let ProxyService = class ProxyService {
             timestamp: new Date().toISOString(),
             message: '代理服务运行正常',
             services: {
+                authService: 'http://localhost:3002',
                 userService: 'http://localhost:3001',
-                novelService: 'http://localhost:3002',
-                aiService: 'http://localhost:3003',
-                paymentService: 'http://localhost:3004',
+                novelService: 'http://localhost:3003',
+                aiService: 'http://localhost:3004',
+                paymentService: 'http://localhost:3005',
             },
         };
     }
@@ -505,6 +508,143 @@ exports.HealthService = HealthService = __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PaymentModule = void 0;
+const common_1 = __webpack_require__(3);
+const payment_controller_1 = __webpack_require__(19);
+const payment_service_1 = __webpack_require__(21);
+let PaymentModule = class PaymentModule {
+};
+exports.PaymentModule = PaymentModule;
+exports.PaymentModule = PaymentModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [payment_controller_1.PaymentController],
+        providers: [payment_service_1.PaymentService],
+    })
+], PaymentModule);
+
+
+/***/ }),
+/* 19 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PaymentController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const express_1 = __webpack_require__(20);
+const payment_service_1 = __webpack_require__(21);
+let PaymentController = class PaymentController {
+    constructor(paymentService) {
+        this.paymentService = paymentService;
+    }
+    async forwardToPaymentService(req, res) {
+        try {
+            const path = req.path.replace('/api/v1/payment', '');
+            const result = await this.paymentService.forwardRequest(path, req.method, req.body, req.headers);
+            res.json(result);
+        }
+        catch (error) {
+            res.status(error.status || 500).json(error.response || { message: 'Internal server error' });
+        }
+    }
+};
+exports.PaymentController = PaymentController;
+__decorate([
+    (0, common_1.All)('*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _b : Object, typeof (_c = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], PaymentController.prototype, "forwardToPaymentService", null);
+exports.PaymentController = PaymentController = __decorate([
+    (0, swagger_1.ApiTags)('payment'),
+    (0, common_1.Controller)('payment'),
+    __metadata("design:paramtypes", [typeof (_a = typeof payment_service_1.PaymentService !== "undefined" && payment_service_1.PaymentService) === "function" ? _a : Object])
+], PaymentController);
+
+
+/***/ }),
+/* 20 */
+/***/ ((module) => {
+
+module.exports = require("express");
+
+/***/ }),
+/* 21 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PaymentService = void 0;
+const common_1 = __webpack_require__(3);
+const axios_1 = __webpack_require__(22);
+let PaymentService = class PaymentService {
+    constructor() {
+        this.paymentServiceUrl = 'http://localhost:3005';
+    }
+    async forwardRequest(path, method, data, headers) {
+        try {
+            const response = await (0, axios_1.default)({
+                method,
+                url: `${this.paymentServiceUrl}${path}`,
+                data,
+                headers,
+            });
+            return response.data;
+        }
+        catch (error) {
+            if (error.response) {
+                throw new common_1.HttpException(error.response.data, error.response.status);
+            }
+            throw new common_1.HttpException('Payment service unavailable', common_1.HttpStatus.SERVICE_UNAVAILABLE);
+        }
+    }
+};
+exports.PaymentService = PaymentService;
+exports.PaymentService = PaymentService = __decorate([
+    (0, common_1.Injectable)()
+], PaymentService);
+
+
+/***/ }),
+/* 22 */
+/***/ ((module) => {
+
+module.exports = require("axios");
+
+/***/ }),
+/* 23 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -520,12 +660,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(19), exports);
-__exportStar(__webpack_require__(20), exports);
+__exportStar(__webpack_require__(24), exports);
+__exportStar(__webpack_require__(25), exports);
 
 
 /***/ }),
-/* 19 */
+/* 24 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -539,7 +679,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const prisma_service_1 = __webpack_require__(20);
+const prisma_service_1 = __webpack_require__(25);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -554,7 +694,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 20 */
+/* 25 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -573,7 +713,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const client_1 = __webpack_require__(21);
+const client_1 = __webpack_require__(26);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -700,19 +840,19 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 21 */
+/* 26 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 22 */
+/* 27 */
 /***/ ((module) => {
 
 module.exports = require("compression");
 
 /***/ }),
-/* 23 */
+/* 28 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
@@ -757,8 +897,8 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const compression = __webpack_require__(22);
-const helmet_1 = __webpack_require__(23);
+const compression = __webpack_require__(27);
+const helmet_1 = __webpack_require__(28);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['error', 'warn', 'log', 'debug', 'verbose'],

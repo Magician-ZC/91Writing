@@ -345,6 +345,160 @@
       </div>
     </el-card>
 
+    <!-- 订单管理卡片 -->
+    <el-card class="order-card">
+      <template #header>
+        <div class="card-header">
+          <h3>我的订单</h3>
+          <el-button 
+            type="primary" 
+            size="small" 
+            @click="refreshOrders"
+            :loading="ordersLoading"
+          >
+            刷新订单
+          </el-button>
+        </div>
+      </template>
+
+      <div class="order-content">
+        <!-- 订单筛选 -->
+        <div class="order-filters">
+          <el-select 
+            v-model="orderFilters.status" 
+            placeholder="订单状态"
+            clearable
+            size="small"
+            @change="loadOrders"
+          >
+            <el-option label="全部" value="" />
+            <el-option label="待支付" value="PENDING" />
+            <el-option label="已支付" value="PAID" />
+            <el-option label="支付失败" value="FAILED" />
+            <el-option label="已取消" value="CANCELLED" />
+          </el-select>
+          
+          <el-select 
+            v-model="orderFilters.paymentMethod" 
+            placeholder="支付方式"
+            clearable
+            size="small"
+            @change="loadOrders"
+          >
+            <el-option label="全部" value="" />
+            <el-option label="支付宝" value="ALIPAY" />
+            <el-option label="微信支付" value="WECHAT" />
+          </el-select>
+
+          <el-date-picker
+            v-model="orderFilters.dateRange"
+            type="daterange"
+            size="small"
+            placeholder="选择日期范围"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            @change="loadOrders"
+          />
+        </div>
+
+        <!-- 订单列表 -->
+        <div v-if="ordersLoading" class="order-loading">
+          <el-skeleton :rows="3" animated />
+        </div>
+
+        <div v-else-if="!orders.length" class="empty-state">
+          <el-empty description="暂无订单记录" :image-size="80" />
+        </div>
+
+        <div v-else class="order-list">
+          <div 
+            v-for="order in orders" 
+            :key="order.id"
+            class="order-item"
+          >
+            <div class="order-header">
+              <div class="order-info">
+                <span class="order-no">订单号：{{ order.orderNo }}</span>
+                <span class="order-date">{{ formatDate(order.createdAt) }}</span>
+              </div>
+              <el-tag 
+                :type="getOrderStatusType(order.status)"
+                size="small"
+              >
+                {{ formatOrderStatus(order.status) }}
+              </el-tag>
+            </div>
+
+            <div class="order-body">
+              <div class="order-package">
+                <el-tag type="primary" size="small">{{ order.packageName }}</el-tag>
+                <span class="package-duration">{{ order.packageDuration }}天</span>
+              </div>
+              
+              <div class="order-payment">
+                <div class="payment-method">
+                  <el-icon><CreditCard /></el-icon>
+                  {{ formatPaymentMethod(order.paymentMethod) }}
+                </div>
+                <div class="payment-amount">¥{{ order.amount }}</div>
+              </div>
+            </div>
+
+            <div class="order-actions">
+              <el-button 
+                type="text" 
+                size="small"
+                @click="viewOrderDetail(order)"
+              >
+                查看详情
+              </el-button>
+
+              <el-button 
+                v-if="order.status === 'PENDING' && !isOrderExpired(order)"
+                type="primary" 
+                size="small"
+                @click="continuePayment(order)"
+              >
+                继续支付
+              </el-button>
+
+              <el-button 
+                v-if="order.status === 'PENDING'"
+                type="danger" 
+                size="small"
+                @click="cancelOrder(order)"
+              >
+                取消订单
+              </el-button>
+            </div>
+
+            <!-- 过期提示 -->
+            <div v-if="order.status === 'PENDING' && isOrderExpired(order)" class="order-expired">
+              <el-alert
+                title="订单已过期"
+                type="warning"
+                :closable="false"
+                size="small"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 分页 -->
+        <div v-if="orderPagination.total > 0" class="order-pagination">
+          <el-pagination
+            v-model:current-page="orderPagination.page"
+            v-model:page-size="orderPagination.pageSize"
+            :total="orderPagination.total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next, jumper"
+            @current-change="loadOrders"
+            @size-change="loadOrders"
+          />
+        </div>
+      </div>
+    </el-card>
+
     <!-- 邀请用户详情对话框 -->
     <el-dialog
       v-model="showInviteesDialog"
@@ -403,10 +557,11 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/authStore'
-import { ElMessage } from 'element-plus'
-import { UserFilled, Camera, CopyDocument, Link } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { UserFilled, Camera, CopyDocument, Link, CreditCard } from '@element-plus/icons-vue'
 import { validatePassword } from '@/services/authService'
-import inviteService from '@/services/inviteService'
+import { inviteService } from '@/services/inviteService'
+import { paymentService } from '@/services/paymentService'
 
 // 状态管理
 const authStore = useAuthStore()
@@ -467,6 +622,20 @@ const shareUrl = computed(() => {
     return `${window.location.origin}/#/register?invite=${inviteInfo.inviteCode}`
   }
   return ''
+})
+
+// 订单管理相关数据
+const ordersLoading = ref(false)
+const orders = ref([])
+const orderFilters = reactive({
+  status: '',
+  paymentMethod: '',
+  dateRange: null
+})
+const orderPagination = reactive({
+  page: 1,
+  pageSize: 10,
+  total: 0
 })
 
 // 上传配置
@@ -739,7 +908,10 @@ const loadInviteData = async () => {
 
     // 处理邀请码信息
     if (codeResult.success) {
-      Object.assign(inviteInfo, codeResult.data)
+      // 处理嵌套数据结构：codeResult.data.data
+      const actualData = codeResult.data.data || codeResult.data
+      Object.assign(inviteInfo, actualData)
+      console.log('UserProfile邀请码数据:', actualData) // 调试日志
     }
 
     // 处理邀请统计
@@ -794,10 +966,178 @@ const copyShareLink = async () => {
   }
 }
 
+// 加载订阅信息
+const loadSubscriptionInfo = async () => {
+  try {
+    // 从订阅服务获取当前订阅信息
+    const { subscriptionService } = await import('@/services/subscriptionService')
+    const response = await subscriptionService.getCurrentSubscription()
+    if (response.success && response.data) {
+      // 更新authStore中的订阅信息
+      authStore.subscription = response.data
+    }
+  } catch (error) {
+    console.error('加载订阅信息失败:', error)
+  }
+}
+
+// 订单管理相关方法
+const loadOrders = async () => {
+  ordersLoading.value = true
+  try {
+    const params = {
+      page: orderPagination.page,
+      pageSize: orderPagination.pageSize,
+      ...orderFilters
+    }
+
+    // 处理日期范围
+    if (orderFilters.dateRange && orderFilters.dateRange.length === 2) {
+      params.startDate = orderFilters.dateRange[0]
+      params.endDate = orderFilters.dateRange[1]
+    }
+
+    const response = await paymentService.getOrders(params)
+    
+    if (response.success) {
+      orders.value = response.data.data || []
+      orderPagination.total = response.data.total || 0
+    } else {
+      ElMessage.error('获取订单列表失败')
+    }
+  } catch (error) {
+    console.error('加载订单失败:', error)
+    ElMessage.error('加载订单失败')
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
+const refreshOrders = async () => {
+  orderPagination.page = 1
+  await loadOrders()
+  ElMessage.success('订单数据已刷新')
+}
+
+const viewOrderDetail = (order) => {
+  // 可以跳转到订单详情页面或显示详情对话框
+  ElMessage.info(`查看订单详情: ${order.orderNo}`)
+  // this.$router.push(`/orders/${order.orderNo}`)
+}
+
+const continuePayment = async (order) => {
+  try {
+    const result = await paymentService.pay(order.orderNo)
+    if (result.success) {
+      // 根据支付方式处理支付逻辑
+      if (order.paymentMethod === 'ALIPAY') {
+        // 跳转到支付宝支付页面
+        window.open(result.data.payUrl, '_blank')
+      } else if (order.paymentMethod === 'WECHAT') {
+        // 显示微信支付二维码
+        ElMessage.info('请使用微信扫码支付')
+      }
+      
+      // 启动支付状态轮询
+      startPaymentPolling(order.orderNo)
+    } else {
+      ElMessage.error(result.message || '发起支付失败')
+    }
+  } catch (error) {
+    console.error('继续支付失败:', error)
+    ElMessage.error('发起支付失败')
+  }
+}
+
+const cancelOrder = async (order) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要取消订单 ${order.orderNo} 吗？`,
+      '取消订单',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    const result = await paymentService.cancelOrder(order.orderNo)
+    if (result.success) {
+      ElMessage.success('订单已取消')
+      await loadOrders() // 刷新订单列表
+    } else {
+      ElMessage.error(result.message || '取消订单失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消订单失败:', error)
+      ElMessage.error('取消订单失败')
+    }
+  }
+}
+
+const startPaymentPolling = (orderNo) => {
+  const stopPolling = paymentService.pollPaymentStatus(orderNo, {
+    interval: 3000,
+    maxAttempts: 100,
+    onSuccess: (order) => {
+      ElMessage.success('支付成功！')
+      loadOrders() // 刷新订单列表
+      loadSubscriptionInfo() // 刷新订阅信息
+    },
+    onFailed: (order) => {
+      ElMessage.error('支付失败，请重试')
+      loadOrders() // 刷新订单列表
+    },
+    onTimeout: () => {
+      ElMessage.warning('支付超时，请手动刷新页面查看状态')
+    }
+  })
+
+  // 可以在组件销毁时停止轮询
+  return stopPolling
+}
+
+const isOrderExpired = (order) => {
+  if (!order?.expiresAt) return false
+  return new Date() > new Date(order.expiresAt)
+}
+
+const formatOrderStatus = (status) => {
+  const statusMap = {
+    'PENDING': '待支付',
+    'PAID': '已支付',
+    'FAILED': '支付失败',
+    'CANCELLED': '已取消'
+  }
+  return statusMap[status] || '未知状态'
+}
+
+const getOrderStatusType = (status) => {
+  const typeMap = {
+    'PENDING': 'warning',
+    'PAID': 'success',
+    'FAILED': 'danger',
+    'CANCELLED': 'info'
+  }
+  return typeMap[status] || 'info'
+}
+
+const formatPaymentMethod = (method) => {
+  const methodMap = {
+    'ALIPAY': '支付宝',
+    'WECHAT': '微信支付',
+    'INVITE_REWARD': '邀请奖励'
+  }
+  return methodMap[method] || method
+}
+
 // 组件挂载时
 onMounted(() => {
   loadUserInfo()
   loadInviteData()
+  loadSubscriptionInfo()
+  loadOrders()
 })
 </script>
 
@@ -904,7 +1244,8 @@ onMounted(() => {
 }
 
 .password-card,
-.subscription-card {
+.subscription-card,
+.order-card {
   margin-top: 0;
 }
 
@@ -1102,6 +1443,133 @@ onMounted(() => {
   margin-top: 4px;
 }
 
+/* 订单管理样式 */
+.order-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.order-filters .el-select,
+.order-filters .el-date-editor {
+  min-width: 160px;
+}
+
+.order-loading {
+  padding: 20px;
+}
+
+.order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.order-item {
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+}
+
+.order-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-no {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.order-date {
+  font-size: 12px;
+  color: #909399;
+}
+
+.order-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.order-package {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.package-duration {
+  font-size: 13px;
+  color: #666;
+}
+
+.order-payment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #666;
+}
+
+.payment-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e6a23c;
+}
+
+.order-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.order-expired {
+  margin-top: 12px;
+}
+
+.order-pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .user-profile-container {
@@ -1148,6 +1616,33 @@ onMounted(() => {
   .invitee-status {
     align-items: flex-start;
     flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  /* 订单管理移动端样式 */
+  .order-filters {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .order-filters .el-select,
+  .order-filters .el-date-editor {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .order-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .order-payment {
+    align-items: flex-start;
+  }
+  
+  .order-actions {
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
 }

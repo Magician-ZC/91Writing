@@ -17,7 +17,7 @@ import {
 import { PaymentService } from './payment.service';
 import { CreatePaymentOrderDto } from '../../dto/create-payment-order.dto';
 import { QueryPaymentOrderDto } from '../../dto/query-payment-order.dto';
-import { JwtAuthGuard } from '@app/auth';
+import { JwtAuthGuard } from '@app/common';
 import { Request } from 'express';
 
 @ApiTags('支付管理')

@@ -174,6 +174,51 @@ const routes = [
         name: 'InviteCenter',
         component: () => import('../views/InviteCenter.vue'),
         meta: { title: '邀请中心 - 91Writing' }
+      },
+      
+      // 管理后台路由（需要管理员权限）
+      {
+        path: 'admin',
+        name: 'AdminPanel',
+        meta: { requiresAdmin: true, title: '管理后台 - 91Writing' },
+        children: [
+          {
+            path: '',
+            name: 'AdminDashboard',
+            component: () => import('../views/admin/dashboard/AdminDashboard.vue'),
+            meta: { title: '管理后台仪表盘 - 91Writing' }
+          },
+          {
+            path: 'users',
+            name: 'AdminUsers',
+            component: () => import('../views/admin/users/UserManagement.vue'),
+            meta: { title: '用户管理 - 91Writing' }
+          },
+          {
+            path: 'subscriptions',
+            name: 'AdminSubscriptions',
+            component: () => import('../views/admin/subscriptions/SubscriptionManagement.vue'),
+            meta: { title: '订阅管理 - 91Writing' }
+          },
+          {
+            path: 'orders',
+            name: 'AdminOrders',
+            component: () => import('../views/admin/orders/OrderManagement.vue'),
+            meta: { title: '订单管理 - 91Writing' }
+          },
+          {
+            path: 'packages',
+            name: 'AdminPackages',
+            component: () => import('../views/admin/packages/PackageManagement.vue'),
+            meta: { title: '套餐管理 - 91Writing' }
+          },
+          {
+            path: 'settings',
+            name: 'AdminSettings',
+            component: () => import('../views/admin/settings/SystemSettings.vue'),
+            meta: { title: '系统设置 - 91Writing' }
+          }
+        ]
       }
     ]
   },

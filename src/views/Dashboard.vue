@@ -72,6 +72,12 @@
           <el-icon><Setting /></el-icon>
           <template #title>系统设置</template>
         </el-menu-item>
+        
+        <!-- 管理后台菜单（仅管理员可见） -->
+        <el-menu-item v-if="isAdmin" index="/admin">
+          <el-icon><Monitor /></el-icon>
+          <template #title>管理后台</template>
+        </el-menu-item>
       </el-menu>
     </div>
     
@@ -221,7 +227,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   House, Document, Message, Collection, Notebook, Position, 
   CreditCard, Setting, Key, Tools, EditPen, DataAnalysis,
-  Expand, Fold, Notification, UserFilled, User, ArrowDown, SwitchButton, Switch 
+  Expand, Fold, Notification, UserFilled, User, ArrowDown, SwitchButton, Switch,
+  Monitor 
 } from '@element-plus/icons-vue'
 import ApiConfig from '@/components/ApiConfig.vue'
 import AnnouncementDialog from '@/components/AnnouncementDialog.vue'
@@ -248,6 +255,7 @@ const isApiConfigured = computed(() => novelStore.isApiConfigured)
 
 // 用户相关计算属性
 const displayName = computed(() => authStore.displayName)
+const isAdmin = computed(() => authStore.isAdmin)
 const userAvatar = computed(() => authStore.user?.avatar)
 const hasActiveSubscription = computed(() => authStore.hasActiveSubscription)
 
@@ -358,7 +366,13 @@ const pageTitle = computed(() => {
     '/short-story': '短文写作',
     '/book-analysis': '拆书工具',
     '/data-migration': '数据迁移',
-    '/settings': '系统设置'
+    '/settings': '系统设置',
+    '/admin': '管理后台',
+    '/admin/users': '用户管理',
+    '/admin/subscriptions': '订阅管理',
+    '/admin/orders': '订单管理',
+    '/admin/packages': '套餐管理',
+    '/admin/settings': '系统配置'
   }
   return titleMap[route.path] || '首页'
 })

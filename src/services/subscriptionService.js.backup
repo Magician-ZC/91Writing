@@ -1,0 +1,298 @@
+import apiManager from './apiManager'
+
+class SubscriptionService {
+  constructor() {
+    this.baseURL = '/api/v1/payment/subscriptions'
+  }
+
+  /**
+   * 获取当前用户订阅
+   */
+  async getCurrentSubscription() {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/current`, {
+        method: 'GET'
+      })
+      return response
+    } catch (error) {
+      console.error('获取当前订阅失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 检查订阅状态
+   */
+  async checkSubscriptionStatus() {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/status`, {
+        method: 'GET'
+      })
+      return response
+    } catch (error) {
+      console.error('检查订阅状态失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 创建订阅
+   */
+  async createSubscription(data) {
+    try {
+      const response = await apiManager.request(this.baseURL, {
+        method: 'POST',
+        data
+      })
+      return response
+    } catch (error) {
+      console.error('创建订阅失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取订阅详情
+   */
+  async getSubscription(id) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/${id}`, {
+        method: 'GET'
+      })
+      return response
+    } catch (error) {
+      console.error('获取订阅详情失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 更新订阅
+   */
+  async updateSubscription(id, data) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/${id}`, {
+        method: 'PATCH',
+        data
+      })
+      return response
+    } catch (error) {
+      console.error('更新订阅失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 取消订阅
+   */
+  async cancel(id) {
+    try {
+      const response = await apiManager.request(
+      }, {
+        method: 'POST',
+        endpoint: `${this.baseURL}/${id}/cancel`
+      })
+      return response
+    } catch (error) {
+      console.error('取消订阅失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 续费订阅
+   */
+  async renew(id) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/${id}/renew`, {
+        method: 'POST'
+      })
+      return response
+    } catch (error) {
+      console.error('续费订阅失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 开启自动续费
+   */
+  async enableAutoRenew(id) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/${id}/auto-renew`, {
+        method: 'PATCH',
+        data: { autoRenew: true }
+      })
+      return response
+    } catch (error) {
+      console.error('开启自动续费失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 关闭自动续费
+   */
+  async disableAutoRenew(id) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/${id}/auto-renew`, {
+        method: 'PATCH',
+        data: { autoRenew: false }
+      })
+      return response
+    } catch (error) {
+      console.error('关闭自动续费失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 检查订阅是否活跃
+   */
+  isSubscriptionActive(subscription) {
+    if (!subscription) return false
+    
+    const now = new Date()
+    const endDate = new Date(subscription.endDate)
+    
+    return subscription.status === 'ACTIVE' && now <= endDate
+  }
+
+  /**
+   * 检查订阅是否即将过期
+   */
+  isSubscriptionExpiringSoon(subscription, days = 7) {
+    if (!subscription || !this.isSubscriptionActive(subscription)) return false
+    
+    const now = new Date()
+    const endDate = new Date(subscription.endDate)
+    const diffTime = endDate - now
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    return diffDays <= days && diffDays > 0
+  }
+
+  /**
+   * 计算订阅剩余天数
+   */
+  getRemainingDays(subscription) {
+    if (!subscription) return 0
+    
+    const now = new Date()
+    const endDate = new Date(subscription.endDate)
+    const diffTime = endDate - now
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    return Math.max(0, diffDays)
+  }
+
+  /**
+   * 格式化订阅状态
+   */
+  formatSubscriptionStatus(status) {
+    const statusMap = {
+      'ACTIVE': '活跃',
+      'EXPIRED': '已过期',
+      'CANCELLED': '已取消',
+      'PENDING': '待激活'
+    }
+    return statusMap[status] || '未知'
+  }
+
+  /**
+   * 获取订阅状态颜色
+   */
+  getSubscriptionStatusColor(status) {
+    const colorMap = {
+      'ACTIVE': '#67c23a',
+      'EXPIRED': '#f56c6c',
+      'CANCELLED': '#909399',
+      'PENDING': '#e6a23c'
+    }
+    return colorMap[status] || '#909399'
+  }
+
+  /**
+   * 检查功能是否可用
+   */
+  checkFeatureAvailable(subscription, featureName) {
+    if (!this.isSubscriptionActive(subscription)) return false
+    if (!subscription.package?.features) return false
+    
+    return !!subscription.package.features[featureName]
+  }
+
+  /**
+   * 获取使用限制
+   */
+  getUsageLimit(subscription, limitName) {
+    if (!this.isSubscriptionActive(subscription)) return 0
+    if (!subscription.package?.features) return 0
+    
+    return subscription.package.features[limitName] || 0
+  }
+
+  /**
+   * 计算订阅价值
+   */
+  calculateSubscriptionValue(subscription) {
+    if (!subscription) return 0
+    
+    const remainingDays = this.getRemainingDays(subscription)
+    const totalDays = subscription.package.durationDays
+    const totalPrice = parseFloat(subscription.package.price)
+    
+    const remainingValue = (remainingDays / totalDays) * totalPrice
+    return Math.round(remainingValue * 100) / 100
+  }
+
+  /**
+   * 获取订阅历史（如果API支持）
+   */
+  async getSubscriptionHistory(params = {}) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/history`, {
+        method: 'GET',
+        params
+      })
+      return response
+    } catch (error) {
+      console.error('获取订阅历史失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 预览升级/降级
+   */
+  async previewUpgrade(currentSubscriptionId, targetPackageId) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/${currentSubscriptionId}/preview-upgrade`, {
+        method: 'POST',
+        data: { targetPackageId }
+      })
+      return response
+    } catch (error) {
+      console.error('预览订阅升级失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 升级订阅
+   */
+  async upgradeSubscription(currentSubscriptionId, targetPackageId) {
+    try {
+      const response = await apiManager.request(`${this.baseURL}/${currentSubscriptionId}/upgrade`, {
+        method: 'POST',
+        data: { targetPackageId }
+      })
+      return response
+    } catch (error) {
+      console.error('升级订阅失败:', error)
+      throw error
+    }
+  }
+}
+
+export const subscriptionService = new SubscriptionService()

@@ -1,4 +1,4 @@
-import { apiManager } from './apiManager'
+import apiManager from './apiManager'
 
 class PaymentService {
   constructor() {

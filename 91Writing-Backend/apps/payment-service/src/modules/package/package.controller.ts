@@ -19,9 +19,7 @@ import { PackageService } from './package.service';
 import { CreatePackageDto } from '../../dto/create-package.dto';
 import { UpdatePackageDto } from '../../dto/update-package.dto';
 import { QueryPackageDto } from '../../dto/query-package.dto';
-import { JwtAuthGuard } from '@app/auth';
-import { Roles, RolesGuard } from '@app/auth';
-import { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '@app/common';
 
 @ApiTags('套餐管理')
 @ApiBearerAuth()
@@ -30,8 +28,7 @@ export class PackageController {
   constructor(private readonly packageService: PackageService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '创建套餐' })
   @ApiResponse({ status: 201, description: '套餐创建成功' })
   create(@Body() createPackageDto: CreatePackageDto) {
@@ -60,8 +57,7 @@ export class PackageController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '更新套餐' })
   @ApiResponse({ status: 200, description: '套餐更新成功' })
   update(@Param('id') id: string, @Body() updatePackageDto: UpdatePackageDto) {
@@ -69,8 +65,7 @@ export class PackageController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '删除套餐' })
   @ApiResponse({ status: 200, description: '套餐删除成功' })
   remove(@Param('id') id: string) {

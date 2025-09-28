@@ -223,6 +223,7 @@ const handleLogin = async () => {
     const valid = await loginFormRef.value.validate()
     if (!valid) return
     
+    loading.value = true
     const result = await authStore.login(loginForm)
     
     if (result.success) {
@@ -240,9 +241,37 @@ const handleLogin = async () => {
         // 回退到首页
         await router.push('/home')
       }
+    } else {
+      // 登录失败，显示具体错误信息
+      let errorMessage = '登录失败，请检查邮箱和密码'
+      
+      if (result.error) {
+        errorMessage = result.error
+      } else if (result.message) {
+        errorMessage = result.message
+      }
+      
+      ElMessage.error(errorMessage)
+      console.error('登录失败:', errorMessage)
     }
   } catch (error) {
-    console.error('登录失败:', error)
+    // 尝试多种方式获取错误信息
+    let errorMessage = '登录失败，请检查网络连接'
+    
+    if (error?.message) {
+      errorMessage = error.message
+    } else if (error?.response?.data?.error?.message) {
+      errorMessage = error.response.data.error.message
+    } else if (error?.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error?.response?.data?.error) {
+      errorMessage = error.response.data.error
+    }
+    
+    ElMessage.error(errorMessage)
+    console.error('登录异常:', error)
+  } finally {
+    loading.value = false
   }
 }
 

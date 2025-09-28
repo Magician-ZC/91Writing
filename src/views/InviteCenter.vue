@@ -58,7 +58,7 @@
             <template #header>
               <div class="card-header">
                 <h3>我的专属邀请码</h3>
-                <el-tag type="success">{{ userInviteInfo.inviteCode }}</el-tag>
+                <el-tag type="success">{{ userInviteInfo.inviteCode || '加载中...' }}</el-tag>
               </div>
             </template>
             
@@ -117,7 +117,7 @@
               </div>
 
               <div class="rule-item">
-                <el-icon class="rule-icon primary"><Crown /></el-icon>
+                <el-icon class="rule-icon primary"><Trophy /></el-icon>
                 <div class="rule-content">
                   <h4>订阅奖励</h4>
                   <p>被邀请好友订阅付费套餐，您可额外获得 <strong>15天</strong> 会员奖励</p>
@@ -326,7 +326,6 @@ import {
   Calendar,
   Star,
   CircleCheck,
-  Crown,
   Clock,
   Share,
   ChatDotRound,
@@ -342,7 +341,6 @@ export default {
     Calendar,
     Star,
     CircleCheck,
-    Crown,
     Clock,
     Share,
     ChatDotRound,
@@ -445,11 +443,16 @@ export default {
     const loadShareMaterials = async () => {
       try {
         const response = await inviteService.getShareMaterials()
+        console.log('分享素材API响应:', response) // 调试日志
         if (response.success) {
-          shareMaterials.value = response.data
+          // 正确处理嵌套数据结构：response.data.data
+          const actualData = response.data.data || response.data
+          shareMaterials.value = actualData
           userInviteInfo.value = {
-            inviteCode: response.data.inviteCode
+            inviteCode: actualData.inviteCode
           }
+          console.log('设置的邀请码:', actualData.inviteCode) // 调试日志
+          console.log('用户邀请信息:', userInviteInfo.value) // 调试日志
         }
       } catch (error) {
         console.error('加载分享素材失败:', error)

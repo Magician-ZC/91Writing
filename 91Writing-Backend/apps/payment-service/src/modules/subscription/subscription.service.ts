@@ -62,7 +62,7 @@ export class SubscriptionService {
   }
 
   async findByUser(userId: string) {
-    return this.prisma.subscription.findUnique({
+    return this.prisma.subscription.findFirst({
       where: { userId },
       include: { 
         package: true,
@@ -75,6 +75,7 @@ export class SubscriptionService {
           }
         }
       },
+      orderBy: { createdAt: 'desc' },
     });
   }
 

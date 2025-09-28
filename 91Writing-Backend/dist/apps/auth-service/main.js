@@ -63,7 +63,7 @@ const passport_1 = __webpack_require__(10);
 const database_1 = __webpack_require__(11);
 const auth_module_1 = __webpack_require__(15);
 const invite_module_1 = __webpack_require__(40);
-const health_module_1 = __webpack_require__(43);
+const health_module_1 = __webpack_require__(44);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -2021,6 +2021,7 @@ exports.InviteModule = void 0;
 const common_1 = __webpack_require__(3);
 const invite_controller_1 = __webpack_require__(41);
 const invite_service_1 = __webpack_require__(42);
+const invite_reward_service_1 = __webpack_require__(43);
 const database_1 = __webpack_require__(11);
 let InviteModule = class InviteModule {
 };
@@ -2029,8 +2030,8 @@ exports.InviteModule = InviteModule = __decorate([
     (0, common_1.Module)({
         imports: [database_1.DatabaseModule],
         controllers: [invite_controller_1.InviteController],
-        providers: [invite_service_1.InviteService],
-        exports: [invite_service_1.InviteService],
+        providers: [invite_service_1.InviteService, invite_reward_service_1.InviteRewardService],
+        exports: [invite_service_1.InviteService, invite_reward_service_1.InviteRewardService],
     })
 ], InviteModule);
 
@@ -2052,7 +2053,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InviteController = void 0;
 const common_1 = __webpack_require__(3);
@@ -2077,6 +2078,15 @@ let InviteController = class InviteController {
     }
     async claimReward(req, body) {
         return this.inviteService.claimReward(req.user.id, body.rewardId);
+    }
+    async getRewardConfig(req) {
+        return this.inviteService.getRewardConfig();
+    }
+    async getExpectedRewards(req) {
+        return this.inviteService.getExpectedRewards(req.user.id);
+    }
+    async generateShareMaterials(req) {
+        return this.inviteService.generateShareMaterials(req.user.id);
     }
 };
 exports.InviteController = InviteController;
@@ -2174,6 +2184,51 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
 ], InviteController.prototype, "claimReward", null);
+__decorate([
+    (0, common_1.Get)('reward-config'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取奖励配置',
+        description: '获取邀请奖励规则配置'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+    }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], InviteController.prototype, "getRewardConfig", null);
+__decorate([
+    (0, common_1.Get)('expected-rewards'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取预期奖励',
+        description: '计算当前用户的预期奖励和里程碑'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+    }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], InviteController.prototype, "getExpectedRewards", null);
+__decorate([
+    (0, common_1.Get)('share-materials'),
+    (0, swagger_1.ApiOperation)({
+        summary: '生成分享素材',
+        description: '生成邀请分享的各种素材和链接'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '生成成功',
+    }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+], InviteController.prototype, "generateShareMaterials", null);
 exports.InviteController = InviteController = __decorate([
     (0, swagger_1.ApiTags)('邀请系统'),
     (0, common_1.Controller)('invite'),
@@ -2198,15 +2253,17 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 var InviteService_1;
-var _a;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InviteService = void 0;
 const common_1 = __webpack_require__(3);
 const database_1 = __webpack_require__(11);
 const client_1 = __webpack_require__(14);
+const invite_reward_service_1 = __webpack_require__(43);
 let InviteService = InviteService_1 = class InviteService {
-    constructor(prisma) {
+    constructor(prisma, inviteRewardService) {
         this.prisma = prisma;
+        this.inviteRewardService = inviteRewardService;
         this.logger = new common_1.Logger(InviteService_1.name);
     }
     async getMyInviteCode(userId) {
@@ -2363,11 +2420,62 @@ let InviteService = InviteService_1 = class InviteService {
             message: '奖励领取成功'
         };
     }
+    async getRewardConfig() {
+        return this.inviteRewardService.getRewardConfig();
+    }
+    async getExpectedRewards(userId) {
+        const expectedRewards = await this.inviteRewardService.calculateExpectedRewards(userId);
+        return {
+            success: true,
+            data: expectedRewards
+        };
+    }
+    async generateShareMaterials(userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                inviteCode: true,
+                inviteCount: true,
+                nickname: true,
+                email: true
+            }
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('用户不存在');
+        }
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:7520';
+        const shareUrl = `${baseUrl}/register?invite=${user.inviteCode}`;
+        const shareTexts = [
+            `我在使用91Writing智能写作平台，功能很棒！推荐给你，注册即可获得3天免费会员：${shareUrl}`,
+            `发现了一个很好用的AI写作工具91Writing，帮你快速创作小说，点击链接注册体验：${shareUrl}`,
+            `91Writing - 让AI帮你写小说，提高创作效率！新用户注册送会员，快来试试：${shareUrl}`,
+            `推荐一个智能写作神器91Writing，已经帮我写了好多章节了！注册链接：${shareUrl}`
+        ];
+        const socialShares = {
+            qq: `https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent('91Writing智能写作平台')}&summary=${encodeURIComponent(shareTexts[0])}`,
+            weibo: `https://service.weibo.com/share/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTexts[0])}`,
+            wechat: shareUrl,
+        };
+        return {
+            success: true,
+            data: {
+                inviteCode: user.inviteCode,
+                shareUrl,
+                shareTexts,
+                socialShares,
+                qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`,
+                statistics: {
+                    totalInvites: user.inviteCount,
+                    userName: user.nickname || user.email
+                }
+            }
+        };
+    }
 };
 exports.InviteService = InviteService;
 exports.InviteService = InviteService = InviteService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof invite_reward_service_1.InviteRewardService !== "undefined" && invite_reward_service_1.InviteRewardService) === "function" ? _b : Object])
 ], InviteService);
 
 
@@ -2382,12 +2490,240 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var InviteRewardService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.InviteRewardService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(11);
+const client_1 = __webpack_require__(14);
+let InviteRewardService = InviteRewardService_1 = class InviteRewardService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(InviteRewardService_1.name);
+        this.rewardConfig = {
+            inviteSuccess: {
+                inviterRewards: [
+                    { type: client_1.RewardType.DAYS, amount: 7, description: '邀请奖励：7天会员' }
+                ],
+                inviteeRewards: [
+                    { type: client_1.RewardType.DAYS, amount: 3, description: '新用户奖励：3天会员' }
+                ]
+            },
+            inviteeSubscribe: {
+                inviterRewards: [
+                    { type: client_1.RewardType.DAYS, amount: 15, description: '被邀请者订阅奖励：15天会员' }
+                ]
+            },
+            milestones: [
+                { inviteCount: 5, rewards: [{ type: client_1.RewardType.DAYS, amount: 30, description: '邀请5人里程碑：30天会员' }] },
+                { inviteCount: 10, rewards: [{ type: client_1.RewardType.DAYS, amount: 60, description: '邀请10人里程碑：60天会员' }] },
+                { inviteCount: 20, rewards: [{ type: client_1.RewardType.DAYS, amount: 90, description: '邀请20人里程碑：90天会员' }] },
+                { inviteCount: 50, rewards: [{ type: client_1.RewardType.DAYS, amount: 180, description: '邀请50人里程碑：180天会员' }] }
+            ]
+        };
+    }
+    async processInviteSuccessReward(inviterId, inviteeId, inviteId) {
+        this.logger.log(`处理邀请成功奖励: ${inviterId} -> ${inviteeId}`);
+        try {
+            for (const reward of this.rewardConfig.inviteSuccess.inviterRewards) {
+                await this.createReward(inviterId, inviteId, reward);
+            }
+            for (const reward of this.rewardConfig.inviteSuccess.inviteeRewards) {
+                await this.createReward(inviteeId, inviteId, reward);
+            }
+            await this.checkMilestoneRewards(inviterId);
+            this.logger.log(`邀请成功奖励处理完成: ${inviterId} -> ${inviteeId}`);
+        }
+        catch (error) {
+            this.logger.error(`处理邀请成功奖励失败: ${error.message}`);
+        }
+    }
+    async processInviteeSubscriptionReward(inviteeId) {
+        this.logger.log(`处理被邀请者订阅奖励: ${inviteeId}`);
+        try {
+            const inviteRecord = await this.prisma.userInvite.findFirst({
+                where: { inviteeId },
+                include: { inviter: true }
+            });
+            if (!inviteRecord) {
+                this.logger.warn(`未找到邀请记录: ${inviteeId}`);
+                return;
+            }
+            for (const reward of this.rewardConfig.inviteeSubscribe.inviterRewards) {
+                await this.createReward(inviteRecord.inviterId, inviteRecord.id, reward);
+            }
+            this.logger.log(`被邀请者订阅奖励处理完成: ${inviteeId}`);
+        }
+        catch (error) {
+            this.logger.error(`处理被邀请者订阅奖励失败: ${error.message}`);
+        }
+    }
+    async checkMilestoneRewards(userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { inviteCount: true }
+        });
+        if (!user)
+            return;
+        const eligibleMilestones = this.rewardConfig.milestones.filter(milestone => milestone.inviteCount === user.inviteCount);
+        for (const milestone of eligibleMilestones) {
+            for (const reward of milestone.rewards) {
+                await this.createReward(userId, null, reward);
+            }
+            this.logger.log(`用户 ${userId} 达成邀请里程碑: ${milestone.inviteCount}人`);
+        }
+    }
+    async createReward(userId, inviteId, rewardConfig) {
+        return this.prisma.inviteReward.create({
+            data: {
+                userId,
+                inviteId,
+                rewardType: rewardConfig.type,
+                amount: rewardConfig.amount,
+                description: rewardConfig.description,
+                status: client_1.RewardStatus.PENDING
+            }
+        });
+    }
+    async processAutomaticRewards() {
+        this.logger.log('开始处理自动奖励发放');
+        const pendingRewards = await this.prisma.inviteReward.findMany({
+            where: { status: client_1.RewardStatus.PENDING },
+            include: { user: true }
+        });
+        for (const reward of pendingRewards) {
+            try {
+                await this.grantReward(reward.id, reward.userId, reward);
+            }
+            catch (error) {
+                this.logger.error(`自动发放奖励失败 ${reward.id}: ${error.message}`);
+            }
+        }
+        this.logger.log(`自动奖励发放完成，处理了 ${pendingRewards.length} 个奖励`);
+    }
+    async grantReward(rewardId, userId, reward) {
+        this.logger.log(`发放奖励: ${rewardId} to ${userId}`);
+        try {
+            if (reward.rewardType === client_1.RewardType.DAYS) {
+                await this.grantMembershipDays(userId, reward.amount);
+            }
+            await this.prisma.inviteReward.update({
+                where: { id: rewardId },
+                data: {
+                    status: client_1.RewardStatus.GRANTED,
+                    grantedAt: new Date()
+                }
+            });
+            this.logger.log(`奖励发放成功: ${rewardId}`);
+        }
+        catch (error) {
+            await this.prisma.inviteReward.update({
+                where: { id: rewardId },
+                data: { status: client_1.RewardStatus.FAILED }
+            });
+            throw error;
+        }
+    }
+    async grantMembershipDays(userId, days) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { subscription: true }
+        });
+        if (!user) {
+            throw new Error('用户不存在');
+        }
+        const currentDate = new Date();
+        if (user.subscription) {
+            const currentEndDate = new Date(user.subscription.endDate);
+            const extendToDate = currentDate > currentEndDate ? currentDate : currentEndDate;
+            const newEndDate = new Date(extendToDate);
+            newEndDate.setDate(newEndDate.getDate() + days);
+            await this.prisma.subscription.update({
+                where: { userId },
+                data: {
+                    endDate: newEndDate,
+                    status: client_1.SubscriptionStatus.ACTIVE
+                }
+            });
+            this.logger.log(`延长用户 ${userId} 订阅 ${days} 天，新到期日期: ${newEndDate}`);
+        }
+        else {
+            const freePackage = await this.prisma.package.findFirst({
+                where: { name: { contains: '免费' } }
+            });
+            if (freePackage) {
+                const endDate = new Date(currentDate);
+                endDate.setDate(endDate.getDate() + days);
+                await this.prisma.subscription.create({
+                    data: {
+                        userId,
+                        packageId: freePackage.id,
+                        status: client_1.SubscriptionStatus.ACTIVE,
+                        startDate: currentDate,
+                        endDate,
+                        autoRenew: false
+                    }
+                });
+                this.logger.log(`为用户 ${userId} 创建 ${days} 天免费订阅`);
+            }
+            else {
+                this.logger.warn(`用户 ${userId} 没有订阅且没有免费套餐，奖励天数: ${days}`);
+            }
+        }
+    }
+    getRewardConfig() {
+        return {
+            success: true,
+            data: this.rewardConfig
+        };
+    }
+    async calculateExpectedRewards(userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { inviteCount: true }
+        });
+        if (!user)
+            return null;
+        const nextMilestone = this.rewardConfig.milestones.find(milestone => milestone.inviteCount > user.inviteCount);
+        return {
+            currentInvites: user.inviteCount,
+            nextMilestone: nextMilestone ? {
+                inviteCount: nextMilestone.inviteCount,
+                remaining: nextMilestone.inviteCount - user.inviteCount,
+                rewards: nextMilestone.rewards
+            } : null,
+            inviteRewards: this.rewardConfig.inviteSuccess
+        };
+    }
+};
+exports.InviteRewardService = InviteRewardService;
+exports.InviteRewardService = InviteRewardService = InviteRewardService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], InviteRewardService);
+
+
+/***/ }),
+/* 44 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(3);
-const terminus_1 = __webpack_require__(44);
-const health_controller_1 = __webpack_require__(45);
-const health_service_1 = __webpack_require__(46);
+const terminus_1 = __webpack_require__(45);
+const health_controller_1 = __webpack_require__(46);
+const health_service_1 = __webpack_require__(47);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -2401,13 +2737,13 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/terminus");
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2425,7 +2761,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const terminus_1 = __webpack_require__(44);
+const terminus_1 = __webpack_require__(45);
 const database_1 = __webpack_require__(11);
 let HealthController = class HealthController {
     constructor(health, prismaHealth, memory, prisma) {
@@ -2563,7 +2899,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2678,7 +3014,7 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2692,7 +3028,7 @@ var AllExceptionsFilter_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AllExceptionsFilter = void 0;
 const common_1 = __webpack_require__(3);
-const library_1 = __webpack_require__(48);
+const library_1 = __webpack_require__(49);
 let AllExceptionsFilter = AllExceptionsFilter_1 = class AllExceptionsFilter {
     constructor() {
         this.logger = new common_1.Logger(AllExceptionsFilter_1.name);
@@ -2839,13 +3175,13 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client/runtime/library");
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2858,7 +3194,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(50);
+const operators_1 = __webpack_require__(51);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         const startTime = Date.now();
@@ -2930,7 +3266,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2978,8 +3314,8 @@ const config_1 = __webpack_require__(5);
 const helmet_1 = __webpack_require__(6);
 const compression = __webpack_require__(7);
 const app_module_1 = __webpack_require__(8);
-const all_exceptions_filter_1 = __webpack_require__(47);
-const response_interceptor_1 = __webpack_require__(49);
+const all_exceptions_filter_1 = __webpack_require__(48);
+const response_interceptor_1 = __webpack_require__(50);
 const common_2 = __webpack_require__(3);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);

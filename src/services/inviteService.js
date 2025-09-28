@@ -1,8 +1,8 @@
-import { apiManager } from './apiManager'
+import apiManager from './apiManager'
 
 class InviteService {
   constructor() {
-    this.baseURL = '/invite'
+    this.baseURL = '/api/v1/auth/invite'
   }
 
   /**
@@ -10,9 +10,8 @@ class InviteService {
    */
   async getMyInviteCode() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/my-code`
+      const response = await apiManager.request(`${this.baseURL}/my-code`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -26,9 +25,8 @@ class InviteService {
    */
   async getInviteStats() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/stats`
+      const response = await apiManager.request(`${this.baseURL}/stats`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -42,9 +40,8 @@ class InviteService {
    */
   async getInviteRewards() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/rewards`
+      const response = await apiManager.request(`${this.baseURL}/rewards`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -58,9 +55,8 @@ class InviteService {
    */
   async getInvitees() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/invitees`
+      const response = await apiManager.request(`${this.baseURL}/invitees`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -74,9 +70,8 @@ class InviteService {
    */
   async claimReward(rewardId) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/claim-reward`, {
         method: 'POST',
-        endpoint: `${this.baseURL}/claim-reward`,
         data: { rewardId }
       })
       return response
@@ -91,9 +86,8 @@ class InviteService {
    */
   async getRewardConfig() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/reward-config`
+      const response = await apiManager.request(`${this.baseURL}/reward-config`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -107,9 +101,8 @@ class InviteService {
    */
   async getExpectedRewards() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/expected-rewards`
+      const response = await apiManager.request(`${this.baseURL}/expected-rewards`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -123,9 +116,8 @@ class InviteService {
    */
   async getShareMaterials() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/share-materials`
+      const response = await apiManager.request(`${this.baseURL}/share-materials`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -140,9 +132,8 @@ class InviteService {
   async validateInviteCode(inviteCode) {
     try {
       // 这个接口可能需要在后端添加
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `/auth/validate-invite/${inviteCode}`
+      const response = await apiManager.request(`/api/v1/auth/validate-invite/${inviteCode}`, {
+        method: 'GET'
       })
       return response
     } catch (error) {

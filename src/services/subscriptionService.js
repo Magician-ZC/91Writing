@@ -1,8 +1,8 @@
-import { apiManager } from './apiManager'
+import apiManager from './apiManager'
 
 class SubscriptionService {
   constructor() {
-    this.baseURL = '/subscriptions'
+    this.baseURL = '/api/v1/payment/subscriptions'
   }
 
   /**
@@ -10,9 +10,8 @@ class SubscriptionService {
    */
   async getCurrentSubscription() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/current`
+      const response = await apiManager.request(`${this.baseURL}/current`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -26,9 +25,8 @@ class SubscriptionService {
    */
   async checkSubscriptionStatus() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/status`
+      const response = await apiManager.request(`${this.baseURL}/status`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -42,9 +40,8 @@ class SubscriptionService {
    */
   async createSubscription(data) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(this.baseURL, {
         method: 'POST',
-        endpoint: this.baseURL,
         data
       })
       return response
@@ -59,9 +56,8 @@ class SubscriptionService {
    */
   async getSubscription(id) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/${id}`
+      const response = await apiManager.request(`${this.baseURL}/${id}`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -75,9 +71,8 @@ class SubscriptionService {
    */
   async updateSubscription(id, data) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/${id}`, {
         method: 'PATCH',
-        endpoint: `${this.baseURL}/${id}`,
         data
       })
       return response
@@ -92,9 +87,8 @@ class SubscriptionService {
    */
   async cancel(id) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/${id}/cancel`
+      const response = await apiManager.request(`${this.baseURL}/${id}/cancel`, {
+        method: 'POST'
       })
       return response
     } catch (error) {
@@ -108,9 +102,8 @@ class SubscriptionService {
    */
   async renew(id) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/${id}/renew`
+      const response = await apiManager.request(`${this.baseURL}/${id}/renew`, {
+        method: 'POST'
       })
       return response
     } catch (error) {
@@ -124,9 +117,8 @@ class SubscriptionService {
    */
   async enableAutoRenew(id) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/${id}/auto-renew`, {
         method: 'PATCH',
-        endpoint: `${this.baseURL}/${id}`,
         data: { autoRenew: true }
       })
       return response
@@ -141,9 +133,8 @@ class SubscriptionService {
    */
   async disableAutoRenew(id) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/${id}/auto-renew`, {
         method: 'PATCH',
-        endpoint: `${this.baseURL}/${id}`,
         data: { autoRenew: false }
       })
       return response
@@ -258,9 +249,8 @@ class SubscriptionService {
    */
   async getSubscriptionHistory(params = {}) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/history`, {
         method: 'GET',
-        endpoint: `${this.baseURL}/history`,
         params
       })
       return response
@@ -275,9 +265,8 @@ class SubscriptionService {
    */
   async previewUpgrade(currentSubscriptionId, targetPackageId) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/${currentSubscriptionId}/preview-upgrade`, {
         method: 'POST',
-        endpoint: `${this.baseURL}/${currentSubscriptionId}/preview-upgrade`,
         data: { targetPackageId }
       })
       return response
@@ -292,9 +281,8 @@ class SubscriptionService {
    */
   async upgradeSubscription(currentSubscriptionId, targetPackageId) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/${currentSubscriptionId}/upgrade`, {
         method: 'POST',
-        endpoint: `${this.baseURL}/${currentSubscriptionId}/upgrade`,
         data: { targetPackageId }
       })
       return response

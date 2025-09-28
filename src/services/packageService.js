@@ -1,8 +1,8 @@
-import { apiManager } from './apiManager'
+import apiManager from './apiManager'
 
 class PackageService {
   constructor() {
-    this.baseURL = '/packages'
+    this.baseURL = '/api/v1/payment/packages'
   }
 
   /**
@@ -10,9 +10,8 @@ class PackageService {
    */
   async getActivePackages() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/active`
+      const response = await apiManager.request(`${this.baseURL}/active`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -26,9 +25,8 @@ class PackageService {
    */
   async getAllPackages(params = {}) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(this.baseURL, {
         method: 'GET',
-        endpoint: this.baseURL,
         params
       })
       return response
@@ -43,9 +41,8 @@ class PackageService {
    */
   async getPackage(id) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/${id}`
+      const response = await apiManager.request(`${this.baseURL}/${id}`, {
+        method: 'GET'
       })
       return response
     } catch (error) {
@@ -59,9 +56,8 @@ class PackageService {
    */
   async createPackage(data) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(this.baseURL, {
         method: 'POST',
-        endpoint: this.baseURL,
         data
       })
       return response
@@ -76,9 +72,8 @@ class PackageService {
    */
   async updatePackage(id, data) {
     try {
-      const response = await apiManager.request({
+      const response = await apiManager.request(`${this.baseURL}/${id}`, {
         method: 'PATCH',
-        endpoint: `${this.baseURL}/${id}`,
         data
       })
       return response
@@ -93,9 +88,8 @@ class PackageService {
    */
   async deletePackage(id) {
     try {
-      const response = await apiManager.request({
-        method: 'DELETE',
-        endpoint: `${this.baseURL}/${id}`
+      const response = await apiManager.request(`${this.baseURL}/${id}`, {
+        method: 'DELETE'
       })
       return response
     } catch (error) {

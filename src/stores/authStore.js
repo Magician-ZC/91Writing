@@ -108,8 +108,9 @@ export const useAuthStore = defineStore('auth', {
         }
       } catch (error) {
         console.error('登录失败:', error)
-        ElMessage.error(error.message || '登录失败，请检查用户名和密码')
-        return { success: false, error: error.message }
+        // 不在这里显示错误消息，让Login.vue组件来处理
+        // ElMessage.error(error.message || '登录失败，请检查用户名和密码')
+        return { success: false, error: error.message || '登录失败，请检查用户名和密码' }
       } finally {
         this.loading = false
       }

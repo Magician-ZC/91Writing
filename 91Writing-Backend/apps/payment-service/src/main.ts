@@ -37,7 +37,7 @@ async function bootstrap() {
     credentials: true,
   });
   
-  const port = process.env.PORT || 3004;
+  const port = process.env.PAYMENT_SERVICE_PORT || 3005;
   await app.listen(port);
   console.log(`Payment Service running on port ${port}`);
 }

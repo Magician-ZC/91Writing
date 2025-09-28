@@ -108,13 +108,13 @@
             <el-radio-group v-model="selectedPaymentMethod" size="large">
               <el-radio label="ALIPAY" class="payment-option">
                 <div class="payment-item">
-                  <img src="/alipay-icon.png" alt="支付宝" class="payment-icon">
+                  <img src="/alipay-icon.svg" alt="支付宝" class="payment-icon">
                   <span>支付宝</span>
                 </div>
               </el-radio>
               <el-radio label="WECHAT" class="payment-option">
                 <div class="payment-item">
-                  <img src="/wechat-icon.png" alt="微信支付" class="payment-icon">
+                  <img src="/wechat-icon.svg" alt="微信支付" class="payment-icon">
                   <span>微信支付</span>
                 </div>
               </el-radio>

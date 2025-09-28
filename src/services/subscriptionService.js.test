@@ -1,0 +1,6 @@
+class SubscriptionService {
+  constructor() {
+    this.baseURL = '/api/v1/payment/subscriptions'
+  }
+}
+export const subscriptionService = new SubscriptionService()

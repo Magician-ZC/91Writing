@@ -125,24 +125,28 @@ class ApiManager {
     
     switch (status) {
       case 401:
-        errorMessage = '认证失败，请重新登录'
+        // 优先使用后端返回的具体错误信息
+        errorMessage = data?.message || data?.error?.message || '认证失败，请重新登录'
         errorCode = 'UNAUTHORIZED'
-        this.clearAuthData()
+        // 只有在非登录错误时才清除认证数据
+        if (!data?.message?.includes('邮箱') && !data?.message?.includes('密码')) {
+          this.clearAuthData()
+        }
         break
       case 403:
-        errorMessage = '权限不足'
+        errorMessage = data?.message || data?.error?.message || '权限不足'
         errorCode = 'FORBIDDEN'
         break
       case 404:
-        errorMessage = '请求的资源不存在'
+        errorMessage = data?.message || data?.error?.message || '请求的资源不存在'
         errorCode = 'NOT_FOUND'
         break
       case 500:
-        errorMessage = '服务器内部错误'
+        errorMessage = data?.message || data?.error?.message || '服务器内部错误'
         errorCode = 'INTERNAL_ERROR'
         break
       default:
-        errorMessage = data?.message || `请求失败 (${status})`
+        errorMessage = data?.message || data?.error?.message || `请求失败 (${status})`
         errorCode = 'HTTP_ERROR'
     }
     
