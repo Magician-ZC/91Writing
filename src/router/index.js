@@ -150,6 +150,30 @@ const routes = [
         name: 'DataMigration',
         component: () => import('../views/DataMigrationPage.vue'),
         meta: { title: '数据迁移 - 91Writing' }
+      },
+      {
+        path: 'subscription',
+        name: 'SubscriptionPlans',
+        component: () => import('../views/SubscriptionPlans.vue'),
+        meta: { title: '套餐订阅 - 91Writing' }
+      },
+      {
+        path: 'payment/success',
+        name: 'PaymentSuccess',
+        component: () => import('../views/PaymentSuccess.vue'),
+        meta: { title: '支付成功 - 91Writing' }
+      },
+      {
+        path: 'payment/failed',
+        name: 'PaymentFailed',
+        component: () => import('../views/PaymentFailed.vue'),
+        meta: { title: '支付失败 - 91Writing' }
+      },
+      {
+        path: 'invite',
+        name: 'InviteCenter',
+        component: () => import('../views/InviteCenter.vue'),
+        meta: { title: '邀请中心 - 91Writing' }
       }
     ]
   },

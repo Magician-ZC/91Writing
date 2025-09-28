@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { RewardStatus } from '@prisma/client';
+import { InviteRewardService } from './invite-reward.service';
 
 @Injectable()
 export class InviteService {
@@ -13,6 +14,7 @@ export class InviteService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly inviteRewardService: InviteRewardService,
   ) {}
 
   /**
@@ -210,6 +212,77 @@ export class InviteService {
       success: true,
       data: updatedReward,
       message: '奖励领取成功'
+    };
+  }
+
+  /**
+   * 获取奖励配置
+   */
+  async getRewardConfig(): Promise<any> {
+    return this.inviteRewardService.getRewardConfig();
+  }
+
+  /**
+   * 计算预期奖励
+   */
+  async getExpectedRewards(userId: string): Promise<any> {
+    const expectedRewards = await this.inviteRewardService.calculateExpectedRewards(userId);
+    
+    return {
+      success: true,
+      data: expectedRewards
+    };
+  }
+
+  /**
+   * 生成分享素材
+   */
+  async generateShareMaterials(userId: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        inviteCode: true,
+        inviteCount: true,
+        nickname: true,
+        email: true
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:7520';
+    const shareUrl = `${baseUrl}/register?invite=${user.inviteCode}`;
+    
+    // 生成不同的分享文案
+    const shareTexts = [
+      `我在使用91Writing智能写作平台，功能很棒！推荐给你，注册即可获得3天免费会员：${shareUrl}`,
+      `发现了一个很好用的AI写作工具91Writing，帮你快速创作小说，点击链接注册体验：${shareUrl}`,
+      `91Writing - 让AI帮你写小说，提高创作效率！新用户注册送会员，快来试试：${shareUrl}`,
+      `推荐一个智能写作神器91Writing，已经帮我写了好多章节了！注册链接：${shareUrl}`
+    ];
+
+    // 生成社交媒体分享链接
+    const socialShares = {
+      qq: `https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent('91Writing智能写作平台')}&summary=${encodeURIComponent(shareTexts[0])}`,
+      weibo: `https://service.weibo.com/share/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTexts[0])}`,
+      wechat: shareUrl, // 微信需要通过二维码分享
+    };
+
+    return {
+      success: true,
+      data: {
+        inviteCode: user.inviteCode,
+        shareUrl,
+        shareTexts,
+        socialShares,
+        qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}`,
+        statistics: {
+          totalInvites: user.inviteCount,
+          userName: user.nickname || user.email
+        }
+      }
     };
   }
 }

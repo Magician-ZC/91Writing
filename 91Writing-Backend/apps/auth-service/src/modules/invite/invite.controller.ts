@@ -107,4 +107,43 @@ export class InviteController {
   async claimReward(@Request() req, @Body() body: { rewardId: string }): Promise<any> {
     return this.inviteService.claimReward(req.user.id, body.rewardId);
   }
+
+  @Get('reward-config')
+  @ApiOperation({ 
+    summary: '获取奖励配置',
+    description: '获取邀请奖励规则配置'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+  })
+  async getRewardConfig(@Request() req): Promise<any> {
+    return this.inviteService.getRewardConfig();
+  }
+
+  @Get('expected-rewards')
+  @ApiOperation({ 
+    summary: '获取预期奖励',
+    description: '计算当前用户的预期奖励和里程碑'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+  })
+  async getExpectedRewards(@Request() req): Promise<any> {
+    return this.inviteService.getExpectedRewards(req.user.id);
+  }
+
+  @Get('share-materials')
+  @ApiOperation({ 
+    summary: '生成分享素材',
+    description: '生成邀请分享的各种素材和链接'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '生成成功',
+  })
+  async generateShareMaterials(@Request() req): Promise<any> {
+    return this.inviteService.generateShareMaterials(req.user.id);
+  }
 }
