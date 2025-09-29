@@ -67,7 +67,7 @@
               <div class="chapter-number">第{{ index + 1 }}章</div>
               <div class="chapter-actions">
                 <el-dropdown trigger="click">
-                  <el-button type="text" size="small">
+                  <el-button type="link" size="small">
                     <el-icon><MoreFilled /></el-icon>
                   </el-button>
                   <template #dropdown>

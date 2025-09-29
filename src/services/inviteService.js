@@ -301,6 +301,43 @@ class InviteService {
       console.error('清除本地邀请数据失败:', error)
     }
   }
+
+  /**
+   * 复制邀请链接到剪贴板
+   */
+  async copyInviteLink(inviteCode) {
+    try {
+      const shareUrl = this.generateInviteLink(inviteCode)
+      
+      if (navigator.clipboard && window.isSecureContext) {
+        // 使用现代 Clipboard API
+        await navigator.clipboard.writeText(shareUrl)
+        return { success: true, message: '邀请链接已复制到剪贴板' }
+      } else {
+        // 兼容性方案
+        const textArea = document.createElement('textarea')
+        textArea.value = shareUrl
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        
+        const success = document.execCommand('copy')
+        document.body.removeChild(textArea)
+        
+        if (success) {
+          return { success: true, message: '邀请链接已复制到剪贴板' }
+        } else {
+          return { success: false, message: '复制失败，请手动复制链接' }
+        }
+      }
+    } catch (error) {
+      console.error('复制邀请链接失败:', error)
+      return { success: false, message: '复制失败，请手动复制链接' }
+    }
+  }
 }
 
 export const inviteService = new InviteService()

@@ -19,6 +19,8 @@ class ApiManager {
       user: 'http://localhost:3001', 
       novel: 'http://localhost:3003',
       ai: 'http://localhost:3004',
+      payment: 'http://localhost:3005',
+      admin: 'http://localhost:3006',
       gateway: 'http://localhost:3000'
     }
     
@@ -176,12 +178,16 @@ class ApiManager {
     // 根据端点路径确定使用哪个微服务
     if (endpoint.includes('/auth/') || endpoint.includes('/invite/')) {
       return 'http://localhost:3002'
+    } else if (endpoint.includes('/admin/')) {
+      return 'http://localhost:3006'
     } else if (endpoint.includes('/user')) {
       return 'http://localhost:3001'
     } else if (endpoint.includes('/novel') || endpoint.includes('/chapter') || endpoint.includes('/memor')) {
       return 'http://localhost:3003'
     } else if (endpoint.includes('/ai/')) {
       return 'http://localhost:3004'
+    } else if (endpoint.includes('/payment') || endpoint.includes('/package') || endpoint.includes('/subscription')) {
+      return 'http://localhost:3005'
     } else {
       return 'http://localhost:3000'
     }
@@ -213,8 +219,29 @@ class ApiManager {
   /**
    * 通用请求方法 - 支持自动降级到本地存储
    */
-  async request(endpoint, options = {}) {
-    const { method = 'GET', data = null, fallbackLocal = true } = options
+  async request(endpointOrConfig, options = {}) {
+    // 支持两种调用方式：
+    // 1. request('/api/endpoint', { method: 'GET', data: {} })
+    // 2. request({ endpoint: '/api/endpoint', method: 'GET', data: {} })
+    let endpoint, method, data, params, fallbackLocal
+    
+    if (typeof endpointOrConfig === 'string') {
+      // 第一种调用方式
+      endpoint = endpointOrConfig
+      const config = options
+      method = config.method || 'GET'
+      data = config.data || null
+      params = config.params || null
+      fallbackLocal = config.fallbackLocal !== false
+    } else {
+      // 第二种调用方式
+      const config = endpointOrConfig
+      endpoint = config.endpoint
+      method = config.method || 'GET'
+      data = config.data || null
+      params = config.params || null
+      fallbackLocal = config.fallbackLocal !== false
+    }
     
     // 优先尝试云端API
     if (this.shouldUseCloud()) {
@@ -227,6 +254,7 @@ class ApiManager {
           url: fullUrl,
           method,
           data,
+          params,
           headers: {
             'Authorization': this.getAuthToken() ? `Bearer ${this.getAuthToken()}` : undefined,
             'Content-Type': 'application/json'

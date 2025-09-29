@@ -1,4 +1,4 @@
-import { PrismaClient, PackageStatus, UserStatus } from '@prisma/client';
+import { PrismaClient, PackageStatus, UserStatus, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -18,6 +18,7 @@ async function main() {
   // 4. 创建测试用户 (仅在开发环境)
   if (process.env.NODE_ENV === 'development') {
     await createTestUser();
+    await createAdminUser();
   }
 
   console.log('🎉 数据库种子数据初始化完成!');
@@ -388,6 +389,73 @@ async function createTestUser() {
   console.log('✅ 创建测试用户成功');
   console.log('📧 邮箱: test@91writing.com');
   console.log('🔑 密码: password123');
+}
+
+async function createAdminUser() {
+  console.log('👑 创建管理员用户...');
+
+  const adminUser = {
+    email: 'admin@91writing.com',
+    username: 'admin',
+    passwordHash: await bcrypt.hash('admin123456', 10),
+    role: UserRole.ADMIN, // 设置为管理员角色
+    status: UserStatus.ACTIVE,
+    emailVerified: true,
+    inviteCode: 'ADMIN01',
+    profile: {
+      create: {
+        nickname: '系统管理员',
+        bio: '91Writing系统管理员账号',
+        preferences: {
+          theme: 'light',
+          language: 'zh-CN',
+          autoSave: true,
+          fontSize: 14,
+        },
+        writingStats: {
+          totalWords: 0,
+          todayWords: 0,
+          weekWords: 0,
+          monthWords: 0,
+          writingDays: 0,
+        },
+      },
+    },
+  };
+
+  const admin = await prisma.user.upsert({
+    where: { email: adminUser.email },
+    update: {
+      role: UserRole.ADMIN, // 确保更新时也设置为管理员
+      status: UserStatus.ACTIVE,
+    },
+    create: adminUser,
+  });
+
+  // 为管理员创建创作家版订阅（最高级别）
+  const premiumPackage = await prisma.package.findFirst({
+    where: { name: '创作家版' },
+  });
+
+  if (premiumPackage) {
+    await prisma.subscription.upsert({
+      where: { userId: admin.id },
+      update: {},
+      create: {
+        userId: admin.id,
+        packageId: premiumPackage.id,
+        status: 'ACTIVE',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 365天后
+        autoRenew: false,
+      },
+    });
+  }
+
+  console.log('✅ 创建管理员用户成功');
+  console.log('📧 邮箱: admin@91writing.com');
+  console.log('🔑 密码: admin123456');
+  console.log('👑 角色: 系统管理员');
 }
 
 main()

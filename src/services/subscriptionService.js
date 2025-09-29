@@ -2,7 +2,7 @@ import apiManager from './apiManager'
 
 class SubscriptionService {
   constructor() {
-    this.baseURL = '/api/v1/payment/subscriptions'
+    this.baseURL = '/api/v1/subscriptions'
   }
 
   /**

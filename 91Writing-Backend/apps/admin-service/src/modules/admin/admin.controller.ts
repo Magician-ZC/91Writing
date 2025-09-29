@@ -28,6 +28,7 @@ import {
   UserManagementDto,
   SubscriptionManagementDto,
   SystemConfigDto,
+  OrderManagementDto,
 } from './dto/admin.dto';
 
 @ApiTags('管理员功能')
@@ -148,7 +149,12 @@ export class AdminController {
   @Roles('ADMIN')
   @ApiOperation({ summary: '获取支付订单列表' })
   @ApiResponse({ status: 200, description: '订单列表获取成功' })
-  async getOrders(@Query() query: any) {
+  @ApiQuery({ name: 'page', required: false, type: Number, description: '页码' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: '每页数量' })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED', 'REFUNDED'], description: '订单状态过滤' })
+  @ApiQuery({ name: 'paymentMethod', required: false, enum: ['ALIPAY', 'WECHAT', 'STRIPE', 'PAYPAL'], description: '支付方式过滤' })
+  @ApiQuery({ name: 'userId', required: false, type: String, description: '用户ID过滤' })
+  async getOrders(@Query() query: OrderManagementDto) {
     return this.adminService.getOrders(query);
   }
 
@@ -218,7 +224,7 @@ export class AdminController {
   @ApiParam({ name: 'id', description: '套餐ID' })
   @ApiResponse({ status: 200, description: '套餐更新成功' })
   async updatePackage(@Param('id') id: string, @Body() updateData: any) {
-    return this.adminService.updatePackage(id, updateData);
+    return this.adminService.updatePackage(parseInt(id), updateData);
   }
 
   @Delete('packages/:id')
@@ -228,6 +234,6 @@ export class AdminController {
   @ApiResponse({ status: 200, description: '套餐删除成功' })
   @HttpCode(HttpStatus.OK)
   async deletePackage(@Param('id') id: string) {
-    return this.adminService.deletePackage(id);
+    return this.adminService.deletePackage(parseInt(id));
   }
 }

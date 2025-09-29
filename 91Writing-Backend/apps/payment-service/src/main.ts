@@ -8,6 +8,9 @@ import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // 设置全局路径前缀
+  app.setGlobalPrefix('api/v1');
+  
   // 全局管道
   app.useGlobalPipes(new ValidationPipe({
     transform: true,
@@ -33,7 +36,7 @@ async function bootstrap() {
   
   // CORS配置
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: ['http://localhost:3000', 'http://localhost:7520', 'http://localhost:5173', 'http://localhost:4173'],
     credentials: true,
   });
   

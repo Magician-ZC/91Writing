@@ -11,12 +11,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
-  // 启用 CORS
-  app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080'],
-    credentials: true,
-  });
-
   // 全局管道
   app.useGlobalPipes(
     new ValidationPipe({
@@ -28,6 +22,16 @@ async function bootstrap() {
       },
     }),
   );
+
+  // CORS 配置
+  app.enableCors({
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://91writing.com', 'https://www.91writing.com']
+      : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:7520', 'http://localhost:4173', 'http://localhost:8080'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  });
 
   // 全局过滤器
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -65,7 +69,7 @@ async function bootstrap() {
     },
   });
 
-  const port = configService.get('ADMIN_SERVICE_PORT', 3004);
+  const port = configService.get('ADMIN_SERVICE_PORT', 3006);
   await app.listen(port);
 
   console.log(`🚀 管理后台服务启动成功: http://localhost:${port}`);

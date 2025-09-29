@@ -286,7 +286,7 @@ const editPackage = (pkg) => {
     durationDays: pkg.durationDays,
     sortOrder: pkg.sortOrder || 0,
     status: pkg.status,
-    features: pkg.features ? JSON.parse(pkg.features) : []
+    features: pkg.features ? (typeof pkg.features === 'string' ? JSON.parse(pkg.features) : pkg.features) : []
   })
   showCreateDialog.value = true
 }
@@ -307,7 +307,7 @@ const savePackage = async () => {
       durationDays: packageForm.durationDays,
       sortOrder: packageForm.sortOrder,
       status: packageForm.status,
-      features: JSON.stringify(packageForm.features)
+      features: packageForm.features
     }
     
     let response

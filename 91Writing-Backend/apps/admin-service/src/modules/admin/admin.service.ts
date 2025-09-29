@@ -8,6 +8,7 @@ import {
   UserManagementDto,
   SubscriptionManagementDto,
   SystemConfigDto,
+  OrderManagementDto,
 } from './dto/admin.dto';
 
 @Injectable()
@@ -279,7 +280,7 @@ export class AdminService {
       this.prisma.user.findMany({
         where,
         include: {
-          subscriptions: {
+          subscription: {
             where: { status: 'ACTIVE' },
             include: { package: true },
           },
@@ -302,7 +303,7 @@ export class AdminService {
         lastLoginAt: user.lastLoginAt,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
-        currentSubscription: user.subscriptions[0] || null,
+        currentSubscription: user.subscription || null,
       })),
       pagination: {
         page,
@@ -317,9 +318,8 @@ export class AdminService {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
-        subscriptions: {
+        subscription: {
           include: { package: true },
-          orderBy: { createdAt: 'desc' },
         },
         paymentOrders: {
           orderBy: { createdAt: 'desc' },
@@ -468,7 +468,6 @@ export class AdminService {
       this.prisma.subscription.groupBy({
         by: ['packageId'],
         _count: { id: true },
-        include: { package: { select: { name: true } } },
       }),
     ]);
 
@@ -517,7 +516,7 @@ export class AdminService {
   }
 
   // ============= 支付订单管理 =============
-  async getOrders(query: any) {
+  async getOrders(query: OrderManagementDto) {
     const {
       page = 1,
       limit = 20,
@@ -698,7 +697,7 @@ export class AdminService {
     });
   }
 
-  async updatePackage(id: string, updateData: any) {
+  async updatePackage(id: number, updateData: any) {
     const pkg = await this.prisma.package.findUnique({ where: { id } });
     
     if (!pkg) {
@@ -711,7 +710,7 @@ export class AdminService {
     });
   }
 
-  async deletePackage(id: string) {
+  async deletePackage(id: number) {
     const pkg = await this.prisma.package.findUnique({ where: { id } });
     
     if (!pkg) {

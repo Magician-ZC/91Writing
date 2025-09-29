@@ -53,9 +53,13 @@ exports.AppModule = AppModule = __decorate([
                 envFilePath: ['.env.local', '.env'],
             }),
             passport_1.PassportModule,
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'your-secret-key',
-                signOptions: { expiresIn: '24h' },
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET', '91writing_default_secret'),
+                    signOptions: { expiresIn: '24h' },
+                }),
+                inject: [config_1.ConfigService],
             }),
             database_1.DatabaseModule,
             health_module_1.HealthModule,
@@ -2137,7 +2141,7 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         super({
             jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
-            secretOrKey: configService.get('JWT_SECRET') || 'your-secret-key',
+            secretOrKey: configService.get('JWT_SECRET', '91writing_default_secret'),
         });
         this.configService = configService;
     }
@@ -2292,6 +2296,7 @@ const response_interceptor_1 = __webpack_require__(49);
 const all_exceptions_filter_1 = __webpack_require__(51);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.setGlobalPrefix('api/v1');
     app.useGlobalPipes(new common_1.ValidationPipe({
         transform: true,
         whitelist: true,
@@ -2308,7 +2313,7 @@ async function bootstrap() {
     const document = swagger_1.SwaggerModule.createDocument(app, config);
     swagger_1.SwaggerModule.setup('api/docs', app, document);
     app.enableCors({
-        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        origin: ['http://localhost:3000', 'http://localhost:7520', 'http://localhost:5173', 'http://localhost:4173'],
         credentials: true,
     });
     const port = process.env.PAYMENT_SERVICE_PORT || 3005;

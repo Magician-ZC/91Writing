@@ -2061,9 +2061,11 @@ async function bootstrap() {
         transform: true,
     }));
     app.enableCors({
-        origin: process.env.FRONTEND_URL || 'http://localhost:7520',
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
+        origin: process.env.NODE_ENV === 'production'
+            ? ['https://91writing.com', 'https://www.91writing.com']
+            : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:7520', 'http://localhost:4173'],
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
         credentials: true,
     });
     const config = new swagger_1.DocumentBuilder()

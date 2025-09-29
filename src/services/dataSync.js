@@ -155,7 +155,8 @@ class DataSyncService {
       const allChapters = []
       
       // 确保数据结构正确
-      const novels = response?.data || response || []
+      const responseData = response?.data || response || {}
+      const novels = responseData.novels || responseData || []
       if (!Array.isArray(novels)) {
         console.warn('getNovels返回的数据不是数组:', novels)
         return []
@@ -189,7 +190,8 @@ class DataSyncService {
       const allMemories = []
       
       // 确保数据结构正确
-      const novels = response?.data || response || []
+      const responseData = response?.data || response || {}
+      const novels = responseData.novels || responseData || []
       if (!Array.isArray(novels)) {
         console.warn('getNovels返回的数据不是数组:', novels)
         return []

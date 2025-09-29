@@ -61,6 +61,7 @@ export class UserManagementDto {
   })
   @IsOptional()
   @IsEnum(['USER', 'ADMIN', 'MODERATOR'])
+  @Transform(({ value }) => value === '' ? undefined : value)
   role?: string;
 
   @ApiPropertyOptional({
@@ -69,6 +70,7 @@ export class UserManagementDto {
   })
   @IsOptional()
   @IsEnum(['ACTIVE', 'INACTIVE', 'BANNED'])
+  @Transform(({ value }) => value === '' ? undefined : value)
   status?: string;
 
   @ApiPropertyOptional({
@@ -114,6 +116,7 @@ export class SubscriptionManagementDto {
   })
   @IsOptional()
   @IsEnum(['ACTIVE', 'EXPIRED', 'CANCELLED'])
+  @Transform(({ value }) => value === '' ? undefined : value)
   status?: string;
 
   @ApiPropertyOptional({
@@ -243,4 +246,67 @@ export class SystemConfigDto {
   @IsOptional()
   @IsObject()
   others?: Record<string, any>;
+}
+
+export class OrderManagementDto {
+  @ApiPropertyOptional({
+    description: '页码',
+    default: 1
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  page?: number = 1;
+
+  @ApiPropertyOptional({
+    description: '每页数量',
+    default: 20
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  limit?: number = 20;
+
+  @ApiPropertyOptional({
+    description: '订单状态过滤',
+    enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED', 'REFUNDED']
+  })
+  @IsOptional()
+  @IsEnum(['PENDING', 'PAID', 'FAILED', 'CANCELLED', 'REFUNDED'])
+  @Transform(({ value }) => value === '' ? undefined : value)
+  status?: string;
+
+  @ApiPropertyOptional({
+    description: '支付方式过滤',
+    enum: ['ALIPAY', 'WECHAT', 'STRIPE', 'PAYPAL']
+  })
+  @IsOptional()
+  @IsEnum(['ALIPAY', 'WECHAT', 'STRIPE', 'PAYPAL'])
+  @Transform(({ value }) => value === '' ? undefined : value)
+  paymentMethod?: string;
+
+  @ApiPropertyOptional({
+    description: '用户ID过滤'
+  })
+  @IsOptional()
+  @IsString()
+  @Transform(({ value }) => value === '' ? undefined : value)
+  userId?: string;
+
+  @ApiPropertyOptional({
+    description: '排序字段',
+    default: 'createdAt'
+  })
+  @IsOptional()
+  @IsString()
+  sortBy?: string = 'createdAt';
+
+  @ApiPropertyOptional({
+    description: '排序方向',
+    enum: ['asc', 'desc'],
+    default: 'desc'
+  })
+  @IsOptional()
+  @IsEnum(['asc', 'desc'])
+  sortOrder?: string = 'desc';
 }

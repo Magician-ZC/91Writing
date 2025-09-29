@@ -283,6 +283,12 @@ router.beforeEach(async (to, from, next) => {
   
   // 检查管理员权限
   if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    console.log('管理员权限检查失败:', {
+      requiresAdmin: to.meta.requiresAdmin,
+      isAdmin: authStore.isAdmin,
+      user: authStore.user,
+      userRole: authStore.userRole
+    })
     next({
       name: 'HomePage',
       query: { message: '权限不足' }

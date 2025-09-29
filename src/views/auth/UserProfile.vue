@@ -916,12 +916,19 @@ const loadInviteData = async () => {
 
     // 处理邀请统计
     if (statsResult.success) {
-      Object.assign(inviteStats, statsResult.data)
+      // 处理嵌套数据结构：可能是 statsResult.data.data 或 statsResult.data
+      const statsData = statsResult.data.data || statsResult.data
+      Object.assign(inviteStats, statsData)
+      console.log('UserProfile邀请统计数据:', statsData) // 调试日志
     }
 
   // 处理邀请用户列表
   if (inviteesResult.success) {
-    invitees.value = Array.isArray(inviteesResult.data) ? inviteesResult.data : []
+    // 处理嵌套数据结构：可能是 inviteesResult.data.data.invitees 或 inviteesResult.data.invitees
+    const actualData = inviteesResult.data.data || inviteesResult.data
+    const inviteesData = actualData.invitees || actualData
+    invitees.value = Array.isArray(inviteesData) ? inviteesData : []
+    console.log('UserProfile邀请用户数据:', inviteesData) // 调试日志
   } else {
     invitees.value = []
   }
@@ -987,14 +994,12 @@ const loadOrders = async () => {
   try {
     const params = {
       page: orderPagination.page,
-      pageSize: orderPagination.pageSize,
-      ...orderFilters
+      limit: orderPagination.pageSize
     }
 
-    // 处理日期范围
-    if (orderFilters.dateRange && orderFilters.dateRange.length === 2) {
-      params.startDate = orderFilters.dateRange[0]
-      params.endDate = orderFilters.dateRange[1]
+    // 只添加有效的status值
+    if (orderFilters.status && orderFilters.status !== '') {
+      params.status = orderFilters.status
     }
 
     const response = await paymentService.getOrders(params)

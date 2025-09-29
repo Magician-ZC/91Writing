@@ -171,19 +171,19 @@
           <el-table-column label="操作" width="200">
             <template #default="{ row }">
               <div class="table-actions">
-                <el-button type="text" size="small" @click="restoreBackup(row)">
+                <el-button type="link" size="small" @click="restoreBackup(row)">
                   <el-icon><RefreshRight /></el-icon>
                   恢复
                 </el-button>
-                <el-button type="text" size="small" @click="downloadBackup(row)">
+                <el-button type="link" size="small" @click="downloadBackup(row)">
                   <el-icon><Download /></el-icon>
                   下载
                 </el-button>
-                <el-button type="text" size="small" @click="viewBackupDetails(row)">
+                <el-button type="link" size="small" @click="viewBackupDetails(row)">
                   <el-icon><View /></el-icon>
                   详情
                 </el-button>
-                <el-button type="text" size="small" @click="deleteBackup(row.id)" class="danger">
+                <el-button type="link" size="small" @click="deleteBackup(row.id)" class="danger">
                   <el-icon><Delete /></el-icon>
                   删除
                 </el-button>
