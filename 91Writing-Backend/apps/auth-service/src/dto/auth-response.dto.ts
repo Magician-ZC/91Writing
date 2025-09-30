@@ -191,6 +191,21 @@ export class RegisterResponseDto {
   @Expose()
   verificationMessage?: string;
 
+  @ApiPropertyOptional({
+    description: '邀请奖励信息',
+    example: {
+      hasReward: true,
+      rewardDays: 3,
+      message: '恭喜！您通过邀请码注册，获得3天免费会员时长'
+    }
+  })
+  @Expose()
+  inviteReward?: {
+    hasReward: boolean;
+    rewardDays: number;
+    message: string;
+  };
+
   constructor(partial: Partial<RegisterResponseDto>) {
     Object.assign(this, partial);
   }

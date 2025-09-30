@@ -356,11 +356,26 @@ const handleRegister = async () => {
     const result = await authStore.register(registerData)
     
     if (result.success) {
-      // 注册成功，跳转到登录页面
-      router.push({
-        path: '/auth/login',
-        query: { email: registerForm.email }
-      })
+      // 检查是否有邀请奖励
+      if (result.data?.inviteReward?.hasReward) {
+        const reward = result.data.inviteReward
+        ElMessage({
+          type: 'success',
+          message: reward.message || `恭喜！您获得了${reward.rewardDays}天免费会员`,
+          duration: 5000,
+          showClose: true,
+        })
+      } else {
+        ElMessage.success('注册成功！请登录')
+      }
+      
+      // 延迟跳转，让用户看到奖励提示
+      setTimeout(() => {
+        router.push({
+          path: '/auth/login',
+          query: { email: registerForm.email }
+        })
+      }, result.data?.inviteReward?.hasReward ? 2000 : 1000)
     }
   } catch (error) {
     console.error('注册失败:', error)

@@ -315,19 +315,29 @@
     </el-card>
 
     <!-- 订阅信息卡片 -->
-    <el-card v-if="subscription" class="subscription-card">
+    <el-card class="subscription-card">
       <template #header>
-        <h3>订阅信息</h3>
+        <div class="card-header">
+          <h3>订阅信息</h3>
+          <el-button 
+            v-if="!subscription || subscription.status !== 'ACTIVE'"
+            type="primary" 
+            size="small"
+            @click="$router.push('/pricing')"
+          >
+            升级套餐
+          </el-button>
+        </div>
       </template>
 
-      <div class="subscription-info">
+      <div v-if="subscription" class="subscription-info">
         <el-descriptions :column="2">
           <el-descriptions-item label="套餐类型">
-            <el-tag type="primary">{{ subscription.packageName }}</el-tag>
+            <el-tag type="primary">{{ getPackageName(subscription) }}</el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="订阅状态">
-            <el-tag :type="subscription.status === 'ACTIVE' ? 'success' : 'warning'">
-              {{ subscription.status === 'ACTIVE' ? '有效' : '已过期' }}
+            <el-tag :type="getSubscriptionStatusType(subscription.status)">
+              {{ formatSubscriptionStatus(subscription.status) }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="开始时间">
@@ -335,6 +345,19 @@
           </el-descriptions-item>
           <el-descriptions-item label="到期时间">
             {{ formatDate(subscription.endDate) }}
+            <el-tag 
+              v-if="isExpiringSoon(subscription)" 
+              type="warning" 
+              size="small"
+              style="margin-left: 8px;"
+            >
+              即将过期
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="剩余天数">
+            <span :style="{ color: getRemainingDaysColor(subscription) }">
+              {{ getRemainingDays(subscription) }} 天
+            </span>
           </el-descriptions-item>
           <el-descriptions-item label="自动续费">
             <el-tag :type="subscription.autoRenew ? 'success' : 'info'">
@@ -342,6 +365,32 @@
             </el-tag>
           </el-descriptions-item>
         </el-descriptions>
+
+        <!-- 邀请奖励提示 -->
+        <div v-if="isInviteRewardSubscription(subscription)" class="reward-notice">
+          <el-alert
+            type="success"
+            :closable="false"
+            show-icon
+          >
+            <template #title>
+              <span>🎉 邀请奖励订阅</span>
+            </template>
+            <span>这是通过邀请码注册获得的奖励订阅！您获得了 {{ getRemainingDays(subscription) }} 天会员时长。</span>
+          </el-alert>
+        </div>
+      </div>
+
+      <div v-else class="no-subscription">
+        <el-empty description="暂无订阅" :image-size="120">
+          <template #description>
+            <p>您目前还没有订阅任何套餐</p>
+            <p class="tip">💡 小提示：邀请好友注册可获得免费会员时长！</p>
+          </template>
+          <el-button type="primary" @click="$router.push('/pricing')">
+            查看套餐
+          </el-button>
+        </el-empty>
       </div>
     </el-card>
 
@@ -979,13 +1028,88 @@ const loadSubscriptionInfo = async () => {
     // 从订阅服务获取当前订阅信息
     const { subscriptionService } = await import('@/services/subscriptionService')
     const response = await subscriptionService.getCurrentSubscription()
-    if (response.success && response.data) {
+    console.log('订阅信息响应:', response)
+    
+    if (response.success) {
+      // 处理嵌套数据结构
+      const subscriptionData = response.data?.data || response.data
+      console.log('解析后的订阅数据:', subscriptionData)
+      
       // 更新authStore中的订阅信息
-      authStore.subscription = response.data
+      if (subscriptionData) {
+        authStore.subscription = subscriptionData
+      } else {
+        // 没有订阅时，清空订阅信息
+        authStore.subscription = null
+        console.log('当前用户暂无订阅')
+      }
     }
   } catch (error) {
     console.error('加载订阅信息失败:', error)
+    // 失败时也清空订阅信息
+    authStore.subscription = null
   }
+}
+
+// 获取套餐名称
+const getPackageName = (subscription) => {
+  return subscription.package?.name || subscription.packageName || '未知套餐'
+}
+
+// 格式化订阅状态
+const formatSubscriptionStatus = (status) => {
+  const statusMap = {
+    'ACTIVE': '有效',
+    'EXPIRED': '已过期',
+    'CANCELLED': '已取消',
+    'PENDING': '待激活'
+  }
+  return statusMap[status] || status
+}
+
+// 获取订阅状态类型
+const getSubscriptionStatusType = (status) => {
+  const typeMap = {
+    'ACTIVE': 'success',
+    'EXPIRED': 'danger',
+    'CANCELLED': 'info',
+    'PENDING': 'warning'
+  }
+  return typeMap[status] || 'info'
+}
+
+// 计算剩余天数
+const getRemainingDays = (subscription) => {
+  if (!subscription?.endDate) return 0
+  const now = new Date()
+  const end = new Date(subscription.endDate)
+  const diff = end - now
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+  return Math.max(0, days)
+}
+
+// 获取剩余天数颜色
+const getRemainingDaysColor = (subscription) => {
+  const days = getRemainingDays(subscription)
+  if (days <= 3) return '#f56c6c' // 红色
+  if (days <= 7) return '#e6a23c' // 橙色
+  return '#67c23a' // 绿色
+}
+
+// 检查是否即将过期
+const isExpiringSoon = (subscription) => {
+  const days = getRemainingDays(subscription)
+  return days > 0 && days <= 7
+}
+
+// 检查是否是邀请奖励订阅
+const isInviteRewardSubscription = (subscription) => {
+  // 如果订阅关联的package价格为0，或者持续时间为3天或7天（常见奖励时长），判断为奖励订阅
+  if (!subscription) return false
+  const duration = subscription.package?.durationDays
+  const price = subscription.package?.price
+  // 3天或7天的免费套餐视为奖励订阅
+  return (duration === 3 || duration === 7) && (price === 0 || price === null)
 }
 
 // 订单管理相关方法
@@ -1256,6 +1380,23 @@ onMounted(() => {
 
 .subscription-info {
   padding: 16px 0;
+}
+
+.no-subscription {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.no-subscription .tip {
+  font-size: 13px;
+  color: #909399;
+  margin-top: 8px;
+}
+
+.reward-notice {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
 }
 
 /* 邀请码相关样式 */

@@ -49,6 +49,61 @@ const routes = [
     ]
   },
   
+  // 独立的后台管理系统
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: () => import('../views/admin/AdminLogin.vue'),
+    meta: { requiresGuest: true, title: '管理员登录 - 91Writing' }
+  },
+  {
+    path: '/admin',
+    component: () => import('../views/admin/AdminLayout.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: '',
+        redirect: '/admin/dashboard'
+      },
+      {
+        path: 'dashboard',
+        name: 'AdminDashboard',
+        component: () => import('../views/admin/dashboard/AdminDashboard.vue'),
+        meta: { title: '管理后台仪表盘 - 91Writing' }
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: () => import('../views/admin/users/UserManagement.vue'),
+        meta: { title: '用户管理 - 91Writing' }
+      },
+      {
+        path: 'subscriptions',
+        name: 'AdminSubscriptions',
+        component: () => import('../views/admin/subscriptions/SubscriptionManagement.vue'),
+        meta: { title: '订阅管理 - 91Writing' }
+      },
+      {
+        path: 'orders',
+        name: 'AdminOrders',
+        component: () => import('../views/admin/orders/OrderManagement.vue'),
+        meta: { title: '订单管理 - 91Writing' }
+      },
+      {
+        path: 'packages',
+        name: 'AdminPackages',
+        component: () => import('../views/admin/packages/PackageManagement.vue'),
+        meta: { title: '套餐管理 - 91Writing' }
+      },
+      {
+        path: 'settings',
+        name: 'AdminSettings',
+        component: () => import('../views/admin/settings/SystemSettings.vue'),
+        meta: { title: '系统设置 - 91Writing' }
+      }
+    ]
+  },
+  
   // 主应用路由（需要登录）
   {
     path: '/',
@@ -174,51 +229,6 @@ const routes = [
         name: 'InviteCenter',
         component: () => import('../views/InviteCenter.vue'),
         meta: { title: '邀请中心 - 91Writing' }
-      },
-      
-      // 管理后台路由（需要管理员权限）
-      {
-        path: 'admin',
-        name: 'AdminPanel',
-        meta: { requiresAdmin: true, title: '管理后台 - 91Writing' },
-        children: [
-          {
-            path: '',
-            name: 'AdminDashboard',
-            component: () => import('../views/admin/dashboard/AdminDashboard.vue'),
-            meta: { title: '管理后台仪表盘 - 91Writing' }
-          },
-          {
-            path: 'users',
-            name: 'AdminUsers',
-            component: () => import('../views/admin/users/UserManagement.vue'),
-            meta: { title: '用户管理 - 91Writing' }
-          },
-          {
-            path: 'subscriptions',
-            name: 'AdminSubscriptions',
-            component: () => import('../views/admin/subscriptions/SubscriptionManagement.vue'),
-            meta: { title: '订阅管理 - 91Writing' }
-          },
-          {
-            path: 'orders',
-            name: 'AdminOrders',
-            component: () => import('../views/admin/orders/OrderManagement.vue'),
-            meta: { title: '订单管理 - 91Writing' }
-          },
-          {
-            path: 'packages',
-            name: 'AdminPackages',
-            component: () => import('../views/admin/packages/PackageManagement.vue'),
-            meta: { title: '套餐管理 - 91Writing' }
-          },
-          {
-            path: 'settings',
-            name: 'AdminSettings',
-            component: () => import('../views/admin/settings/SystemSettings.vue'),
-            meta: { title: '系统设置 - 91Writing' }
-          }
-        ]
       }
     ]
   },
@@ -276,24 +286,44 @@ router.beforeEach(async (to, from, next) => {
   
   // 检查是否需要游客状态（未登录）
   if (to.meta.requiresGuest && authStore.isAuthenticated) {
-    // 已登录用户访问登录/注册页面，重定向到首页
-    next('/home')
+    // 已登录用户访问登录/注册页面
+    // 如果是管理员访问管理员登录页，重定向到管理后台
+    if (to.name === 'AdminLogin' && authStore.isAdmin) {
+      next('/admin/dashboard')
+      return
+    }
+    // 普通用户访问登录页，重定向到首页
+    if (to.name === 'Login' || to.name === 'Register' || to.name === 'AuthRegister') {
+      next('/')
+      return
+    }
     return
   }
   
   // 检查管理员权限
-  if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    console.log('管理员权限检查失败:', {
-      requiresAdmin: to.meta.requiresAdmin,
-      isAdmin: authStore.isAdmin,
-      user: authStore.user,
-      userRole: authStore.userRole
-    })
-    next({
-      name: 'HomePage',
-      query: { message: '权限不足' }
-    })
-    return
+  if (to.meta.requiresAdmin) {
+    if (!authStore.isAuthenticated) {
+      // 未登录，重定向到管理员登录页
+      next({
+        name: 'AdminLogin',
+        query: { redirect: to.fullPath }
+      })
+      return
+    }
+    
+    if (!authStore.isAdmin) {
+      console.log('管理员权限检查失败:', {
+        requiresAdmin: to.meta.requiresAdmin,
+        isAdmin: authStore.isAdmin,
+        user: authStore.user,
+        userRole: authStore.userRole
+      })
+      next({
+        name: 'HomePage',
+        query: { message: '权限不足' }
+      })
+      return
+    }
   }
   
   next()

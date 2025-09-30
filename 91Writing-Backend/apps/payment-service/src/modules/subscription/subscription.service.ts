@@ -62,7 +62,7 @@ export class SubscriptionService {
   }
 
   async findByUser(userId: string) {
-    return this.prisma.subscription.findFirst({
+    const subscription = await this.prisma.subscription.findFirst({
       where: { userId },
       include: { 
         package: true,
@@ -77,6 +77,17 @@ export class SubscriptionService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // 如果没有订阅，返回null而不是undefined
+    if (!subscription) {
+      return null;
+    }
+
+    // 添加packageName字段以便前端使用
+    return {
+      ...subscription,
+      packageName: subscription.package?.name || '未知套餐',
+    };
   }
 
   async findOne(id: string, userId: string) {

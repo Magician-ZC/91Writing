@@ -217,20 +217,34 @@ export class InviteRewardService {
 
       this.logger.log(`延长用户 ${userId} 订阅 ${days} 天，新到期日期: ${newEndDate}`);
     } else {
-      // 用户没有订阅，需要创建临时订阅或积分余额
-      // 这里可以创建一个免费套餐的订阅
-      const freePackage = await this.prisma.package.findFirst({
-        where: { name: { contains: '免费' } }
+      // 用户没有订阅，创建一个新的免费奖励订阅
+      // 先查找基础套餐或创建一个虚拟套餐ID
+      let packageToUse = await this.prisma.package.findFirst({
+        where: { 
+          OR: [
+            { name: { contains: '基础' } },
+            { name: { contains: '标准' } },
+            { price: { lte: 100 } }
+          ]
+        },
+        orderBy: { price: 'asc' }
       });
 
-      if (freePackage) {
+      // 如果没有找到任何套餐，使用第一个可用的套餐
+      if (!packageToUse) {
+        packageToUse = await this.prisma.package.findFirst({
+          where: { status: 'ACTIVE' }
+        });
+      }
+
+      if (packageToUse) {
         const endDate = new Date(currentDate);
         endDate.setDate(endDate.getDate() + days);
 
         await this.prisma.subscription.create({
           data: {
             userId,
-            packageId: freePackage.id,
+            packageId: packageToUse.id,
             status: SubscriptionStatus.ACTIVE,
             startDate: currentDate,
             endDate,
@@ -238,10 +252,10 @@ export class InviteRewardService {
           }
         });
 
-        this.logger.log(`为用户 ${userId} 创建 ${days} 天免费订阅`);
+        this.logger.log(`为用户 ${userId} 创建 ${days} 天奖励订阅，套餐: ${packageToUse.name}`);
       } else {
-        // 如果没有免费套餐，记录为积分或其他形式
-        this.logger.warn(`用户 ${userId} 没有订阅且没有免费套餐，奖励天数: ${days}`);
+        this.logger.error(`用户 ${userId} 无法创建订阅，没有可用的套餐`);
+        throw new Error('没有可用的套餐创建订阅');
       }
     }
   }

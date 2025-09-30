@@ -4,7 +4,9 @@ import {
   UnauthorizedException, 
   BadRequestException,
   NotFoundException,
-  Logger 
+  Logger,
+  Inject,
+  forwardRef
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -28,6 +30,7 @@ import { plainToClass } from 'class-transformer';
 import * as bcrypt from 'bcrypt';
 import { UserRole, UserStatus, SubscriptionStatus, InviteStatus, RewardStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { InviteRewardService } from '../invite/invite-reward.service';
 
 @Injectable()
 export class AuthService {
@@ -37,6 +40,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => InviteRewardService))
+    private readonly inviteRewardService: InviteRewardService,
   ) {}
 
   /**
@@ -115,8 +120,17 @@ export class AuthService {
     });
 
     // 如果使用了邀请码，创建邀请关系并发放奖励
+    let inviteRewardInfo = null;
     if (inviterData) {
-      await this.createInviteRelation(inviterData.id, user.id);
+      const rewardResult = await this.createInviteRelation(inviterData.id, user.id);
+      if (rewardResult) {
+        inviteRewardInfo = {
+          hasReward: true,
+          rewardDays: 3, // 被邀请者获得3天
+          message: '🎉 恭喜！您通过邀请码注册，获得3天免费会员时长'
+        };
+        this.logger.log(`用户 ${user.id} 获得邀请奖励: 3天会员`);
+      }
     }
 
     // 生成邮箱验证令牌
@@ -135,6 +149,7 @@ export class AuthService {
       registeredAt: new Date().toISOString(),
       needEmailVerification: true,
       verificationMessage: '验证邮件已发送到您的邮箱，请查收并点击链接完成验证',
+      inviteReward: inviteRewardInfo,
     });
   }
 
@@ -515,54 +530,48 @@ export class AuthService {
   /**
    * 创建邀请关系并发放奖励
    */
-  private async createInviteRelation(inviterId: string, inviteeId: string): Promise<void> {
-    // 创建邀请记录
-    const invite = await this.prisma.userInvite.create({
-      data: {
-        inviterId,
-        inviteeId,
-        status: InviteStatus.ACCEPTED,
-        rewardStatus: RewardStatus.PENDING
-      }
-    });
+  private async createInviteRelation(inviterId: string, inviteeId: string): Promise<boolean> {
+    try {
+      this.logger.log(`开始创建邀请关系: inviter=${inviterId}, invitee=${inviteeId}`);
+      
+      // 创建邀请记录
+      const invite = await this.prisma.userInvite.create({
+        data: {
+          inviterId,
+          inviteeId,
+          status: InviteStatus.ACCEPTED,
+          rewardStatus: RewardStatus.PENDING
+        }
+      });
+      
+      this.logger.log(`邀请记录创建成功: inviteId=${invite.id}`);
 
-    // 更新邀请者的邀请统计
-    await this.prisma.user.update({
-      where: { id: inviterId },
-      data: { 
-        inviteCount: { increment: 1 }
-      }
-    });
+      // 更新邀请者的邀请统计
+      await this.prisma.user.update({
+        where: { id: inviterId },
+        data: { 
+          inviteCount: { increment: 1 }
+        }
+      });
+      
+      this.logger.log(`更新邀请者统计成功: inviterId=${inviterId}`);
 
-    // 发放邀请奖励（示例：7天会员）
-    await this.grantInviteReward(inviterId, invite.id);
+      // 使用InviteRewardService发放邀请奖励
+      await this.inviteRewardService.processInviteSuccessReward(inviterId, inviteeId, invite.id);
+      
+      // 更新邀请记录的奖励状态
+      await this.prisma.userInvite.update({
+        where: { id: invite.id },
+        data: { rewardStatus: RewardStatus.GRANTED }
+      });
 
-    this.logger.log(`邀请关系创建成功: ${inviterId} -> ${inviteeId}`);
-  }
-
-  /**
-   * 发放邀请奖励
-   */
-  private async grantInviteReward(userId: string, inviteId: string): Promise<void> {
-    // 创建奖励记录
-    await this.prisma.inviteReward.create({
-      data: {
-        userId,
-        inviteId,
-        rewardType: 'DAYS',
-        amount: 7,
-        description: '邀请好友注册奖励：7天会员',
-        status: RewardStatus.GRANTED,
-        grantedAt: new Date()
-      }
-    });
-
-    // TODO: 这里可以实际执行奖励发放逻辑，比如：
-    // - 延长用户订阅时间
-    // - 增加用户积分
-    // - 发送通知等
-
-    this.logger.log(`邀请奖励发放成功: 用户 ${userId} 获得7天会员`);
+      this.logger.log(`邀请关系创建并发放奖励成功: ${inviterId} -> ${inviteeId}`);
+      return true; // 成功发放奖励
+    } catch (error) {
+      this.logger.error(`创建邀请关系失败: ${error.message}`, error.stack);
+      // 不抛出错误，避免影响注册流程，但返回false表示奖励发放失败
+      return false;
+    }
   }
 
   /**
