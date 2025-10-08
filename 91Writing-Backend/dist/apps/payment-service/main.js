@@ -1248,7 +1248,7 @@ let SubscriptionService = class SubscriptionService {
         }
     }
     async findByUser(userId) {
-        return this.prisma.subscription.findFirst({
+        const subscription = await this.prisma.subscription.findFirst({
             where: { userId },
             include: {
                 package: true,
@@ -1263,6 +1263,13 @@ let SubscriptionService = class SubscriptionService {
             },
             orderBy: { createdAt: 'desc' },
         });
+        if (!subscription) {
+            return null;
+        }
+        return {
+            ...subscription,
+            packageName: subscription.package?.name || '未知套餐',
+        };
     }
     async findOne(id, userId) {
         const subscription = await this.prisma.subscription.findFirst({

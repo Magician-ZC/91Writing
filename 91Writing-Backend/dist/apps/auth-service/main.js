@@ -795,8 +795,17 @@ let AuthService = AuthService_1 = class AuthService {
             this.logger.log(`用户注册成功: ${email}, 专属邀请码: ${userInviteCode}`);
             return newUser;
         });
+        let inviteRewardInfo = null;
         if (inviterData) {
-            await this.createInviteRelation(inviterData.id, user.id);
+            const rewardResult = await this.createInviteRelation(inviterData.id, user.id);
+            if (rewardResult) {
+                inviteRewardInfo = {
+                    hasReward: true,
+                    rewardDays: 3,
+                    message: '🎉 恭喜！您通过邀请码注册，获得3天免费会员时长'
+                };
+                this.logger.log(`用户 ${user.id} 获得邀请奖励: 3天会员`);
+            }
         }
         const verificationToken = this.generateVerificationToken();
         this.logger.log(`用户注册成功: ${email}`);
@@ -805,6 +814,7 @@ let AuthService = AuthService_1 = class AuthService {
             registeredAt: new Date().toISOString(),
             needEmailVerification: true,
             verificationMessage: '验证邮件已发送到您的邮箱，请查收并点击链接完成验证',
+            inviteReward: inviteRewardInfo,
         });
     }
     async login(loginDto) {
@@ -1064,10 +1074,11 @@ let AuthService = AuthService_1 = class AuthService {
                 data: { rewardStatus: client_1.RewardStatus.GRANTED }
             });
             this.logger.log(`邀请关系创建并发放奖励成功: ${inviterId} -> ${inviteeId}`);
+            return true;
         }
         catch (error) {
             this.logger.error(`创建邀请关系失败: ${error.message}`, error.stack);
-            throw error;
+            return false;
         }
     }
     async validateResetToken(token) {
@@ -1315,6 +1326,18 @@ __decorate([
     (0, class_transformer_1.Expose)(),
     __metadata("design:type", String)
 ], RegisterResponseDto.prototype, "verificationMessage", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '邀请奖励信息',
+        example: {
+            hasReward: true,
+            rewardDays: 3,
+            message: '恭喜！您通过邀请码注册，获得3天免费会员时长'
+        }
+    }),
+    (0, class_transformer_1.Expose)(),
+    __metadata("design:type", Object)
+], RegisterResponseDto.prototype, "inviteReward", void 0);
 class RefreshResponseDto {
     constructor(partial) {
         Object.assign(this, partial);

@@ -6,7 +6,7 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { resolve } from 'path'
 
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [
     vue(),
     AutoImport({
@@ -25,6 +25,13 @@ export default defineConfig({
   },
   server: {
     port: 7520,
-    open: true
+    open: true,
+    // 配置开发服务器支持 SPA 路由
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
+      }
+    }
   }
 })

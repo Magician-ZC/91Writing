@@ -241,7 +241,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes
 })
 
@@ -297,6 +297,8 @@ router.beforeEach(async (to, from, next) => {
       next('/')
       return
     }
+    // 其他情况也需要调用 next()
+    next()
     return
   }
   
