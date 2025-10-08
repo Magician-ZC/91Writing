@@ -10,12 +10,7 @@ class PaymentService {
    */
   async createOrder(data) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/orders`,
-        data
-      })
-      return response
+      return await apiManager.createPaymentOrder(data)
     } catch (error) {
       console.error('创建支付订单失败:', error)
       throw error
@@ -27,12 +22,7 @@ class PaymentService {
    */
   async getOrders(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/orders`,
-        params
-      })
-      return response
+      return await apiManager.getUserPaymentOrders(params)
     } catch (error) {
       console.error('获取支付订单列表失败:', error)
       throw error
@@ -44,11 +34,7 @@ class PaymentService {
    */
   async getOrder(orderNo) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/orders/${orderNo}`
-      })
-      return response
+      return await apiManager.getPaymentOrder(orderNo)
     } catch (error) {
       console.error('获取支付订单详情失败:', error)
       throw error
@@ -60,11 +46,7 @@ class PaymentService {
    */
   async pay(orderNo) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/orders/${orderNo}/pay`
-      })
-      return response
+      return await apiManager.payOrder(orderNo)
     } catch (error) {
       console.error('发起支付失败:', error)
       throw error
@@ -76,11 +58,7 @@ class PaymentService {
    */
   async cancelOrder(orderNo) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/orders/${orderNo}/cancel`
-      })
-      return response
+      return await apiManager.cancelPaymentOrder(orderNo)
     } catch (error) {
       console.error('取消支付订单失败:', error)
       throw error
@@ -92,10 +70,7 @@ class PaymentService {
    */
   async queryPaymentStatus(orderNo) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/orders/${orderNo}/status`
-      })
+      const response = await apiManager.queryOrderPaymentStatus(orderNo)
       return response
     } catch (error) {
       console.error('查询支付状态失败:', error)
@@ -307,11 +282,7 @@ class PaymentService {
    */
   async getPaymentStatistics(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/statistics`,
-        params
-      })
+      const response = await apiManager.getPaymentStatistics(params)
       return response
     } catch (error) {
       console.error('获取支付统计失败:', error)
@@ -324,11 +295,7 @@ class PaymentService {
    */
   async requestRefund(orderNo, reason) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/orders/${orderNo}/refund`,
-        data: { reason }
-      })
+      const response = await apiManager.requestOrderRefund(orderNo, reason)
       return response
     } catch (error) {
       console.error('申请退款失败:', error)
@@ -341,10 +308,7 @@ class PaymentService {
    */
   async getInvoice(orderNo) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/orders/${orderNo}/invoice`
-      })
+      const response = await apiManager.getOrderInvoice(orderNo)
       return response
     } catch (error) {
       console.error('获取发票信息失败:', error)
@@ -357,11 +321,7 @@ class PaymentService {
    */
   async createInvoice(orderNo, invoiceData) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/orders/${orderNo}/invoice`,
-        data: invoiceData
-      })
+      const response = await apiManager.createOrderInvoice(orderNo, invoiceData)
       return response
     } catch (error) {
       console.error('创建发票失败:', error)

@@ -12,12 +12,7 @@ class AdminService {
    */
   async getDashboardStats(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/dashboard/stats`,
-        params
-      })
-      return response
+      return await apiManager.getDashboardStats(params)
     } catch (error) {
       console.error('获取仪表盘统计失败:', error)
       throw error
@@ -29,12 +24,7 @@ class AdminService {
    */
   async getChartData(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/dashboard/charts`,
-        params
-      })
-      return response
+      return await apiManager.getChartData(params)
     } catch (error) {
       console.error('获取图表数据失败:', error)
       throw error
@@ -48,12 +38,7 @@ class AdminService {
    */
   async getUsers(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/users`,
-        params
-      })
-      return response
+      return await apiManager.getAdminUsers(params)
     } catch (error) {
       console.error('获取用户列表失败:', error)
       throw error
@@ -65,11 +50,7 @@ class AdminService {
    */
   async getUserDetail(userId) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/users/${userId}`
-      })
-      return response
+      return await apiManager.getAdminUserDetail(userId)
     } catch (error) {
       console.error('获取用户详情失败:', error)
       throw error
@@ -81,12 +62,7 @@ class AdminService {
    */
   async updateUser(userId, userData) {
     try {
-      const response = await apiManager.request({
-        method: 'PUT',
-        endpoint: `${this.baseURL}/users/${userId}`,
-        data: userData
-      })
-      return response
+      return await apiManager.updateAdminUser(userId, userData)
     } catch (error) {
       console.error('更新用户信息失败:', error)
       throw error
@@ -98,12 +74,7 @@ class AdminService {
    */
   async banUser(userId, banData) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/users/${userId}/ban`,
-        data: banData
-      })
-      return response
+      return await apiManager.banAdminUser(userId, banData)
     } catch (error) {
       console.error('封禁用户失败:', error)
       throw error
@@ -115,11 +86,7 @@ class AdminService {
    */
   async unbanUser(userId) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/users/${userId}/unban`
-      })
-      return response
+      return await apiManager.unbanAdminUser(userId)
     } catch (error) {
       console.error('解封用户失败:', error)
       throw error
@@ -133,12 +100,7 @@ class AdminService {
    */
   async getSubscriptions(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/subscriptions`,
-        params
-      })
-      return response
+      return await apiManager.getAdminSubscriptions(params)
     } catch (error) {
       console.error('获取订阅列表失败:', error)
       throw error
@@ -150,12 +112,7 @@ class AdminService {
    */
   async getSubscriptionStats(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/subscriptions/stats`,
-        params
-      })
-      return response
+      return await apiManager.getAdminSubscriptionStats(params)
     } catch (error) {
       console.error('获取订阅统计失败:', error)
       throw error
@@ -167,12 +124,7 @@ class AdminService {
    */
   async updateSubscription(subscriptionId, updateData) {
     try {
-      const response = await apiManager.request({
-        method: 'PUT',
-        endpoint: `${this.baseURL}/subscriptions/${subscriptionId}`,
-        data: updateData
-      })
-      return response
+      return await apiManager.updateAdminSubscription(subscriptionId, updateData)
     } catch (error) {
       console.error('更新订阅信息失败:', error)
       throw error
@@ -184,12 +136,7 @@ class AdminService {
    */
   async extendSubscription(subscriptionId, extendData) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/subscriptions/${subscriptionId}/extend`,
-        data: extendData
-      })
-      return response
+      return await apiManager.extendAdminSubscription(subscriptionId, extendData)
     } catch (error) {
       console.error('延长订阅失败:', error)
       throw error
@@ -203,12 +150,7 @@ class AdminService {
    */
   async getOrders(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/orders`,
-        params
-      })
-      return response
+      return await apiManager.getAdminOrders(params)
     } catch (error) {
       console.error('获取订单列表失败:', error)
       throw error
@@ -220,12 +162,7 @@ class AdminService {
    */
   async getPaymentStats(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/orders/stats`,
-        params
-      })
-      return response
+      return await apiManager.getAdminPaymentStats(params)
     } catch (error) {
       console.error('获取支付统计失败:', error)
       throw error
@@ -237,12 +174,7 @@ class AdminService {
    */
   async processRefund(orderNo, refundData) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/orders/${orderNo}/refund`,
-        data: refundData
-      })
-      return response
+      return await apiManager.processAdminRefund(orderNo, refundData)
     } catch (error) {
       console.error('处理退款失败:', error)
       throw error
@@ -256,11 +188,7 @@ class AdminService {
    */
   async getPackages() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/packages`
-      })
-      return response
+      return await apiManager.getAdminPackages()
     } catch (error) {
       console.error('获取套餐列表失败:', error)
       throw error
@@ -272,12 +200,7 @@ class AdminService {
    */
   async createPackage(packageData) {
     try {
-      const response = await apiManager.request({
-        method: 'POST',
-        endpoint: `${this.baseURL}/packages`,
-        data: packageData
-      })
-      return response
+      return await apiManager.createAdminPackage(packageData)
     } catch (error) {
       console.error('创建套餐失败:', error)
       throw error
@@ -289,12 +212,7 @@ class AdminService {
    */
   async updatePackage(packageId, updateData) {
     try {
-      const response = await apiManager.request({
-        method: 'PUT',
-        endpoint: `${this.baseURL}/packages/${packageId}`,
-        data: updateData
-      })
-      return response
+      return await apiManager.updateAdminPackage(packageId, updateData)
     } catch (error) {
       console.error('更新套餐失败:', error)
       throw error
@@ -306,11 +224,7 @@ class AdminService {
    */
   async deletePackage(packageId) {
     try {
-      const response = await apiManager.request({
-        method: 'DELETE',
-        endpoint: `${this.baseURL}/packages/${packageId}`
-      })
-      return response
+      return await apiManager.deleteAdminPackage(packageId)
     } catch (error) {
       console.error('删除套餐失败:', error)
       throw error
@@ -324,11 +238,7 @@ class AdminService {
    */
   async getSystemConfig() {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/system/config`
-      })
-      return response
+      return await apiManager.getAdminSystemConfig()
     } catch (error) {
       console.error('获取系统配置失败:', error)
       throw error
@@ -340,12 +250,7 @@ class AdminService {
    */
   async updateSystemConfig(configData) {
     try {
-      const response = await apiManager.request({
-        method: 'PUT',
-        endpoint: `${this.baseURL}/system/config`,
-        data: configData
-      })
-      return response
+      return await apiManager.updateAdminSystemConfig(configData)
     } catch (error) {
       console.error('更新系统配置失败:', error)
       throw error
@@ -357,12 +262,7 @@ class AdminService {
    */
   async getSystemLogs(params = {}) {
     try {
-      const response = await apiManager.request({
-        method: 'GET',
-        endpoint: `${this.baseURL}/system/logs`,
-        params
-      })
-      return response
+      return await apiManager.getAdminSystemLogs(params)
     } catch (error) {
       console.error('获取系统日志失败:', error)
       throw error

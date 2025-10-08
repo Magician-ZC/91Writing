@@ -51,6 +51,24 @@ export REDIS_HOST="localhost"
 export REDIS_PORT="6379"
 export REDIS_PASSWORD="redis123"
 export NODE_ENV="development"
+
+# 微服务端口配置（按照MICROSERVICES-CONFIG.md规范）
+export API_GATEWAY_PORT=3000
+export USER_SERVICE_PORT=3001
+export AUTH_SERVICE_PORT=3002
+export NOVEL_SERVICE_PORT=3003
+export AI_SERVICE_PORT=3004
+export PAYMENT_SERVICE_PORT=3005
+export ADMIN_SERVICE_PORT=3006
+
+# 微服务URL配置（API Gateway使用）
+export AUTH_SERVICE_URL="http://localhost:3002"
+export USER_SERVICE_URL="http://localhost:3001"
+export NOVEL_SERVICE_URL="http://localhost:3003"
+export AI_SERVICE_URL="http://localhost:3004"
+export PAYMENT_SERVICE_URL="http://localhost:3005"
+export ADMIN_SERVICE_URL="http://localhost:3006"
+
 echo -e "${GREEN}✅ 环境变量已设置${NC}"
 
 echo ""

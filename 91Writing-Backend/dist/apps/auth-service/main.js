@@ -3364,7 +3364,6 @@ async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);
     const logger = new common_2.Logger('AuthService');
-    app.setGlobalPrefix('api/v1/auth');
     app.use((0, helmet_1.default)());
     app.use(compression());
     app.enableCors({

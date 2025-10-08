@@ -46,8 +46,10 @@ const database_1 = __webpack_require__(9);
 const novel_module_1 = __webpack_require__(13);
 const chapter_module_1 = __webpack_require__(23);
 const memory_module_1 = __webpack_require__(27);
-const health_module_1 = __webpack_require__(31);
-const jwt_strategy_1 = __webpack_require__(34);
+const material_module_1 = __webpack_require__(31);
+const prompt_module_1 = __webpack_require__(35);
+const health_module_1 = __webpack_require__(39);
+const jwt_strategy_1 = __webpack_require__(42);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -73,6 +75,8 @@ exports.AppModule = AppModule = __decorate([
             novel_module_1.NovelModule,
             chapter_module_1.ChapterModule,
             memory_module_1.MemoryModule,
+            material_module_1.MaterialModule,
+            prompt_module_1.PromptModule,
             health_module_1.HealthModule,
         ],
         providers: [
@@ -2392,19 +2396,22 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HealthModule = void 0;
+exports.MaterialModule = void 0;
 const common_1 = __webpack_require__(3);
-const health_controller_1 = __webpack_require__(32);
-const health_service_1 = __webpack_require__(33);
-let HealthModule = class HealthModule {
+const material_controller_1 = __webpack_require__(32);
+const material_service_1 = __webpack_require__(33);
+const database_1 = __webpack_require__(9);
+let MaterialModule = class MaterialModule {
 };
-exports.HealthModule = HealthModule;
-exports.HealthModule = HealthModule = __decorate([
+exports.MaterialModule = MaterialModule;
+exports.MaterialModule = MaterialModule = __decorate([
     (0, common_1.Module)({
-        controllers: [health_controller_1.HealthController],
-        providers: [health_service_1.HealthService],
+        imports: [database_1.DatabaseModule],
+        controllers: [material_controller_1.MaterialController],
+        providers: [material_service_1.MaterialService],
+        exports: [material_service_1.MaterialService],
     })
-], HealthModule);
+], MaterialModule);
 
 
 /***/ }),
@@ -2421,11 +2428,1084 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MaterialController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const material_service_1 = __webpack_require__(33);
+const material_dto_1 = __webpack_require__(34);
+const guards_1 = __webpack_require__(16);
+let MaterialController = class MaterialController {
+    constructor(materialService) {
+        this.materialService = materialService;
+    }
+    async create(req, dto) {
+        return this.materialService.create(req.user.userId, dto);
+    }
+    async findAll(req, query) {
+        return this.materialService.findAll(req.user.userId, query);
+    }
+    async getCategories(req) {
+        return this.materialService.getCategories(req.user.userId);
+    }
+    async getTags(req) {
+        return this.materialService.getTags(req.user.userId);
+    }
+    async getStats(req) {
+        return this.materialService.getStats(req.user.userId);
+    }
+    async findOne(req, id) {
+        return this.materialService.findOne(req.user.userId, id);
+    }
+    async update(req, id, dto) {
+        return this.materialService.update(req.user.userId, id, dto);
+    }
+    async remove(req, id) {
+        return this.materialService.remove(req.user.userId, id);
+    }
+};
+exports.MaterialController = MaterialController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: '创建素材' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof material_dto_1.CreateMaterialDto !== "undefined" && material_dto_1.CreateMaterialDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材列表' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof material_dto_1.QueryMaterialDto !== "undefined" && material_dto_1.QueryMaterialDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('categories'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材分类列表' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getCategories", null);
+__decorate([
+    (0, common_1.Get)('tags'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材标签列表' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getTags", null);
+__decorate([
+    (0, common_1.Get)('stats'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材统计' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getStats", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材详情' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '更新素材' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_d = typeof material_dto_1.UpdateMaterialDto !== "undefined" && material_dto_1.UpdateMaterialDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '删除素材' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "remove", null);
+exports.MaterialController = MaterialController = __decorate([
+    (0, swagger_1.ApiTags)('素材管理'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, common_1.Controller)('materials'),
+    __metadata("design:paramtypes", [typeof (_a = typeof material_service_1.MaterialService !== "undefined" && material_service_1.MaterialService) === "function" ? _a : Object])
+], MaterialController);
+
+
+/***/ }),
+/* 33 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MaterialService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let MaterialService = class MaterialService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(userId, dto) {
+        const material = await this.prisma.material.create({
+            data: {
+                userId,
+                name: dto.name,
+                type: dto.type,
+                category: dto.category,
+                fileUrl: dto.fileUrl,
+                fileSize: dto.fileSize,
+                description: dto.description,
+                tags: dto.tags || [],
+            },
+        });
+        return material;
+    }
+    async findAll(userId, query) {
+        const { type, category, keyword, page = 1, pageSize = 20 } = query;
+        const where = {
+            userId,
+            ...(type && { type }),
+            ...(category && { category }),
+            ...(keyword && {
+                OR: [
+                    { name: { contains: keyword } },
+                    { description: { contains: keyword } },
+                ],
+            }),
+        };
+        const [items, total] = await Promise.all([
+            this.prisma.material.findMany({
+                where,
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.material.count({ where }),
+        ]);
+        return {
+            items,
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize),
+        };
+    }
+    async findOne(userId, id) {
+        const material = await this.prisma.material.findUnique({
+            where: { id },
+        });
+        if (!material) {
+            throw new common_1.NotFoundException('素材不存在');
+        }
+        if (material.userId !== userId) {
+            throw new common_1.ForbiddenException('无权访问此素材');
+        }
+        await this.prisma.material.update({
+            where: { id },
+            data: { usageCount: { increment: 1 } },
+        });
+        return material;
+    }
+    async update(userId, id, dto) {
+        const material = await this.prisma.material.findUnique({
+            where: { id },
+        });
+        if (!material) {
+            throw new common_1.NotFoundException('素材不存在');
+        }
+        if (material.userId !== userId) {
+            throw new common_1.ForbiddenException('无权修改此素材');
+        }
+        const updated = await this.prisma.material.update({
+            where: { id },
+            data: {
+                ...(dto.name && { name: dto.name }),
+                ...(dto.category !== undefined && { category: dto.category }),
+                ...(dto.description !== undefined && { description: dto.description }),
+                ...(dto.tags !== undefined && { tags: dto.tags }),
+            },
+        });
+        return updated;
+    }
+    async remove(userId, id) {
+        const material = await this.prisma.material.findUnique({
+            where: { id },
+        });
+        if (!material) {
+            throw new common_1.NotFoundException('素材不存在');
+        }
+        if (material.userId !== userId) {
+            throw new common_1.ForbiddenException('无权删除此素材');
+        }
+        await this.prisma.material.delete({
+            where: { id },
+        });
+        return { message: '删除成功' };
+    }
+    async getCategories(userId) {
+        const materials = await this.prisma.material.findMany({
+            where: { userId },
+            select: { category: true },
+            distinct: ['category'],
+        });
+        const categories = materials
+            .map((m) => m.category)
+            .filter((c) => c !== null && c !== '');
+        return categories;
+    }
+    async getTags(userId) {
+        const materials = await this.prisma.material.findMany({
+            where: { userId },
+            select: { tags: true },
+        });
+        const tagsSet = new Set();
+        materials.forEach((m) => {
+            if (Array.isArray(m.tags)) {
+                m.tags.forEach((tag) => tagsSet.add(tag));
+            }
+        });
+        return Array.from(tagsSet);
+    }
+    async getStats(userId) {
+        const stats = await this.prisma.material.groupBy({
+            by: ['type'],
+            where: { userId },
+            _count: { id: true },
+            _sum: { fileSize: true },
+        });
+        const total = await this.prisma.material.count({ where: { userId } });
+        return {
+            total,
+            byType: stats.map((s) => ({
+                type: s.type,
+                count: s._count.id,
+                totalSize: s._sum.fileSize || 0,
+            })),
+        };
+    }
+};
+exports.MaterialService = MaterialService;
+exports.MaterialService = MaterialService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], MaterialService);
+
+
+/***/ }),
+/* 34 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.QueryMaterialDto = exports.UpdateMaterialDto = exports.CreateMaterialDto = exports.MaterialType = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+var MaterialType;
+(function (MaterialType) {
+    MaterialType["IMAGE"] = "IMAGE";
+    MaterialType["DOCUMENT"] = "DOCUMENT";
+    MaterialType["AUDIO"] = "AUDIO";
+    MaterialType["VIDEO"] = "VIDEO";
+    MaterialType["TEXT"] = "TEXT";
+})(MaterialType || (exports.MaterialType = MaterialType = {}));
+class CreateMaterialDto {
+}
+exports.CreateMaterialDto = CreateMaterialDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '素材名称', maxLength: 200 }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(200),
+    __metadata("design:type", String)
+], CreateMaterialDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '素材类型', enum: MaterialType }),
+    (0, class_validator_1.IsEnum)(MaterialType),
+    __metadata("design:type", String)
+], CreateMaterialDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分类', required: false, maxLength: 50 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(50),
+    __metadata("design:type", String)
+], CreateMaterialDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '文件URL', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateMaterialDto.prototype, "fileUrl", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '文件大小(字节)', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], CreateMaterialDto.prototype, "fileSize", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '描述', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateMaterialDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '标签', required: false, type: [String] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreateMaterialDto.prototype, "tags", void 0);
+class UpdateMaterialDto {
+}
+exports.UpdateMaterialDto = UpdateMaterialDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '素材名称', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(200),
+    __metadata("design:type", String)
+], UpdateMaterialDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分类', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(50),
+    __metadata("design:type", String)
+], UpdateMaterialDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '描述', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateMaterialDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '标签', required: false, type: [String] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdateMaterialDto.prototype, "tags", void 0);
+class QueryMaterialDto {
+    constructor() {
+        this.page = 1;
+        this.pageSize = 20;
+    }
+}
+exports.QueryMaterialDto = QueryMaterialDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '素材类型', required: false, enum: MaterialType }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(MaterialType),
+    __metadata("design:type", String)
+], QueryMaterialDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分类', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryMaterialDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '搜索关键词', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryMaterialDto.prototype, "keyword", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '页码', required: false, default: 1 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], QueryMaterialDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每页数量', required: false, default: 20 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], QueryMaterialDto.prototype, "pageSize", void 0);
+
+
+/***/ }),
+/* 35 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PromptModule = void 0;
+const common_1 = __webpack_require__(3);
+const prompt_controller_1 = __webpack_require__(36);
+const prompt_service_1 = __webpack_require__(37);
+const database_1 = __webpack_require__(9);
+let PromptModule = class PromptModule {
+};
+exports.PromptModule = PromptModule;
+exports.PromptModule = PromptModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        controllers: [prompt_controller_1.PromptController],
+        providers: [prompt_service_1.PromptService],
+        exports: [prompt_service_1.PromptService],
+    })
+], PromptModule);
+
+
+/***/ }),
+/* 36 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PromptController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const prompt_service_1 = __webpack_require__(37);
+const prompt_dto_1 = __webpack_require__(38);
+const guards_1 = __webpack_require__(16);
+let PromptController = class PromptController {
+    constructor(promptService) {
+        this.promptService = promptService;
+    }
+    async create(req, dto) {
+        return this.promptService.create(req.user.userId, dto);
+    }
+    async findAll(req, query) {
+        const userId = req.user?.userId;
+        return this.promptService.findAll(userId, query);
+    }
+    async getCategories(req) {
+        const userId = req.user?.userId;
+        return this.promptService.getCategories(userId);
+    }
+    async getTags(req) {
+        const userId = req.user?.userId;
+        return this.promptService.getTags(userId);
+    }
+    async getPopular(limit) {
+        return this.promptService.getPopular(limit || 10);
+    }
+    async getRecommended(req, limit) {
+        return this.promptService.getRecommended(req.user.userId, limit || 10);
+    }
+    async findOne(req, id) {
+        const userId = req.user?.userId;
+        return this.promptService.findOne(id, userId);
+    }
+    async update(req, id, dto) {
+        return this.promptService.update(id, req.user.userId, dto);
+    }
+    async remove(req, id) {
+        return this.promptService.remove(id, req.user.userId);
+    }
+    async rate(req, id, dto) {
+        return this.promptService.rate(id, req.user.userId, dto.rating);
+    }
+};
+exports.PromptController = PromptController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: '创建提示词' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof prompt_dto_1.CreatePromptDto !== "undefined" && prompt_dto_1.CreatePromptDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取提示词列表' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof prompt_dto_1.QueryPromptDto !== "undefined" && prompt_dto_1.QueryPromptDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('categories'),
+    (0, swagger_1.ApiOperation)({ summary: '获取提示词分类列表' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "getCategories", null);
+__decorate([
+    (0, common_1.Get)('tags'),
+    (0, swagger_1.ApiOperation)({ summary: '获取提示词标签列表' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "getTags", null);
+__decorate([
+    (0, common_1.Get)('popular'),
+    (0, swagger_1.ApiOperation)({ summary: '获取热门提示词' }),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "getPopular", null);
+__decorate([
+    (0, common_1.Get)('recommended'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: '获取推荐提示词' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Number]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "getRecommended", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '获取提示词详情' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: '更新提示词' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_d = typeof prompt_dto_1.UpdatePromptDto !== "undefined" && prompt_dto_1.UpdatePromptDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: '删除提示词' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)(':id/rate'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: '评分提示词' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_e = typeof prompt_dto_1.RatePromptDto !== "undefined" && prompt_dto_1.RatePromptDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], PromptController.prototype, "rate", null);
+exports.PromptController = PromptController = __decorate([
+    (0, swagger_1.ApiTags)('提示词管理'),
+    (0, common_1.Controller)('prompts'),
+    __metadata("design:paramtypes", [typeof (_a = typeof prompt_service_1.PromptService !== "undefined" && prompt_service_1.PromptService) === "function" ? _a : Object])
+], PromptController);
+
+
+/***/ }),
+/* 37 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PromptService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let PromptService = class PromptService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(userId, dto) {
+        const prompt = await this.prisma.prompt.create({
+            data: {
+                userId,
+                title: dto.title,
+                content: dto.content,
+                category: dto.category,
+                tags: dto.tags || [],
+                isPublic: dto.isPublic || false,
+            },
+        });
+        return prompt;
+    }
+    async findAll(userId, query) {
+        const { category, keyword, publicOnly, page = 1, pageSize = 20 } = query;
+        const where = {
+            ...(publicOnly
+                ? { isPublic: true }
+                : userId
+                    ? {
+                        OR: [
+                            { userId },
+                            { isPublic: true }
+                        ]
+                    }
+                    : { isPublic: true }),
+            ...(category && { category }),
+            ...(keyword && {
+                OR: [
+                    { title: { contains: keyword } },
+                    { content: { contains: keyword } },
+                ],
+            }),
+        };
+        const [items, total] = await Promise.all([
+            this.prisma.prompt.findMany({
+                where,
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                orderBy: [
+                    { rating: 'desc' },
+                    { usageCount: 'desc' },
+                    { createdAt: 'desc' }
+                ],
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            nickname: true
+                        }
+                    }
+                }
+            }),
+            this.prisma.prompt.count({ where }),
+        ]);
+        return {
+            items,
+            total,
+            page,
+            pageSize,
+            totalPages: Math.ceil(total / pageSize),
+        };
+    }
+    async findOne(id, userId) {
+        const prompt = await this.prisma.prompt.findUnique({
+            where: { id },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        nickname: true
+                    }
+                }
+            }
+        });
+        if (!prompt) {
+            throw new common_1.NotFoundException('提示词不存在');
+        }
+        if (!prompt.isPublic && prompt.userId !== userId) {
+            throw new common_1.ForbiddenException('无权访问此提示词');
+        }
+        await this.prisma.prompt.update({
+            where: { id },
+            data: { usageCount: { increment: 1 } },
+        });
+        return prompt;
+    }
+    async update(id, userId, dto) {
+        const prompt = await this.prisma.prompt.findUnique({
+            where: { id },
+        });
+        if (!prompt) {
+            throw new common_1.NotFoundException('提示词不存在');
+        }
+        if (prompt.userId !== userId) {
+            throw new common_1.ForbiddenException('无权修改此提示词');
+        }
+        const updated = await this.prisma.prompt.update({
+            where: { id },
+            data: {
+                ...(dto.title && { title: dto.title }),
+                ...(dto.content && { content: dto.content }),
+                ...(dto.category !== undefined && { category: dto.category }),
+                ...(dto.tags !== undefined && { tags: dto.tags }),
+                ...(dto.isPublic !== undefined && { isPublic: dto.isPublic }),
+            },
+        });
+        return updated;
+    }
+    async remove(id, userId) {
+        const prompt = await this.prisma.prompt.findUnique({
+            where: { id },
+        });
+        if (!prompt) {
+            throw new common_1.NotFoundException('提示词不存在');
+        }
+        if (prompt.userId !== userId) {
+            throw new common_1.ForbiddenException('无权删除此提示词');
+        }
+        await this.prisma.prompt.delete({
+            where: { id },
+        });
+        return { message: '删除成功' };
+    }
+    async rate(id, userId, rating) {
+        const prompt = await this.prisma.prompt.findUnique({
+            where: { id },
+        });
+        if (!prompt) {
+            throw new common_1.NotFoundException('提示词不存在');
+        }
+        const newRating = (Number(prompt.rating) * prompt.usageCount + rating) / (prompt.usageCount + 1);
+        const updated = await this.prisma.prompt.update({
+            where: { id },
+            data: {
+                rating: newRating,
+                usageCount: { increment: 1 }
+            },
+        });
+        return updated;
+    }
+    async getCategories(userId) {
+        const where = userId
+            ? {
+                OR: [
+                    { userId },
+                    { isPublic: true }
+                ]
+            }
+            : { isPublic: true };
+        const prompts = await this.prisma.prompt.findMany({
+            where,
+            select: { category: true },
+            distinct: ['category'],
+        });
+        const categories = prompts
+            .map((p) => p.category)
+            .filter((c) => c !== null && c !== '');
+        return categories;
+    }
+    async getTags(userId) {
+        const where = userId
+            ? {
+                OR: [
+                    { userId },
+                    { isPublic: true }
+                ]
+            }
+            : { isPublic: true };
+        const prompts = await this.prisma.prompt.findMany({
+            where,
+            select: { tags: true },
+        });
+        const tagsSet = new Set();
+        prompts.forEach((p) => {
+            if (Array.isArray(p.tags)) {
+                p.tags.forEach((tag) => tagsSet.add(tag));
+            }
+        });
+        return Array.from(tagsSet);
+    }
+    async getPopular(limit = 10) {
+        const prompts = await this.prisma.prompt.findMany({
+            where: { isPublic: true },
+            take: limit,
+            orderBy: [
+                { rating: 'desc' },
+                { usageCount: 'desc' }
+            ],
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        nickname: true
+                    }
+                }
+            }
+        });
+        return prompts;
+    }
+    async getRecommended(userId, limit = 10) {
+        const userPrompts = await this.prisma.prompt.findMany({
+            where: { userId },
+            select: { category: true },
+            orderBy: { createdAt: 'desc' },
+            take: 5
+        });
+        const userCategories = [...new Set(userPrompts.map(p => p.category).filter(Boolean))];
+        if (userCategories.length === 0) {
+            return this.getPopular(limit);
+        }
+        const recommended = await this.prisma.prompt.findMany({
+            where: {
+                isPublic: true,
+                userId: { not: userId },
+                category: { in: userCategories }
+            },
+            take: limit,
+            orderBy: [
+                { rating: 'desc' },
+                { usageCount: 'desc' }
+            ],
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        nickname: true
+                    }
+                }
+            }
+        });
+        return recommended;
+    }
+};
+exports.PromptService = PromptService;
+exports.PromptService = PromptService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], PromptService);
+
+
+/***/ }),
+/* 38 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RatePromptDto = exports.QueryPromptDto = exports.UpdatePromptDto = exports.CreatePromptDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+class CreatePromptDto {
+}
+exports.CreatePromptDto = CreatePromptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '提示词标题', maxLength: 200 }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(200),
+    __metadata("design:type", String)
+], CreatePromptDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '提示词内容' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreatePromptDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分类', required: false, maxLength: 50 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(50),
+    __metadata("design:type", String)
+], CreatePromptDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '标签', required: false, type: [String] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreatePromptDto.prototype, "tags", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '是否公开', required: false, default: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreatePromptDto.prototype, "isPublic", void 0);
+class UpdatePromptDto {
+}
+exports.UpdatePromptDto = UpdatePromptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '提示词标题', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(200),
+    __metadata("design:type", String)
+], UpdatePromptDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '提示词内容', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdatePromptDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分类', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(50),
+    __metadata("design:type", String)
+], UpdatePromptDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '标签', required: false, type: [String] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdatePromptDto.prototype, "tags", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '是否公开', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdatePromptDto.prototype, "isPublic", void 0);
+class QueryPromptDto {
+    constructor() {
+        this.page = 1;
+        this.pageSize = 20;
+    }
+}
+exports.QueryPromptDto = QueryPromptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分类', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryPromptDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '搜索关键词', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryPromptDto.prototype, "keyword", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '是否仅查询公开提示词', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], QueryPromptDto.prototype, "publicOnly", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '页码', required: false, default: 1 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], QueryPromptDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每页数量', required: false, default: 20 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], QueryPromptDto.prototype, "pageSize", void 0);
+class RatePromptDto {
+}
+exports.RatePromptDto = RatePromptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '评分 (0-5)', minimum: 0, maximum: 5 }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(5),
+    __metadata("design:type", Number)
+], RatePromptDto.prototype, "rating", void 0);
+
+
+/***/ }),
+/* 39 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HealthModule = void 0;
+const common_1 = __webpack_require__(3);
+const health_controller_1 = __webpack_require__(40);
+const health_service_1 = __webpack_require__(41);
+let HealthModule = class HealthModule {
+};
+exports.HealthModule = HealthModule;
+exports.HealthModule = HealthModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [health_controller_1.HealthController],
+        providers: [health_service_1.HealthService],
+    })
+], HealthModule);
+
+
+/***/ }),
+/* 40 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(3);
-const health_service_1 = __webpack_require__(33);
+const health_service_1 = __webpack_require__(41);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -2448,7 +3528,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 33 */
+/* 41 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2479,7 +3559,7 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 34 */
+/* 42 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2498,7 +3578,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
 const passport_1 = __webpack_require__(8);
-const passport_jwt_1 = __webpack_require__(35);
+const passport_jwt_1 = __webpack_require__(43);
 const database_1 = __webpack_require__(9);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, prisma) {
@@ -2551,13 +3631,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 35 */
+/* 43 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 36 */
+/* 44 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2620,7 +3700,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = __decorate([
 
 
 /***/ }),
-/* 37 */
+/* 45 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2633,7 +3713,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(38);
+const operators_1 = __webpack_require__(46);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -2656,7 +3736,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 46 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2701,8 +3781,8 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(36);
-const response_interceptor_1 = __webpack_require__(37);
+const all_exceptions_filter_1 = __webpack_require__(44);
+const response_interceptor_1 = __webpack_require__(45);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.useGlobalPipes(new common_1.ValidationPipe({
@@ -2786,7 +3866,7 @@ async function bootstrap() {
       .swagger-ui .info h1 { color: #2c5aa0; }
     `,
     });
-    const port = process.env.PORT || 3003;
+    const port = process.env.NOVEL_SERVICE_PORT || process.env.PORT || 3003;
     await app.listen(port);
     console.log(`Novel Service is running on: http://localhost:${port}`);
     console.log(`API Documentation: http://localhost:${port}/api-docs`);

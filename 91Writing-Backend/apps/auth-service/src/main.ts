@@ -17,8 +17,9 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const logger = new Logger('AuthService');
 
-  // 全局前缀
-  app.setGlobalPrefix('api/v1/auth');
+  // 🔧 不设置全局前缀 - API Gateway会处理 /api/v1/auth 前缀
+  // 微服务只需要处理业务路径（如 /login, /register等）
+  // app.setGlobalPrefix('api/v1/auth'); // 已移除
 
   // 安全中间件
   app.use(helmet());

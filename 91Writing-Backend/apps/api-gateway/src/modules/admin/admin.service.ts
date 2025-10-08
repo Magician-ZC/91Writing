@@ -22,15 +22,31 @@ export class AdminService {
   async proxyRequest(req: Request) {
     const { method, url, headers, body } = req;
     
-    // 清理路径，移除 /admin 前缀
-    const targetPath = url.replace(/^\/admin/, '') || '/';
+    // 从URL中提取analytics路径
+    // 移除所有前缀：/api/v1/admin 或 /admin，保留实际的API路径
+    let targetPath = url;
+    
+    // 尝试匹配并移除各种可能的前缀
+    const prefixes = ['/api/v1/admin', '/admin'];
+    for (const prefix of prefixes) {
+      if (targetPath.startsWith(prefix)) {
+        targetPath = targetPath.substring(prefix.length);
+        break;
+      }
+    }
+    
+    // 确保路径以/开头
+    if (!targetPath.startsWith('/')) {
+      targetPath = '/' + targetPath;
+    }
+    
     const targetUrl = `${this.adminServiceUrl}${targetPath}`;
 
     // 过滤和清理请求头
     const cleanHeaders = this.cleanHeaders(headers);
 
     // 记录请求日志
-    this.logger.log(`代理请求: ${method} ${targetUrl}`);
+    this.logger.log(`代理请求: ${method} ${targetUrl} (原始URL: ${url})`);
 
     try {
       const response = await firstValueFrom(

@@ -6,6 +6,8 @@ import { DatabaseModule } from '@app/database';
 import { NovelModule } from './modules/novel/novel.module';
 import { ChapterModule } from './modules/chapter/chapter.module';
 import { MemoryModule } from './modules/memory/memory.module';
+import { MaterialModule } from './modules/material/material.module';
+import { PromptModule } from './modules/prompt/prompt.module';
 import { HealthModule } from './modules/health/health.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
@@ -39,6 +41,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     NovelModule,
     ChapterModule,
     MemoryModule,
+    MaterialModule,
+    PromptModule,
     HealthModule,
   ],
   providers: [

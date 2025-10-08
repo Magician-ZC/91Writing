@@ -10,10 +10,7 @@ class PackageService {
    */
   async getActivePackages() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/active`, {
-        method: 'GET'
-      })
-      return response
+      return await apiManager.getActivePackages()
     } catch (error) {
       console.error('获取套餐列表失败:', error)
       throw error
@@ -21,15 +18,11 @@ class PackageService {
   }
 
   /**
-   * 获取所有套餐列表（管理员）
+   * 获取所有套餐列表
    */
   async getAllPackages(params = {}) {
     try {
-      const response = await apiManager.request(this.baseURL, {
-        method: 'GET',
-        params
-      })
-      return response
+      return await apiManager.getPackages(params)
     } catch (error) {
       console.error('获取全部套餐列表失败:', error)
       throw error
@@ -41,10 +34,7 @@ class PackageService {
    */
   async getPackage(id) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}`, {
-        method: 'GET'
-      })
-      return response
+      return await apiManager.getPackage(id)
     } catch (error) {
       console.error('获取套餐详情失败:', error)
       throw error
@@ -56,10 +46,7 @@ class PackageService {
    */
   async createPackage(data) {
     try {
-      const response = await apiManager.request(this.baseURL, {
-        method: 'POST',
-        data
-      })
+      const response = await apiManager.createAdminPackage(data)
       return response
     } catch (error) {
       console.error('创建套餐失败:', error)
@@ -72,10 +59,7 @@ class PackageService {
    */
   async updatePackage(id, data) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}`, {
-        method: 'PATCH',
-        data
-      })
+      const response = await apiManager.updateAdminPackage(id, data)
       return response
     } catch (error) {
       console.error('更新套餐失败:', error)
@@ -88,9 +72,7 @@ class PackageService {
    */
   async deletePackage(id) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}`, {
-        method: 'DELETE'
-      })
+      const response = await apiManager.deleteAdminPackage(id)
       return response
     } catch (error) {
       console.error('删除套餐失败:', error)

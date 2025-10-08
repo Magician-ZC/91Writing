@@ -34,7 +34,7 @@ import {
 @ApiTags('管理员功能')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(AdminAuthGuard, RoleGuard)
-@Controller('admin')
+@Controller()  // 🔧 去掉'admin'前缀 - API Gateway已经处理了/admin路由
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 

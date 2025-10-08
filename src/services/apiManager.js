@@ -13,16 +13,9 @@ class ApiManager {
     this.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
     this.isOnline = navigator.onLine
     
-    // 微服务端点配置
-    this.services = {
-      auth: 'http://localhost:3002',
-      user: 'http://localhost:3001', 
-      novel: 'http://localhost:3003',
-      ai: 'http://localhost:3004',
-      payment: 'http://localhost:3005',
-      admin: 'http://localhost:3006',
-      gateway: 'http://localhost:3000'
-    }
+    // 🔧 所有请求统一通过API Gateway (baseURL)
+    // API Gateway会负责路由到正确的微服务
+    // 这样可以统一处理：认证、限流、日志、CORS等
     
     this.setupAxios()
     this.setupOnlineListener()
@@ -172,26 +165,17 @@ class ApiManager {
   }
 
   /**
-   * 获取服务端点URL
+   * 🔧 已废弃：不再需要直接访问微服务
+   * 所有请求都通过API Gateway统一路由
+   * 
+   * API Gateway会根据路径前缀自动转发到对应的微服务：
+   * - /api/v1/auth/*     → auth-service (3002)
+   * - /api/v1/admin/*    → admin-service (3006)
+   * - /api/v1/user/*     → user-service (3001)
+   * - /api/v1/novel/*    → novel-service (3003)
+   * - /api/v1/ai/*       → ai-service (3004)
+   * - /api/v1/payment/*  → payment-service (3005)
    */
-  getServiceUrl(endpoint) {
-    // 根据端点路径确定使用哪个微服务
-    if (endpoint.includes('/auth/') || endpoint.includes('/invite/')) {
-      return 'http://localhost:3002'
-    } else if (endpoint.includes('/admin/')) {
-      return 'http://localhost:3006'
-    } else if (endpoint.includes('/user')) {
-      return 'http://localhost:3001'
-    } else if (endpoint.includes('/novel') || endpoint.includes('/chapter') || endpoint.includes('/memor')) {
-      return 'http://localhost:3003'
-    } else if (endpoint.includes('/ai/')) {
-      return 'http://localhost:3004'
-    } else if (endpoint.includes('/payment') || endpoint.includes('/package') || endpoint.includes('/subscription')) {
-      return 'http://localhost:3005'
-    } else {
-      return 'http://localhost:3000'
-    }
-  }
 
   /**
    * 设置运行模式
@@ -246,9 +230,9 @@ class ApiManager {
     // 优先尝试云端API
     if (this.shouldUseCloud()) {
       try {
-        // 获取正确的服务URL
-        const serviceUrl = this.getServiceUrl(endpoint)
-        const fullUrl = serviceUrl + endpoint
+        // 🔧 修复：所有请求都通过API Gateway (baseURL)，不再直接访问微服务
+        // 这样可以统一路由、认证、限流等功能
+        const fullUrl = this.baseURL + endpoint
         
         const response = await axios({
           url: fullUrl,
@@ -369,7 +353,7 @@ class ApiManager {
   async getCurrentUser() {
     return await this.request('/api/v1/auth/me', {
       method: 'GET',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -377,7 +361,7 @@ class ApiManager {
     return await this.request('/api/v1/auth/profile', {
       method: 'PATCH',
       data: profileData,
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -396,14 +380,14 @@ class ApiManager {
     const endpoint = `/api/v1/novels${query ? '?' + query : ''}`
     return await this.request(endpoint, {
       method: 'GET',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
   async getNovel(novelId) {
     return await this.request(`/api/v1/novels/${novelId}`, {
       method: 'GET',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -411,7 +395,7 @@ class ApiManager {
     return await this.request('/api/v1/novels', {
       method: 'POST',
       data: novelData,
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -419,14 +403,29 @@ class ApiManager {
     return await this.request(`/api/v1/novels/${novelId}`, {
       method: 'PATCH',
       data: updateData,
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
   async deleteNovel(novelId) {
     return await this.request(`/api/v1/novels/${novelId}`, {
       method: 'DELETE',
-      fallbackLocal: true
+      fallbackLocal: false
+    })
+  }
+
+  async getNovelSettings(novelId) {
+    return await this.request(`/api/v1/novels/${novelId}/settings`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async updateNovelSettings(novelId, settings) {
+    return await this.request(`/api/v1/novels/${novelId}/settings`, {
+      method: 'PATCH',
+      data: settings,
+      fallbackLocal: false
     })
   }
 
@@ -435,14 +434,14 @@ class ApiManager {
   async getChapters(novelId) {
     return await this.request(`/api/v1/novels/${novelId}/chapters`, {
       method: 'GET',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
   async getChapter(chapterId) {
     return await this.request(`/api/v1/chapters/${chapterId}`, {
       method: 'GET',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -450,7 +449,7 @@ class ApiManager {
     return await this.request(`/api/v1/novels/${novelId}/chapters`, {
       method: 'POST',
       data: chapterData,
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -458,14 +457,14 @@ class ApiManager {
     return await this.request(`/api/v1/chapters/${chapterId}`, {
       method: 'PATCH',
       data: updateData,
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
   async deleteChapter(chapterId) {
     return await this.request(`/api/v1/chapters/${chapterId}`, {
       method: 'DELETE',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -476,7 +475,7 @@ class ApiManager {
     const endpoint = `/api/v1/novels/${novelId}/memories${query ? '?' + query : ''}`
     return await this.request(endpoint, {
       method: 'GET',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -484,7 +483,7 @@ class ApiManager {
     return await this.request(`/api/v1/novels/${novelId}/memories`, {
       method: 'POST',
       data: memoryData,
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -492,14 +491,14 @@ class ApiManager {
     return await this.request(`/api/v1/memories/${memoryId}`, {
       method: 'PATCH',
       data: updateData,
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
   async deleteMemory(memoryId) {
     return await this.request(`/api/v1/memories/${memoryId}`, {
       method: 'DELETE',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -508,7 +507,7 @@ class ApiManager {
   async exportData() {
     return await this.request('/api/v1/export', {
       method: 'GET',
-      fallbackLocal: true
+      fallbackLocal: false
     })
   }
 
@@ -516,7 +515,146 @@ class ApiManager {
     return await this.request('/api/v1/import', {
       method: 'POST',
       data: importData,
-      fallbackLocal: true
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 素材管理API =====
+  
+  async getMaterials(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/materials${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getMaterial(materialId) {
+    return await this.request(`/api/v1/materials/${materialId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createMaterial(materialData) {
+    return await this.request('/api/v1/materials', {
+      method: 'POST',
+      data: materialData,
+      fallbackLocal: false
+    })
+  }
+
+  async updateMaterial(materialId, updateData) {
+    return await this.request(`/api/v1/materials/${materialId}`, {
+      method: 'PUT',
+      data: updateData,
+      fallbackLocal: false
+    })
+  }
+
+  async deleteMaterial(materialId) {
+    return await this.request(`/api/v1/materials/${materialId}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  async getMaterialCategories() {
+    return await this.request('/api/v1/materials/categories', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getMaterialTags() {
+    return await this.request('/api/v1/materials/tags', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getMaterialStats() {
+    return await this.request('/api/v1/materials/stats', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 提示词管理API =====
+  
+  async getPrompts(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/prompts${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getPrompt(promptId) {
+    return await this.request(`/api/v1/prompts/${promptId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createPrompt(promptData) {
+    return await this.request('/api/v1/prompts', {
+      method: 'POST',
+      data: promptData,
+      fallbackLocal: false
+    })
+  }
+
+  async updatePrompt(promptId, updateData) {
+    return await this.request(`/api/v1/prompts/${promptId}`, {
+      method: 'PUT',
+      data: updateData,
+      fallbackLocal: false
+    })
+  }
+
+  async deletePrompt(promptId) {
+    return await this.request(`/api/v1/prompts/${promptId}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  async ratePrompt(promptId, rating) {
+    return await this.request(`/api/v1/prompts/${promptId}/rate`, {
+      method: 'POST',
+      data: { rating },
+      fallbackLocal: false
+    })
+  }
+
+  async getPromptCategories() {
+    return await this.request('/api/v1/prompts/categories', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getPromptTags() {
+    return await this.request('/api/v1/prompts/tags', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getPopularPrompts(limit = 10) {
+    return await this.request(`/api/v1/prompts/popular?limit=${limit}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getRecommendedPrompts(limit = 10) {
+    return await this.request(`/api/v1/prompts/recommended?limit=${limit}`, {
+      method: 'GET',
+      fallbackLocal: false
     })
   }
 
@@ -582,6 +720,448 @@ class ApiManager {
     const query = new URLSearchParams(params).toString()
     const endpoint = `/api/v1/admin/analytics/export${query ? '?' + query : ''}`
     return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 管理后台API =====
+  
+  // ----- 仪表盘统计 -----
+  async getDashboardStats(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/dashboard/stats${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getChartData(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/dashboard/charts${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 用户管理 -----
+  async getAdminUsers(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/users${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getAdminUserDetail(userId) {
+    return await this.request(`/api/v1/admin/users/${userId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async updateAdminUser(userId, userData) {
+    return await this.request(`/api/v1/admin/users/${userId}`, {
+      method: 'PUT',
+      data: userData,
+      fallbackLocal: false
+    })
+  }
+
+  async banAdminUser(userId, banData) {
+    return await this.request(`/api/v1/admin/users/${userId}/ban`, {
+      method: 'POST',
+      data: banData,
+      fallbackLocal: false
+    })
+  }
+
+  async unbanAdminUser(userId) {
+    return await this.request(`/api/v1/admin/users/${userId}/unban`, {
+      method: 'POST',
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 订阅管理 -----
+  async getAdminSubscriptions(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/subscriptions${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getAdminSubscriptionStats(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/subscriptions/stats${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async updateAdminSubscription(subscriptionId, updateData) {
+    return await this.request(`/api/v1/admin/subscriptions/${subscriptionId}`, {
+      method: 'PUT',
+      data: updateData,
+      fallbackLocal: false
+    })
+  }
+
+  async extendAdminSubscription(subscriptionId, extendData) {
+    return await this.request(`/api/v1/admin/subscriptions/${subscriptionId}/extend`, {
+      method: 'POST',
+      data: extendData,
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 支付订单管理 -----
+  async getAdminOrders(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/orders${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getAdminPaymentStats(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/orders/stats${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async processAdminRefund(orderNo, refundData) {
+    return await this.request(`/api/v1/admin/orders/${orderNo}/refund`, {
+      method: 'POST',
+      data: refundData,
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 套餐管理 -----
+  async getAdminPackages() {
+    return await this.request('/api/v1/admin/packages', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createAdminPackage(packageData) {
+    return await this.request('/api/v1/admin/packages', {
+      method: 'POST',
+      data: packageData,
+      fallbackLocal: false
+    })
+  }
+
+  async updateAdminPackage(packageId, updateData) {
+    return await this.request(`/api/v1/admin/packages/${packageId}`, {
+      method: 'PUT',
+      data: updateData,
+      fallbackLocal: false
+    })
+  }
+
+  async deleteAdminPackage(packageId) {
+    return await this.request(`/api/v1/admin/packages/${packageId}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 系统配置 -----
+  async getAdminSystemConfig() {
+    return await this.request('/api/v1/admin/system/config', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async updateAdminSystemConfig(configData) {
+    return await this.request('/api/v1/admin/system/config', {
+      method: 'PUT',
+      data: configData,
+      fallbackLocal: false
+    })
+  }
+
+  async getAdminSystemLogs(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/system/logs${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 普通用户API（支付、订阅、套餐）=====
+  
+  // ----- 支付订单 -----
+  async createPaymentOrder(orderData) {
+    return await this.request('/api/v1/payments/orders', {
+      method: 'POST',
+      data: orderData,
+      fallbackLocal: false
+    })
+  }
+
+  async getUserPaymentOrders(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/payments/orders${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getPaymentOrder(orderNo) {
+    return await this.request(`/api/v1/payments/orders/${orderNo}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async payOrder(orderNo) {
+    return await this.request(`/api/v1/payments/orders/${orderNo}/pay`, {
+      method: 'POST',
+      fallbackLocal: false
+    })
+  }
+
+  async cancelPaymentOrder(orderNo) {
+    return await this.request(`/api/v1/payments/orders/${orderNo}/cancel`, {
+      method: 'POST',
+      fallbackLocal: false
+    })
+  }
+
+  async queryOrderPaymentStatus(orderNo) {
+    return await this.request(`/api/v1/payments/orders/${orderNo}/status`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getPaymentStatistics(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/payments/statistics${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async requestOrderRefund(orderNo, reason) {
+    return await this.request(`/api/v1/payments/orders/${orderNo}/refund`, {
+      method: 'POST',
+      data: { reason },
+      fallbackLocal: false
+    })
+  }
+
+  async getOrderInvoice(orderNo) {
+    return await this.request(`/api/v1/payments/orders/${orderNo}/invoice`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createOrderInvoice(orderNo, invoiceData) {
+    return await this.request(`/api/v1/payments/orders/${orderNo}/invoice`, {
+      method: 'POST',
+      data: invoiceData,
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 订阅管理 -----
+  async getCurrentSubscription() {
+    return await this.request('/api/v1/subscriptions/current', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async checkSubscriptionStatus() {
+    return await this.request('/api/v1/subscriptions/status', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createSubscription(subscriptionData) {
+    return await this.request('/api/v1/subscriptions', {
+      method: 'POST',
+      data: subscriptionData,
+      fallbackLocal: false
+    })
+  }
+
+  async getSubscription(subscriptionId) {
+    return await this.request(`/api/v1/subscriptions/${subscriptionId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async updateSubscription(subscriptionId, updateData) {
+    return await this.request(`/api/v1/subscriptions/${subscriptionId}`, {
+      method: 'PATCH',
+      data: updateData,
+      fallbackLocal: false
+    })
+  }
+
+  async cancelSubscription(subscriptionId, reason) {
+    return await this.request(`/api/v1/subscriptions/${subscriptionId}/cancel`, {
+      method: 'POST',
+      data: { reason },
+      fallbackLocal: false
+    })
+  }
+
+  async renewSubscription(subscriptionId) {
+    return await this.request(`/api/v1/subscriptions/${subscriptionId}/renew`, {
+      method: 'POST',
+      fallbackLocal: false
+    })
+  }
+
+  async enableSubscriptionAutoRenew(subscriptionId) {
+    return await this.request(`/api/v1/subscriptions/${subscriptionId}/auto-renew`, {
+      method: 'POST',
+      fallbackLocal: false
+    })
+  }
+
+  async disableSubscriptionAutoRenew(subscriptionId) {
+    return await this.request(`/api/v1/subscriptions/${subscriptionId}/auto-renew`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  async getSubscriptionHistory(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/subscriptions/history${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async previewSubscriptionUpgrade(currentSubscriptionId, targetPackageId) {
+    return await this.request(`/api/v1/subscriptions/${currentSubscriptionId}/preview-upgrade`, {
+      method: 'POST',
+      data: { targetPackageId },
+      fallbackLocal: false
+    })
+  }
+
+  async upgradeSubscription(currentSubscriptionId, targetPackageId) {
+    return await this.request(`/api/v1/subscriptions/${currentSubscriptionId}/upgrade`, {
+      method: 'POST',
+      data: { targetPackageId },
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 套餐管理 -----
+  async getPackages(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/packages${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getActivePackages() {
+    return await this.request('/api/v1/packages/active', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getPackage(packageId) {
+    return await this.request(`/api/v1/packages/${packageId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  // ----- 邀请管理 -----
+  async getMyInviteCode() {
+    return await this.request('/api/v1/auth/invite/my-code', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getInviteStats() {
+    return await this.request('/api/v1/auth/invite/stats', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getInviteRewards() {
+    return await this.request('/api/v1/auth/invite/rewards', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getInvitees(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/auth/invite/invitees${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async claimInviteReward(rewardId) {
+    return await this.request('/api/v1/auth/invite/claim-reward', {
+      method: 'POST',
+      data: { rewardId },
+      fallbackLocal: false
+    })
+  }
+
+  async getInviteRewardConfig() {
+    return await this.request('/api/v1/auth/invite/reward-config', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getExpectedInviteRewards() {
+    return await this.request('/api/v1/auth/invite/expected-rewards', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getInviteShareMaterials() {
+    return await this.request('/api/v1/auth/invite/share-materials', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async validateInviteCode(inviteCode) {
+    return await this.request(`/api/v1/auth/validate-invite/${inviteCode}`, {
       method: 'GET',
       fallbackLocal: false
     })

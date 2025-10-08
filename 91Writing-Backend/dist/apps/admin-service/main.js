@@ -42,10 +42,13 @@ const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
 const throttler_1 = __webpack_require__(6);
 const cache_manager_1 = __webpack_require__(7);
-const database_1 = __webpack_require__(8);
-const admin_module_1 = __webpack_require__(12);
-const health_module_1 = __webpack_require__(23);
-const analytics_module_1 = __webpack_require__(26);
+const passport_1 = __webpack_require__(8);
+const jwt_1 = __webpack_require__(9);
+const database_1 = __webpack_require__(10);
+const admin_module_1 = __webpack_require__(14);
+const health_module_1 = __webpack_require__(24);
+const analytics_module_1 = __webpack_require__(27);
+const jwt_strategy_1 = __webpack_require__(34);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -55,6 +58,17 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
                 envFilePath: ['.env.local', '.env'],
+            }),
+            passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET', '91writing_default_secret'),
+                    signOptions: {
+                        expiresIn: configService.get('JWT_EXPIRES_IN', '7d'),
+                    },
+                }),
+                inject: [config_1.ConfigService],
             }),
             throttler_1.ThrottlerModule.forRootAsync({
                 inject: [config_1.ConfigService],
@@ -90,7 +104,7 @@ exports.AppModule = AppModule = __decorate([
             analytics_module_1.AnalyticsModule,
         ],
         controllers: [],
-        providers: [],
+        providers: [jwt_strategy_1.JwtStrategy],
     })
 ], AppModule);
 
@@ -109,6 +123,18 @@ module.exports = require("@nestjs/cache-manager");
 
 /***/ }),
 /* 8 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/passport");
+
+/***/ }),
+/* 9 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/jwt");
+
+/***/ }),
+/* 10 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -127,12 +153,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(9), exports);
-__exportStar(__webpack_require__(10), exports);
+__exportStar(__webpack_require__(11), exports);
+__exportStar(__webpack_require__(12), exports);
 
 
 /***/ }),
-/* 9 */
+/* 11 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -146,7 +172,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
-const prisma_service_1 = __webpack_require__(10);
+const prisma_service_1 = __webpack_require__(12);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -161,7 +187,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 10 */
+/* 12 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -180,7 +206,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
-const client_1 = __webpack_require__(11);
+const client_1 = __webpack_require__(13);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -307,13 +333,13 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 11 */
+/* 13 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -326,13 +352,13 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminModule = void 0;
 const common_1 = __webpack_require__(2);
-const axios_1 = __webpack_require__(13);
-const jwt_1 = __webpack_require__(14);
+const axios_1 = __webpack_require__(15);
+const jwt_1 = __webpack_require__(9);
 const config_1 = __webpack_require__(4);
-const admin_controller_1 = __webpack_require__(15);
-const admin_service_1 = __webpack_require__(16);
-const admin_auth_guard_1 = __webpack_require__(17);
-const role_guard_1 = __webpack_require__(18);
+const admin_controller_1 = __webpack_require__(16);
+const admin_service_1 = __webpack_require__(17);
+const admin_auth_guard_1 = __webpack_require__(18);
+const role_guard_1 = __webpack_require__(19);
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -361,19 +387,13 @@ exports.AdminModule = AdminModule = __decorate([
 
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/axios");
 
 /***/ }),
-/* 14 */
-/***/ ((module) => {
-
-module.exports = require("@nestjs/jwt");
-
-/***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -394,11 +414,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const admin_service_1 = __webpack_require__(16);
-const admin_auth_guard_1 = __webpack_require__(17);
-const role_guard_1 = __webpack_require__(18);
-const roles_decorator_1 = __webpack_require__(19);
-const admin_dto_1 = __webpack_require__(20);
+const admin_service_1 = __webpack_require__(17);
+const admin_auth_guard_1 = __webpack_require__(18);
+const role_guard_1 = __webpack_require__(19);
+const roles_decorator_1 = __webpack_require__(20);
+const admin_dto_1 = __webpack_require__(21);
 let AdminController = class AdminController {
     constructor(adminService) {
         this.adminService = adminService;
@@ -711,13 +731,13 @@ exports.AdminController = AdminController = __decorate([
     (0, swagger_1.ApiTags)('管理员功能'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
-    (0, common_1.Controller)('admin'),
+    (0, common_1.Controller)(),
     __metadata("design:paramtypes", [typeof (_a = typeof admin_service_1.AdminService !== "undefined" && admin_service_1.AdminService) === "function" ? _a : Object])
 ], AdminController);
 
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -735,8 +755,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminService = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
-const axios_1 = __webpack_require__(13);
-const database_1 = __webpack_require__(8);
+const axios_1 = __webpack_require__(15);
+const database_1 = __webpack_require__(10);
 let AdminService = class AdminService {
     constructor(prisma, httpService, configService) {
         this.prisma = prisma;
@@ -1283,7 +1303,7 @@ exports.AdminService = AdminService = __decorate([
 
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1301,7 +1321,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AdminAuthGuard = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
-const jwt_1 = __webpack_require__(14);
+const jwt_1 = __webpack_require__(9);
 let AdminAuthGuard = class AdminAuthGuard {
     constructor(jwtService, configService) {
         this.jwtService = jwtService;
@@ -1342,7 +1362,7 @@ exports.AdminAuthGuard = AdminAuthGuard = __decorate([
 
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1389,7 +1409,7 @@ exports.RoleGuard = RoleGuard = __decorate([
 
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -1401,7 +1421,7 @@ exports.Roles = Roles;
 
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1418,8 +1438,8 @@ var _a, _b, _c, _d, _e, _f;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OrderManagementDto = exports.SystemConfigDto = exports.SubscriptionManagementDto = exports.UserManagementDto = exports.AdminStatsDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const class_validator_1 = __webpack_require__(21);
-const class_transformer_1 = __webpack_require__(22);
+const class_validator_1 = __webpack_require__(22);
+const class_transformer_1 = __webpack_require__(23);
 class AdminStatsDto {
     constructor() {
         this.period = 'month';
@@ -1789,19 +1809,19 @@ __decorate([
 
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ ((module) => {
 
 module.exports = require("class-validator");
 
 /***/ }),
-/* 22 */
+/* 23 */
 /***/ ((module) => {
 
 module.exports = require("class-transformer");
 
 /***/ }),
-/* 23 */
+/* 24 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1814,8 +1834,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(2);
-const health_controller_1 = __webpack_require__(24);
-const health_service_1 = __webpack_require__(25);
+const health_controller_1 = __webpack_require__(25);
+const health_service_1 = __webpack_require__(26);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -1828,7 +1848,7 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 24 */
+/* 25 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1846,7 +1866,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
-const health_service_1 = __webpack_require__(25);
+const health_service_1 = __webpack_require__(26);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -1883,7 +1903,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 25 */
+/* 26 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1900,7 +1920,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthService = void 0;
 const common_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(8);
+const database_1 = __webpack_require__(10);
 let HealthService = class HealthService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -1956,7 +1976,7 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 26 */
+/* 27 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1969,15 +1989,29 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AnalyticsModule = void 0;
 const common_1 = __webpack_require__(2);
-const analytics_controller_1 = __webpack_require__(27);
-const analytics_service_1 = __webpack_require__(28);
-const database_1 = __webpack_require__(8);
+const jwt_1 = __webpack_require__(9);
+const config_1 = __webpack_require__(4);
+const analytics_controller_1 = __webpack_require__(28);
+const analytics_service_1 = __webpack_require__(29);
+const database_1 = __webpack_require__(10);
 let AnalyticsModule = class AnalyticsModule {
 };
 exports.AnalyticsModule = AnalyticsModule;
 exports.AnalyticsModule = AnalyticsModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_1.DatabaseModule],
+        imports: [
+            database_1.DatabaseModule,
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET', '91writing_default_secret'),
+                    signOptions: {
+                        expiresIn: configService.get('JWT_EXPIRES_IN', '7d'),
+                    },
+                }),
+                inject: [config_1.ConfigService],
+            }),
+        ],
         controllers: [analytics_controller_1.AnalyticsController],
         providers: [analytics_service_1.AnalyticsService],
         exports: [analytics_service_1.AnalyticsService],
@@ -1986,7 +2020,7 @@ exports.AnalyticsModule = AnalyticsModule = __decorate([
 
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2006,10 +2040,10 @@ var _a, _b, _c, _d, _e, _f, _g;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AnalyticsController = void 0;
 const common_1 = __webpack_require__(2);
-const analytics_service_1 = __webpack_require__(28);
-const guards_1 = __webpack_require__(29);
+const analytics_service_1 = __webpack_require__(29);
+const guards_1 = __webpack_require__(30);
 const swagger_1 = __webpack_require__(3);
-const admin_auth_guard_1 = __webpack_require__(17);
+const admin_auth_guard_1 = __webpack_require__(18);
 const analytics_dto_1 = __webpack_require__(33);
 let AnalyticsController = class AnalyticsController {
     constructor(analyticsService) {
@@ -2139,7 +2173,7 @@ exports.AnalyticsController = AnalyticsController = __decorate([
 
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2157,7 +2191,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AnalyticsService = void 0;
 const common_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(8);
+const database_1 = __webpack_require__(10);
 let AnalyticsService = AnalyticsService_1 = class AnalyticsService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -2473,7 +2507,7 @@ exports.AnalyticsService = AnalyticsService = AnalyticsService_1 = __decorate([
 
 
 /***/ }),
-/* 29 */
+/* 30 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2492,12 +2526,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(30), exports);
+__exportStar(__webpack_require__(31), exports);
 __exportStar(__webpack_require__(32), exports);
 
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2510,7 +2544,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.JwtAuthGuard = void 0;
 const common_1 = __webpack_require__(2);
-const passport_1 = __webpack_require__(31);
+const passport_1 = __webpack_require__(8);
 let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
     handleRequest(err, user, info) {
         if (err || !user) {
@@ -2524,12 +2558,6 @@ exports.JwtAuthGuard = JwtAuthGuard = __decorate([
     (0, common_1.Injectable)()
 ], JwtAuthGuard);
 
-
-/***/ }),
-/* 31 */
-/***/ ((module) => {
-
-module.exports = require("@nestjs/passport");
 
 /***/ }),
 /* 32 */
@@ -2579,7 +2607,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RetentionQueryDto = exports.DateRangeDto = exports.BatchTrackDto = void 0;
 const swagger_1 = __webpack_require__(3);
-const class_validator_1 = __webpack_require__(21);
+const class_validator_1 = __webpack_require__(22);
 class BatchTrackDto {
 }
 exports.BatchTrackDto = BatchTrackDto;
@@ -2621,6 +2649,84 @@ __decorate([
 
 /***/ }),
 /* 34 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JwtStrategy = void 0;
+const common_1 = __webpack_require__(2);
+const config_1 = __webpack_require__(4);
+const passport_1 = __webpack_require__(8);
+const passport_jwt_1 = __webpack_require__(35);
+const database_1 = __webpack_require__(10);
+let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
+    constructor(configService, prisma) {
+        super({
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            ignoreExpiration: false,
+            secretOrKey: configService.get('JWT_SECRET', '91writing_default_secret'),
+        });
+        this.configService = configService;
+        this.prisma = prisma;
+    }
+    async validate(payload) {
+        const { sub, email, role } = payload;
+        const user = await this.prisma.user.findUnique({
+            where: { id: sub },
+            include: {
+                profile: true,
+                subscription: {
+                    include: {
+                        package: true,
+                    },
+                },
+            },
+        });
+        if (!user) {
+            throw new common_1.UnauthorizedException('用户不存在');
+        }
+        if (user.status !== 'ACTIVE') {
+            throw new common_1.UnauthorizedException('用户账号已被禁用');
+        }
+        return {
+            id: user.id,
+            email: user.email,
+            nickname: user.nickname,
+            role: user.role,
+            status: user.status,
+            isActive: user.isActive,
+            tenantId: user.tenantId,
+            profile: user.profile,
+            subscription: user.subscription,
+            lastLoginAt: user.lastLoginAt,
+        };
+    }
+};
+exports.JwtStrategy = JwtStrategy;
+exports.JwtStrategy = JwtStrategy = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object, typeof (_b = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _b : Object])
+], JwtStrategy);
+
+
+/***/ }),
+/* 35 */
+/***/ ((module) => {
+
+module.exports = require("passport-jwt");
+
+/***/ }),
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2697,7 +2803,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 35 */
+/* 37 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2710,7 +2816,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(2);
-const operators_1 = __webpack_require__(36);
+const operators_1 = __webpack_require__(38);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -2752,7 +2858,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 36 */
+/* 38 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2796,8 +2902,8 @@ const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(34);
-const response_interceptor_1 = __webpack_require__(35);
+const all_exceptions_filter_1 = __webpack_require__(36);
+const response_interceptor_1 = __webpack_require__(37);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);

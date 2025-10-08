@@ -108,7 +108,7 @@ async function bootstrap() {
     `,
   });
   
-  const port = process.env.PORT || 3003;
+  const port = process.env.NOVEL_SERVICE_PORT || process.env.PORT || 3003;
   await app.listen(port);
   console.log(`Novel Service is running on: http://localhost:${port}`);
   console.log(`API Documentation: http://localhost:${port}/api-docs`);

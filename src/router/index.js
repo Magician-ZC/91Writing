@@ -15,6 +15,8 @@ import ToolsLibrary from '../views/ToolsLibrary.vue'
 import ShortStory from '../views/ShortStory.vue'
 import BookAnalysis from '../views/BookAnalysis.vue'
 import NovelWizard from '../components/wizard/NovelWizard.vue'
+import MaterialManagement from '../views/MaterialManagement.vue'
+import MindMapView from '../views/MindMapView.vue'
 import Login from '../views/auth/Login.vue'
 import Register from '../views/auth/Register.vue'
 import { useAuthStore } from '@/stores/authStore'
@@ -193,6 +195,18 @@ const routes = [
         name: 'BookAnalysis',
         component: BookAnalysis,
         meta: { title: '作品分析 - 91Writing' }
+      },
+      {
+        path: 'materials',
+        name: 'MaterialManagement',
+        component: MaterialManagement,
+        meta: { title: '素材管理 - 91Writing' }
+      },
+      {
+        path: 'mindmap/:novelId',
+        name: 'MindMapView',
+        component: MindMapView,
+        meta: { title: '思维导图 - 91Writing' }
       },
       {
         path: 'wizard',

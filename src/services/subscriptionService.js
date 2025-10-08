@@ -10,10 +10,7 @@ class SubscriptionService {
    */
   async getCurrentSubscription() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/current`, {
-        method: 'GET'
-      })
-      return response
+      return await apiManager.getCurrentSubscription()
     } catch (error) {
       console.error('获取当前订阅失败:', error)
       throw error
@@ -25,10 +22,7 @@ class SubscriptionService {
    */
   async checkSubscriptionStatus() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/status`, {
-        method: 'GET'
-      })
-      return response
+      return await apiManager.checkSubscriptionStatus()
     } catch (error) {
       console.error('检查订阅状态失败:', error)
       throw error
@@ -40,11 +34,7 @@ class SubscriptionService {
    */
   async createSubscription(data) {
     try {
-      const response = await apiManager.request(this.baseURL, {
-        method: 'POST',
-        data
-      })
-      return response
+      return await apiManager.createSubscription(data)
     } catch (error) {
       console.error('创建订阅失败:', error)
       throw error
@@ -56,10 +46,7 @@ class SubscriptionService {
    */
   async getSubscription(id) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}`, {
-        method: 'GET'
-      })
-      return response
+      return await apiManager.getSubscription(id)
     } catch (error) {
       console.error('获取订阅详情失败:', error)
       throw error
@@ -71,11 +58,7 @@ class SubscriptionService {
    */
   async updateSubscription(id, data) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}`, {
-        method: 'PATCH',
-        data
-      })
-      return response
+      return await apiManager.updateSubscription(id, data)
     } catch (error) {
       console.error('更新订阅失败:', error)
       throw error
@@ -85,12 +68,9 @@ class SubscriptionService {
   /**
    * 取消订阅
    */
-  async cancel(id) {
+  async cancel(id, reason = '') {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}/cancel`, {
-        method: 'POST'
-      })
-      return response
+      return await apiManager.cancelSubscription(id, reason)
     } catch (error) {
       console.error('取消订阅失败:', error)
       throw error
@@ -102,9 +82,7 @@ class SubscriptionService {
    */
   async renew(id) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}/renew`, {
-        method: 'POST'
-      })
+      const response = await apiManager.renewSubscription(id)
       return response
     } catch (error) {
       console.error('续费订阅失败:', error)
@@ -117,10 +95,7 @@ class SubscriptionService {
    */
   async enableAutoRenew(id) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}/auto-renew`, {
-        method: 'PATCH',
-        data: { autoRenew: true }
-      })
+      const response = await apiManager.enableSubscriptionAutoRenew(id)
       return response
     } catch (error) {
       console.error('开启自动续费失败:', error)
@@ -133,10 +108,7 @@ class SubscriptionService {
    */
   async disableAutoRenew(id) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${id}/auto-renew`, {
-        method: 'PATCH',
-        data: { autoRenew: false }
-      })
+      const response = await apiManager.disableSubscriptionAutoRenew(id)
       return response
     } catch (error) {
       console.error('关闭自动续费失败:', error)
@@ -249,10 +221,7 @@ class SubscriptionService {
    */
   async getSubscriptionHistory(params = {}) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/history`, {
-        method: 'GET',
-        params
-      })
+      const response = await apiManager.getSubscriptionHistory(params)
       return response
     } catch (error) {
       console.error('获取订阅历史失败:', error)
@@ -265,10 +234,7 @@ class SubscriptionService {
    */
   async previewUpgrade(currentSubscriptionId, targetPackageId) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${currentSubscriptionId}/preview-upgrade`, {
-        method: 'POST',
-        data: { targetPackageId }
-      })
+      const response = await apiManager.previewSubscriptionUpgrade(currentSubscriptionId, targetPackageId)
       return response
     } catch (error) {
       console.error('预览订阅升级失败:', error)
@@ -281,10 +247,7 @@ class SubscriptionService {
    */
   async upgradeSubscription(currentSubscriptionId, targetPackageId) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/${currentSubscriptionId}/upgrade`, {
-        method: 'POST',
-        data: { targetPackageId }
-      })
+      const response = await apiManager.upgradeSubscription(currentSubscriptionId, targetPackageId)
       return response
     } catch (error) {
       console.error('升级订阅失败:', error)

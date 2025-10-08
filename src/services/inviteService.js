@@ -10,9 +10,7 @@ class InviteService {
    */
   async getMyInviteCode() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/my-code`, {
-        method: 'GET'
-      })
+      const response = await apiManager.getMyInviteCode()
       return response
     } catch (error) {
       console.error('获取邀请码失败:', error)
@@ -25,9 +23,7 @@ class InviteService {
    */
   async getInviteStats() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/stats`, {
-        method: 'GET'
-      })
+      const response = await apiManager.getInviteStats()
       return response
     } catch (error) {
       console.error('获取邀请统计失败:', error)
@@ -40,9 +36,7 @@ class InviteService {
    */
   async getInviteRewards() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/rewards`, {
-        method: 'GET'
-      })
+      const response = await apiManager.getInviteRewards()
       return response
     } catch (error) {
       console.error('获取邀请奖励记录失败:', error)
@@ -55,9 +49,7 @@ class InviteService {
    */
   async getInvitees() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/invitees`, {
-        method: 'GET'
-      })
+      const response = await apiManager.getInvitees()
       return response
     } catch (error) {
       console.error('获取邀请用户列表失败:', error)
@@ -70,10 +62,7 @@ class InviteService {
    */
   async claimReward(rewardId) {
     try {
-      const response = await apiManager.request(`${this.baseURL}/claim-reward`, {
-        method: 'POST',
-        data: { rewardId }
-      })
+      const response = await apiManager.claimInviteReward(rewardId)
       return response
     } catch (error) {
       console.error('领取邀请奖励失败:', error)
@@ -86,9 +75,7 @@ class InviteService {
    */
   async getRewardConfig() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/reward-config`, {
-        method: 'GET'
-      })
+      const response = await apiManager.getInviteRewardConfig()
       return response
     } catch (error) {
       console.error('获取奖励配置失败:', error)
@@ -101,9 +88,7 @@ class InviteService {
    */
   async getExpectedRewards() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/expected-rewards`, {
-        method: 'GET'
-      })
+      const response = await apiManager.getExpectedInviteRewards()
       return response
     } catch (error) {
       console.error('获取预期奖励失败:', error)
@@ -116,9 +101,7 @@ class InviteService {
    */
   async getShareMaterials() {
     try {
-      const response = await apiManager.request(`${this.baseURL}/share-materials`, {
-        method: 'GET'
-      })
+      const response = await apiManager.getInviteShareMaterials()
       return response
     } catch (error) {
       console.error('获取分享素材失败:', error)
@@ -131,10 +114,7 @@ class InviteService {
    */
   async validateInviteCode(inviteCode) {
     try {
-      // 这个接口可能需要在后端添加
-      const response = await apiManager.request(`/api/v1/auth/validate-invite/${inviteCode}`, {
-        method: 'GET'
-      })
+      const response = await apiManager.validateInviteCode(inviteCode)
       return response
     } catch (error) {
       console.error('验证邀请码失败:', error)
