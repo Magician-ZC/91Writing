@@ -30,6 +30,31 @@ async function initApp() {
     const { default: apiManager } = await import('./services/apiManager')
     const { default: dataSyncService } = await import('./services/dataSync')
     
+    // 初始化PWA功能
+    const { registerServiceWorker, setupPWAInstallPrompt, setupNetworkListeners } = await import('./utils/pwa')
+    
+    // 注册 Service Worker
+    if (import.meta.env.PROD) {
+      await registerServiceWorker()
+    }
+    
+    // 设置PWA安装提示
+    const pwaInstaller = setupPWAInstallPrompt()
+    window.pwaInstaller = pwaInstaller // 全局访问
+    
+    // 设置网络状态监听
+    setupNetworkListeners(
+      () => {
+        console.log('网络已连接，开始同步数据')
+        if (apiManager.getMode() === 'hybrid') {
+          dataSyncService.autoSync()
+        }
+      },
+      () => {
+        console.log('网络已断开，切换到离线模式')
+      }
+    )
+    
     // 设置token拦截器（保留兼容性）
     authStore.setupTokenInterceptor()
     

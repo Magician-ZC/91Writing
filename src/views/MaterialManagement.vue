@@ -338,10 +338,18 @@ onMounted(() => {
 const loadMaterials = async () => {
   loading.value = true
   try {
-    const params = {
-      ...searchQuery,
-      tags: selectedTags.value.length > 0 ? selectedTags.value.join(',') : undefined
-    }
+    // 构建查询参数，过滤掉空值
+    const params = {}
+    
+    if (searchQuery.keyword) params.keyword = searchQuery.keyword
+    if (searchQuery.type) params.type = searchQuery.type
+    if (searchQuery.category) params.category = searchQuery.category
+    if (selectedTags.value.length > 0) params.tags = selectedTags.value.join(',')
+    
+    // 分页参数总是包含
+    params.page = searchQuery.page
+    params.pageSize = searchQuery.pageSize
+    
     const result = await materialService.getMaterials(params)
     materials.value = result.items || []
     total.value = result.total || 0

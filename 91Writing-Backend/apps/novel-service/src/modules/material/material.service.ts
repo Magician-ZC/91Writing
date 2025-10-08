@@ -31,7 +31,7 @@ export class MaterialService {
    * 查询用户素材列表
    */
   async findAll(userId: string, query: QueryMaterialDto) {
-    const { type, category, keyword, page = 1, pageSize = 20 } = query;
+    const { type, category, keyword, tags, page = 1, pageSize = 20 } = query;
 
     const where: Prisma.MaterialWhereInput = {
       userId,
@@ -45,22 +45,38 @@ export class MaterialService {
       }),
     };
 
-    const [items, total] = await Promise.all([
+    // 先查询数据
+    const [allItems, total] = await Promise.all([
       this.prisma.material.findMany({
         where,
         skip: (page - 1) * pageSize,
-        take: pageSize,
+        take: pageSize * 2, // 获取更多数据用于过滤
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.material.count({ where }),
     ]);
 
+    // 如果有tags筛选，在内存中过滤
+    let items = allItems;
+    let filteredTotal = total;
+    
+    if (tags) {
+      const tagArray = tags.split(',').map(t => t.trim());
+      items = allItems.filter(item => {
+        if (!item.tags || !Array.isArray(item.tags)) return false;
+        return tagArray.some(tag => (item.tags as string[]).includes(tag));
+      });
+      // 限制返回数量
+      items = items.slice(0, pageSize);
+      filteredTotal = items.length;
+    }
+
     return {
       items,
-      total,
+      total: filteredTotal,
       page,
       pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      totalPages: Math.ceil(filteredTotal / pageSize),
     };
   }
 

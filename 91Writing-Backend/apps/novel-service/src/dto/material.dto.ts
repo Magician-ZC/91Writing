@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsInt, IsArray, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum MaterialType {
@@ -86,13 +87,20 @@ export class QueryMaterialDto {
   @IsString()
   keyword?: string;
 
+  @ApiProperty({ description: '标签(逗号分隔)', required: false })
+  @IsOptional()
+  @IsString()
+  tags?: string;
+
   @ApiProperty({ description: '页码', required: false, default: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   page?: number = 1;
 
   @ApiProperty({ description: '每页数量', required: false, default: 20 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   pageSize?: number = 20;
 }

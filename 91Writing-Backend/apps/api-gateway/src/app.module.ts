@@ -8,6 +8,7 @@ import { ProxyModule } from './modules/proxy/proxy.module';
 import { HealthModule } from './modules/health/health.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { NovelModule } from './modules/novel/novel.module';
 import { DatabaseModule } from '@app/database';
 
 @Module({
@@ -53,6 +54,7 @@ import { DatabaseModule } from '@app/database';
     // 功能模块
     DatabaseModule,
     AuthModule,
+    NovelModule,
     ProxyModule,
     PaymentModule,
     AdminModule,

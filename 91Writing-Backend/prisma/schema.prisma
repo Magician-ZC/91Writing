@@ -49,6 +49,13 @@ model User {
   receivedInvites UserInvite[]   @relation("InviteeRelation")
   inviteRewards   InviteReward[]
 
+  // 协作关系
+  collaborations  NovelCollaboration[]
+  chapterLocks    ChapterLock[]
+  editEvents      ChapterEditEvent[]
+  chapterVersions ChapterVersion[]
+  comments        ChapterComment[]
+
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -166,9 +173,10 @@ model Novel {
   settings     Json? // 小说设置(角色、世界观等)
 
   // 关联
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chapters Chapter[]
-  memories NovelMemory[]
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapters       Chapter[]
+  memories       NovelMemory[]
+  collaborations NovelCollaboration[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -191,7 +199,11 @@ model Chapter {
   status        ChapterStatus @default(DRAFT)
 
   // 关联
-  novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  novel      Novel              @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  lock       ChapterLock?
+  editEvents ChapterEditEvent[]
+  versions   ChapterVersion[]
+  comments   ChapterComment[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -222,6 +234,124 @@ model NovelMemory {
   @@index([novelId, memoryType])
   @@index([importance])
   @@map("novel_memories")
+}
+
+// ===== 协作系统 =====
+// 小说协作表
+model NovelCollaboration {
+  id            String              @id @default(cuid())
+  novelId       String              @map("novel_id")
+  userId        String              @map("user_id")
+  role          CollaborationRole   @default(VIEWER)
+  status        CollaborationStatus @default(PENDING)
+  inviteMessage String?             @map("invite_message") @db.Text
+
+  // 关联
+  novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([novelId, userId])
+  @@index([novelId])
+  @@index([userId])
+  @@index([status])
+  @@map("novel_collaborations")
+}
+
+// 章节锁定表
+model ChapterLock {
+  id        String   @id @default(cuid())
+  chapterId String   @unique @map("chapter_id")
+  userId    String   @map("user_id")
+  isLocked  Boolean  @default(true) @map("is_locked")
+  lockedAt  DateTime @default(now()) @map("locked_at")
+
+  // 关联
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([chapterId])
+  @@index([userId])
+  @@map("chapter_locks")
+}
+
+// 章节编辑事件表
+model ChapterEditEvent {
+  id        String   @id @default(cuid())
+  chapterId String   @map("chapter_id")
+  userId    String   @map("user_id")
+  eventType String   @map("event_type") @db.VarChar(50)
+  eventData Json     @map("event_data")
+
+  // 关联
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([chapterId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("chapter_edit_events")
+}
+
+// 章节版本表
+model ChapterVersion {
+  id            String  @id @default(cuid())
+  chapterId     String  @map("chapter_id")
+  versionNumber Int     @map("version_number")
+  title         String  @db.VarChar(200)
+  content       String? @db.LongText
+  wordCount     Int     @default(0) @map("word_count")
+  userId        String  @map("user_id") // 创建此版本的用户
+  changeLog     String? @map("change_log") @db.Text
+
+  // 关联
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([chapterId, versionNumber])
+  @@index([chapterId])
+  @@index([userId])
+  @@map("chapter_versions")
+}
+
+// 章节评论表
+model ChapterComment {
+  id         String        @id @default(cuid())
+  chapterId  String        @map("chapter_id")
+  userId     String        @map("user_id")
+  content    String        @db.Text
+  position   Json? // 评论位置信息（段落、字符位置等）
+  status     CommentStatus @default(ACTIVE)
+  parentId   String?       @map("parent_id") // 父评论ID（用于回复）
+
+  // 关联
+  chapter Chapter          @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  ChapterComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies ChapterComment[] @relation("CommentReplies")
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([chapterId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([status])
+  @@map("chapter_comments")
 }
 
 // ===== 素材系统 =====
@@ -473,4 +603,24 @@ enum RewardType {
   DAYS // 天数奖励
   PACKAGE // 套餐奖励
   CASH // 现金奖励
+}
+
+// ===== 协作系统枚举 =====
+enum CollaborationRole {
+  OWNER // 所有者
+  EDITOR // 编辑者
+  COMMENTER // 评论者
+  VIEWER // 查看者
+}
+
+enum CollaborationStatus {
+  ACTIVE // 活跃
+  PENDING // 待确认
+  REVOKED // 已撤销
+}
+
+enum CommentStatus {
+  ACTIVE // 活跃
+  RESOLVED // 已解决
+  DELETED // 已删除
 }

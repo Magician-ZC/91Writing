@@ -144,6 +144,10 @@
                     <el-icon><EditPen /></el-icon>
                     编辑信息
                   </el-dropdown-item>
+                  <el-dropdown-item @click="openMindMap(novel)">
+                    <el-icon><Connection /></el-icon>
+                    思维导图
+                  </el-dropdown-item>
                   <el-dropdown-item divided @click="exportNovel(novel)">
                     <el-icon><Download /></el-icon>
                     导出
@@ -958,6 +962,11 @@ const openNovel = (novel) => {
 const viewNovelDetails = (novel) => {
   selectedNovel.value = novel
   showDetailsDialog.value = true
+}
+
+const openMindMap = (novel) => {
+  // 跳转到思维导图页面
+  router.push(`/mindmap/${novel.id}`)
 }
 
 const exportNovel = (novel) => {

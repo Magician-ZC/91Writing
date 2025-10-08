@@ -47,7 +47,8 @@ const proxy_module_1 = __webpack_require__(15);
 const health_module_1 = __webpack_require__(18);
 const payment_module_1 = __webpack_require__(21);
 const admin_module_1 = __webpack_require__(25);
-const database_1 = __webpack_require__(28);
+const novel_module_1 = __webpack_require__(28);
+const database_1 = __webpack_require__(31);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -88,6 +89,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             database_1.DatabaseModule,
             auth_module_1.AuthModule,
+            novel_module_1.NovelModule,
             proxy_module_1.ProxyModule,
             payment_module_1.PaymentModule,
             admin_module_1.AdminModule,
@@ -1002,6 +1004,229 @@ exports.AdminService = AdminService = AdminService_1 = __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NovelModule = void 0;
+const common_1 = __webpack_require__(3);
+const axios_1 = __webpack_require__(10);
+const novel_controller_1 = __webpack_require__(29);
+const novel_service_1 = __webpack_require__(30);
+let NovelModule = class NovelModule {
+};
+exports.NovelModule = NovelModule;
+exports.NovelModule = NovelModule = __decorate([
+    (0, common_1.Module)({
+        imports: [axios_1.HttpModule],
+        controllers: [novel_controller_1.NovelController],
+        providers: [novel_service_1.NovelService],
+    })
+], NovelModule);
+
+
+/***/ }),
+/* 29 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NovelController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const express_1 = __webpack_require__(12);
+const novel_service_1 = __webpack_require__(30);
+let NovelController = class NovelController {
+    constructor(novelService) {
+        this.novelService = novelService;
+    }
+    async proxyNovels(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyChapters(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyMemories(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyMaterials(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyPrompts(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyCollaboration(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyVersions(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyComments(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyToNovelService(req, res) {
+        try {
+            const path = req.path;
+            const result = await this.novelService.proxyRequest(path, req.method, req.headers, req.body, req.query);
+            return res.status(200).json(result);
+        }
+        catch (error) {
+            const status = error.statusCode || error.status || 500;
+            const message = error.message || 'Internal Server Error';
+            return res.status(status).json(error);
+        }
+    }
+};
+exports.NovelController = NovelController;
+__decorate([
+    (0, common_1.All)('novels*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _b : Object, typeof (_c = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyNovels", null);
+__decorate([
+    (0, common_1.All)('chapters*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _d : Object, typeof (_e = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyChapters", null);
+__decorate([
+    (0, common_1.All)('memories*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_f = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _f : Object, typeof (_g = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _g : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyMemories", null);
+__decorate([
+    (0, common_1.All)('materials*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_h = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _h : Object, typeof (_j = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _j : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyMaterials", null);
+__decorate([
+    (0, common_1.All)('prompts*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_k = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _k : Object, typeof (_l = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _l : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyPrompts", null);
+__decorate([
+    (0, common_1.All)('collaboration*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_m = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _m : Object, typeof (_o = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _o : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyCollaboration", null);
+__decorate([
+    (0, common_1.All)('versions*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_p = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _p : Object, typeof (_q = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _q : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyVersions", null);
+__decorate([
+    (0, common_1.All)('comments*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_r = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _r : Object, typeof (_s = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _s : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyComments", null);
+exports.NovelController = NovelController = __decorate([
+    (0, swagger_1.ApiTags)('Novel Service Proxy'),
+    (0, common_1.Controller)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof novel_service_1.NovelService !== "undefined" && novel_service_1.NovelService) === "function" ? _a : Object])
+], NovelController);
+
+
+/***/ }),
+/* 30 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NovelService = void 0;
+const common_1 = __webpack_require__(3);
+const axios_1 = __webpack_require__(10);
+const config_1 = __webpack_require__(6);
+const rxjs_1 = __webpack_require__(14);
+let NovelService = class NovelService {
+    constructor(httpService, configService) {
+        this.httpService = httpService;
+        this.configService = configService;
+        this.novelServiceUrl = this.configService.get('NOVEL_SERVICE_URL', 'http://localhost:3003');
+    }
+    async proxyRequest(path, method, headers, body, query) {
+        const url = `${this.novelServiceUrl}${path}`;
+        try {
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request({
+                url,
+                method,
+                headers: {
+                    ...headers,
+                    host: undefined,
+                },
+                data: body,
+                params: query,
+            }));
+            return response.data;
+        }
+        catch (error) {
+            if (error.response) {
+                throw error.response.data;
+            }
+            throw error;
+        }
+    }
+};
+exports.NovelService = NovelService;
+exports.NovelService = NovelService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof axios_1.HttpService !== "undefined" && axios_1.HttpService) === "function" ? _a : Object, typeof (_b = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _b : Object])
+], NovelService);
+
+
+/***/ }),
+/* 31 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -1017,12 +1242,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(29), exports);
-__exportStar(__webpack_require__(30), exports);
+__exportStar(__webpack_require__(32), exports);
+__exportStar(__webpack_require__(33), exports);
 
 
 /***/ }),
-/* 29 */
+/* 32 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1036,7 +1261,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const prisma_service_1 = __webpack_require__(30);
+const prisma_service_1 = __webpack_require__(33);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -1051,7 +1276,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 30 */
+/* 33 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1070,7 +1295,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const client_1 = __webpack_require__(31);
+const client_1 = __webpack_require__(34);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -1197,19 +1422,19 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 31 */
+/* 34 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 32 */
+/* 35 */
 /***/ ((module) => {
 
 module.exports = require("compression");
 
 /***/ }),
-/* 33 */
+/* 36 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
@@ -1254,8 +1479,8 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const compression = __webpack_require__(32);
-const helmet_1 = __webpack_require__(33);
+const compression = __webpack_require__(35);
+const helmet_1 = __webpack_require__(36);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['error', 'warn', 'log', 'debug', 'verbose'],

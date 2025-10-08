@@ -47,9 +47,12 @@ const novel_module_1 = __webpack_require__(13);
 const chapter_module_1 = __webpack_require__(23);
 const memory_module_1 = __webpack_require__(27);
 const material_module_1 = __webpack_require__(31);
-const prompt_module_1 = __webpack_require__(35);
-const health_module_1 = __webpack_require__(39);
-const jwt_strategy_1 = __webpack_require__(42);
+const prompt_module_1 = __webpack_require__(36);
+const collaboration_module_1 = __webpack_require__(40);
+const version_module_1 = __webpack_require__(52);
+const comment_module_1 = __webpack_require__(56);
+const health_module_1 = __webpack_require__(60);
+const jwt_strategy_1 = __webpack_require__(63);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -77,6 +80,9 @@ exports.AppModule = AppModule = __decorate([
             memory_module_1.MemoryModule,
             material_module_1.MaterialModule,
             prompt_module_1.PromptModule,
+            collaboration_module_1.CollaborationModule,
+            version_module_1.VersionModule,
+            comment_module_1.CommentModule,
             health_module_1.HealthModule,
         ],
         providers: [
@@ -2587,7 +2593,7 @@ let MaterialService = class MaterialService {
         return material;
     }
     async findAll(userId, query) {
-        const { type, category, keyword, page = 1, pageSize = 20 } = query;
+        const { type, category, keyword, tags, page = 1, pageSize = 20 } = query;
         const where = {
             userId,
             ...(type && { type }),
@@ -2599,21 +2605,33 @@ let MaterialService = class MaterialService {
                 ],
             }),
         };
-        const [items, total] = await Promise.all([
+        const [allItems, total] = await Promise.all([
             this.prisma.material.findMany({
                 where,
                 skip: (page - 1) * pageSize,
-                take: pageSize,
+                take: pageSize * 2,
                 orderBy: { createdAt: 'desc' },
             }),
             this.prisma.material.count({ where }),
         ]);
+        let items = allItems;
+        let filteredTotal = total;
+        if (tags) {
+            const tagArray = tags.split(',').map(t => t.trim());
+            items = allItems.filter(item => {
+                if (!item.tags || !Array.isArray(item.tags))
+                    return false;
+                return tagArray.some(tag => item.tags.includes(tag));
+            });
+            items = items.slice(0, pageSize);
+            filteredTotal = items.length;
+        }
         return {
             items,
-            total,
+            total: filteredTotal,
             page,
             pageSize,
-            totalPages: Math.ceil(total / pageSize),
+            totalPages: Math.ceil(filteredTotal / pageSize),
         };
     }
     async findOne(userId, id) {
@@ -2734,6 +2752,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.QueryMaterialDto = exports.UpdateMaterialDto = exports.CreateMaterialDto = exports.MaterialType = void 0;
 const class_validator_1 = __webpack_require__(20);
+const class_transformer_1 = __webpack_require__(35);
 const swagger_1 = __webpack_require__(4);
 var MaterialType;
 (function (MaterialType) {
@@ -2843,14 +2862,22 @@ __decorate([
     __metadata("design:type", String)
 ], QueryMaterialDto.prototype, "keyword", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({ description: '标签(逗号分隔)', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryMaterialDto.prototype, "tags", void 0);
+__decorate([
     (0, swagger_1.ApiProperty)({ description: '页码', required: false, default: 1 }),
     (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
 ], QueryMaterialDto.prototype, "page", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({ description: '每页数量', required: false, default: 20 }),
     (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
 ], QueryMaterialDto.prototype, "pageSize", void 0);
@@ -2858,6 +2885,12 @@ __decorate([
 
 /***/ }),
 /* 35 */
+/***/ ((module) => {
+
+module.exports = require("class-transformer");
+
+/***/ }),
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2870,8 +2903,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PromptModule = void 0;
 const common_1 = __webpack_require__(3);
-const prompt_controller_1 = __webpack_require__(36);
-const prompt_service_1 = __webpack_require__(37);
+const prompt_controller_1 = __webpack_require__(37);
+const prompt_service_1 = __webpack_require__(38);
 const database_1 = __webpack_require__(9);
 let PromptModule = class PromptModule {
 };
@@ -2887,7 +2920,7 @@ exports.PromptModule = PromptModule = __decorate([
 
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2908,8 +2941,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PromptController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const prompt_service_1 = __webpack_require__(37);
-const prompt_dto_1 = __webpack_require__(38);
+const prompt_service_1 = __webpack_require__(38);
+const prompt_dto_1 = __webpack_require__(39);
 const guards_1 = __webpack_require__(16);
 let PromptController = class PromptController {
     constructor(promptService) {
@@ -3058,7 +3091,7 @@ exports.PromptController = PromptController = __decorate([
 
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3326,7 +3359,7 @@ exports.PromptService = PromptService = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3461,7 +3494,1657 @@ __decorate([
 
 
 /***/ }),
-/* 39 */
+/* 40 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CollaborationModule = void 0;
+const common_1 = __webpack_require__(3);
+const collaboration_controller_1 = __webpack_require__(41);
+const collaboration_service_1 = __webpack_require__(42);
+const database_1 = __webpack_require__(9);
+let CollaborationModule = class CollaborationModule {
+};
+exports.CollaborationModule = CollaborationModule;
+exports.CollaborationModule = CollaborationModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        controllers: [collaboration_controller_1.CollaborationController],
+        providers: [collaboration_service_1.CollaborationService],
+        exports: [collaboration_service_1.CollaborationService],
+    })
+], CollaborationModule);
+
+
+/***/ }),
+/* 41 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CollaborationController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const collaboration_service_1 = __webpack_require__(42);
+const collaboration_dto_1 = __webpack_require__(43);
+const common_2 = __webpack_require__(44);
+let CollaborationController = class CollaborationController {
+    constructor(collaborationService) {
+        this.collaborationService = collaborationService;
+    }
+    async createCollaboration(dto) {
+        return this.collaborationService.createCollaboration(dto);
+    }
+    async getCollaborators(novelId) {
+        return this.collaborationService.getCollaborators(novelId);
+    }
+    async updateCollaboration(id, dto) {
+        return this.collaborationService.updateCollaboration(id, dto);
+    }
+    async acceptCollaboration(id, req) {
+        return this.collaborationService.acceptCollaboration(id, req.user.userId);
+    }
+    async revokeCollaboration(id, req) {
+        return this.collaborationService.revokeCollaboration(id, req.user.userId);
+    }
+    async checkPermission(novelId, userId, role) {
+        const hasPermission = await this.collaborationService.checkCollaborationPermission(novelId, userId, role);
+        return { hasPermission };
+    }
+    async lockChapter(dto) {
+        return this.collaborationService.lockChapter(dto);
+    }
+    async unlockChapter(dto) {
+        return this.collaborationService.unlockChapter(dto);
+    }
+    async getChapterLockStatus(chapterId) {
+        return this.collaborationService.getChapterLockStatus(chapterId);
+    }
+    async recordEditEvent(dto) {
+        return this.collaborationService.recordEditEvent(dto);
+    }
+    async getChapterEditHistory(chapterId, limit, after) {
+        return this.collaborationService.getChapterEditHistory(chapterId, limit ? parseInt(limit.toString()) : 50, after ? new Date(after) : undefined);
+    }
+};
+exports.CollaborationController = CollaborationController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: '创建协作邀请' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof collaboration_dto_1.CreateCollaborationDto !== "undefined" && collaboration_dto_1.CreateCollaborationDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "createCollaboration", null);
+__decorate([
+    (0, common_1.Get)('novel/:novelId'),
+    (0, swagger_1.ApiOperation)({ summary: '获取小说的协作者列表' }),
+    __param(0, (0, common_1.Param)('novelId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "getCollaborators", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '更新协作状态' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_c = typeof collaboration_dto_1.UpdateCollaborationDto !== "undefined" && collaboration_dto_1.UpdateCollaborationDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "updateCollaboration", null);
+__decorate([
+    (0, common_1.Post)(':id/accept'),
+    (0, swagger_1.ApiOperation)({ summary: '接受协作邀请' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "acceptCollaboration", null);
+__decorate([
+    (0, common_1.Post)(':id/revoke'),
+    (0, swagger_1.ApiOperation)({ summary: '撤销协作' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "revokeCollaboration", null);
+__decorate([
+    (0, common_1.Get)('novel/:novelId/permission/:userId'),
+    (0, swagger_1.ApiOperation)({ summary: '检查用户协作权限' }),
+    __param(0, (0, common_1.Param)('novelId')),
+    __param(1, (0, common_1.Param)('userId')),
+    __param(2, (0, common_1.Query)('role')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "checkPermission", null);
+__decorate([
+    (0, common_1.Post)('chapter/lock'),
+    (0, swagger_1.ApiOperation)({ summary: '锁定章节（开始编辑）' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof collaboration_dto_1.LockChapterDto !== "undefined" && collaboration_dto_1.LockChapterDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "lockChapter", null);
+__decorate([
+    (0, common_1.Post)('chapter/unlock'),
+    (0, swagger_1.ApiOperation)({ summary: '解锁章节（结束编辑）' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_e = typeof collaboration_dto_1.UnlockChapterDto !== "undefined" && collaboration_dto_1.UnlockChapterDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "unlockChapter", null);
+__decorate([
+    (0, common_1.Get)('chapter/:chapterId/lock-status'),
+    (0, swagger_1.ApiOperation)({ summary: '获取章节锁定状态' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "getChapterLockStatus", null);
+__decorate([
+    (0, common_1.Post)('edit-event'),
+    (0, swagger_1.ApiOperation)({ summary: '记录编辑事件' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_f = typeof collaboration_dto_1.EditEventDto !== "undefined" && collaboration_dto_1.EditEventDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "recordEditEvent", null);
+__decorate([
+    (0, common_1.Get)('chapter/:chapterId/edit-history'),
+    (0, swagger_1.ApiOperation)({ summary: '获取章节编辑历史' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)('after')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number, String]),
+    __metadata("design:returntype", Promise)
+], CollaborationController.prototype, "getChapterEditHistory", null);
+exports.CollaborationController = CollaborationController = __decorate([
+    (0, swagger_1.ApiTags)('Collaboration'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(common_2.JwtAuthGuard),
+    (0, common_1.Controller)('collaboration'),
+    __metadata("design:paramtypes", [typeof (_a = typeof collaboration_service_1.CollaborationService !== "undefined" && collaboration_service_1.CollaborationService) === "function" ? _a : Object])
+], CollaborationController);
+
+
+/***/ }),
+/* 42 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CollaborationService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+const collaboration_dto_1 = __webpack_require__(43);
+let CollaborationService = class CollaborationService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async createCollaboration(dto) {
+        const novel = await this.prisma.novel.findUnique({
+            where: { id: dto.novelId },
+        });
+        if (!novel) {
+            throw new common_1.NotFoundException('小说不存在');
+        }
+        const existing = await this.prisma.novelCollaboration.findFirst({
+            where: {
+                novelId: dto.novelId,
+                userId: dto.userId,
+                status: collaboration_dto_1.CollaborationStatus.ACTIVE,
+            },
+        });
+        if (existing) {
+            throw new common_1.ConflictException('该用户已是协作者');
+        }
+        return this.prisma.novelCollaboration.create({
+            data: {
+                novelId: dto.novelId,
+                userId: dto.userId,
+                role: dto.role,
+                status: collaboration_dto_1.CollaborationStatus.PENDING,
+                inviteMessage: dto.message,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+    async getCollaborators(novelId) {
+        return this.prisma.novelCollaboration.findMany({
+            where: {
+                novelId,
+                status: collaboration_dto_1.CollaborationStatus.ACTIVE,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async updateCollaboration(collaborationId, dto) {
+        return this.prisma.novelCollaboration.update({
+            where: { id: collaborationId },
+            data: dto,
+        });
+    }
+    async acceptCollaboration(collaborationId, userId) {
+        const collaboration = await this.prisma.novelCollaboration.findUnique({
+            where: { id: collaborationId },
+        });
+        if (!collaboration) {
+            throw new common_1.NotFoundException('协作邀请不存在');
+        }
+        if (collaboration.userId !== userId) {
+            throw new common_1.ForbiddenException('无权接受此邀请');
+        }
+        return this.prisma.novelCollaboration.update({
+            where: { id: collaborationId },
+            data: { status: collaboration_dto_1.CollaborationStatus.ACTIVE },
+        });
+    }
+    async revokeCollaboration(collaborationId, userId) {
+        const collaboration = await this.prisma.novelCollaboration.findUnique({
+            where: { id: collaborationId },
+        });
+        if (!collaboration) {
+            throw new common_1.NotFoundException('协作记录不存在');
+        }
+        return this.prisma.novelCollaboration.update({
+            where: { id: collaborationId },
+            data: { status: collaboration_dto_1.CollaborationStatus.REVOKED },
+        });
+    }
+    async checkCollaborationPermission(novelId, userId, requiredRole) {
+        const novel = await this.prisma.novel.findUnique({
+            where: { id: novelId },
+        });
+        if (novel?.userId === userId) {
+            return true;
+        }
+        const collaboration = await this.prisma.novelCollaboration.findFirst({
+            where: {
+                novelId,
+                userId,
+                status: collaboration_dto_1.CollaborationStatus.ACTIVE,
+            },
+        });
+        if (!collaboration) {
+            return false;
+        }
+        if (requiredRole) {
+            const roleHierarchy = {
+                [collaboration_dto_1.CollaborationRole.OWNER]: 4,
+                [collaboration_dto_1.CollaborationRole.EDITOR]: 3,
+                [collaboration_dto_1.CollaborationRole.COMMENTER]: 2,
+                [collaboration_dto_1.CollaborationRole.VIEWER]: 1,
+            };
+            return (roleHierarchy[collaboration.role] >= roleHierarchy[requiredRole]);
+        }
+        return true;
+    }
+    async lockChapter(dto) {
+        const existingLock = await this.prisma.chapterLock.findFirst({
+            where: {
+                chapterId: dto.chapterId,
+                isLocked: true,
+            },
+        });
+        if (existingLock && existingLock.userId !== dto.userId) {
+            const lockAge = Date.now() - existingLock.lockedAt.getTime();
+            if (lockAge < 30 * 60 * 1000) {
+                const user = await this.prisma.user.findUnique({
+                    where: { id: existingLock.userId },
+                    include: { profile: true },
+                });
+                throw new common_1.ConflictException(`章节正在被 ${user?.profile?.nickname || user?.email} 编辑中`);
+            }
+        }
+        return this.prisma.chapterLock.upsert({
+            where: { chapterId: dto.chapterId },
+            update: {
+                userId: dto.userId,
+                isLocked: true,
+                lockedAt: new Date(),
+            },
+            create: {
+                chapterId: dto.chapterId,
+                userId: dto.userId,
+                isLocked: true,
+                lockedAt: new Date(),
+            },
+        });
+    }
+    async unlockChapter(dto) {
+        const lock = await this.prisma.chapterLock.findFirst({
+            where: {
+                chapterId: dto.chapterId,
+            },
+        });
+        if (!lock) {
+            return null;
+        }
+        if (lock.userId !== dto.userId) {
+            throw new common_1.ForbiddenException('只有锁定者本人可以解锁');
+        }
+        return this.prisma.chapterLock.update({
+            where: { chapterId: dto.chapterId },
+            data: { isLocked: false },
+        });
+    }
+    async getChapterLockStatus(chapterId) {
+        const lock = await this.prisma.chapterLock.findFirst({
+            where: {
+                chapterId,
+                isLocked: true,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!lock) {
+            return { isLocked: false, lockedBy: null };
+        }
+        const lockAge = Date.now() - lock.lockedAt.getTime();
+        if (lockAge >= 30 * 60 * 1000) {
+            await this.prisma.chapterLock.update({
+                where: { chapterId },
+                data: { isLocked: false },
+            });
+            return { isLocked: false, lockedBy: null };
+        }
+        return {
+            isLocked: true,
+            lockedBy: {
+                id: lock.user.id,
+                email: lock.user.email,
+                nickname: lock.user.profile?.nickname,
+                avatar: lock.user.profile?.avatar,
+            },
+            lockedAt: lock.lockedAt,
+        };
+    }
+    async recordEditEvent(dto) {
+        return this.prisma.chapterEditEvent.create({
+            data: {
+                chapterId: dto.chapterId,
+                userId: dto.userId,
+                eventType: dto.eventType,
+                eventData: dto.data,
+            },
+        });
+    }
+    async getChapterEditHistory(chapterId, limit = 50, afterTimestamp) {
+        return this.prisma.chapterEditEvent.findMany({
+            where: {
+                chapterId,
+                ...(afterTimestamp && { createdAt: { gt: afterTimestamp } }),
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        });
+    }
+};
+exports.CollaborationService = CollaborationService;
+exports.CollaborationService = CollaborationService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], CollaborationService);
+
+
+/***/ }),
+/* 43 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EditEventDto = exports.UnlockChapterDto = exports.LockChapterDto = exports.UpdateCollaborationDto = exports.CreateCollaborationDto = exports.CollaborationStatus = exports.CollaborationRole = void 0;
+const class_validator_1 = __webpack_require__(20);
+var CollaborationRole;
+(function (CollaborationRole) {
+    CollaborationRole["OWNER"] = "OWNER";
+    CollaborationRole["EDITOR"] = "EDITOR";
+    CollaborationRole["VIEWER"] = "VIEWER";
+    CollaborationRole["COMMENTER"] = "COMMENTER";
+})(CollaborationRole || (exports.CollaborationRole = CollaborationRole = {}));
+var CollaborationStatus;
+(function (CollaborationStatus) {
+    CollaborationStatus["ACTIVE"] = "ACTIVE";
+    CollaborationStatus["PENDING"] = "PENDING";
+    CollaborationStatus["REVOKED"] = "REVOKED";
+})(CollaborationStatus || (exports.CollaborationStatus = CollaborationStatus = {}));
+class CreateCollaborationDto {
+}
+exports.CreateCollaborationDto = CreateCollaborationDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCollaborationDto.prototype, "novelId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCollaborationDto.prototype, "userId", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(CollaborationRole),
+    __metadata("design:type", String)
+], CreateCollaborationDto.prototype, "role", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCollaborationDto.prototype, "message", void 0);
+class UpdateCollaborationDto {
+}
+exports.UpdateCollaborationDto = UpdateCollaborationDto;
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(CollaborationRole),
+    __metadata("design:type", String)
+], UpdateCollaborationDto.prototype, "role", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(CollaborationStatus),
+    __metadata("design:type", String)
+], UpdateCollaborationDto.prototype, "status", void 0);
+class LockChapterDto {
+}
+exports.LockChapterDto = LockChapterDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], LockChapterDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], LockChapterDto.prototype, "userId", void 0);
+class UnlockChapterDto {
+}
+exports.UnlockChapterDto = UnlockChapterDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UnlockChapterDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UnlockChapterDto.prototype, "userId", void 0);
+class EditEventDto {
+}
+exports.EditEventDto = EditEventDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EditEventDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EditEventDto.prototype, "userId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EditEventDto.prototype, "eventType", void 0);
+__decorate([
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], EditEventDto.prototype, "data", void 0);
+
+
+/***/ }),
+/* 44 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(45), exports);
+__exportStar(__webpack_require__(16), exports);
+__exportStar(__webpack_require__(48), exports);
+__exportStar(__webpack_require__(49), exports);
+__exportStar(__webpack_require__(50), exports);
+__exportStar(__webpack_require__(51), exports);
+
+
+/***/ }),
+/* 45 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(46), exports);
+__exportStar(__webpack_require__(47), exports);
+
+
+/***/ }),
+/* 46 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TenantId = exports.Tenant = void 0;
+const common_1 = __webpack_require__(3);
+exports.Tenant = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.tenantId || request.headers['x-tenant-id'];
+});
+exports.TenantId = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user?.tenantId || request.headers['x-tenant-id'];
+});
+
+
+/***/ }),
+/* 47 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CurrentUser = exports.User = void 0;
+const common_1 = __webpack_require__(3);
+exports.User = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+});
+exports.CurrentUser = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    const user = request.user;
+    return data ? user?.[data] : user;
+});
+
+
+/***/ }),
+/* 48 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 49 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 50 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 51 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 52 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VersionModule = void 0;
+const common_1 = __webpack_require__(3);
+const version_controller_1 = __webpack_require__(53);
+const version_service_1 = __webpack_require__(54);
+const database_1 = __webpack_require__(9);
+let VersionModule = class VersionModule {
+};
+exports.VersionModule = VersionModule;
+exports.VersionModule = VersionModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        controllers: [version_controller_1.VersionController],
+        providers: [version_service_1.VersionService],
+        exports: [version_service_1.VersionService],
+    })
+], VersionModule);
+
+
+/***/ }),
+/* 53 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VersionController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const version_service_1 = __webpack_require__(54);
+const version_dto_1 = __webpack_require__(55);
+const common_2 = __webpack_require__(44);
+let VersionController = class VersionController {
+    constructor(versionService) {
+        this.versionService = versionService;
+    }
+    async createVersion(dto) {
+        return this.versionService.createVersion(dto);
+    }
+    async getChapterVersionHistory(chapterId, limit) {
+        return this.versionService.getChapterVersionHistory(chapterId, limit ? parseInt(limit.toString()) : 50);
+    }
+    async getVersion(chapterId, versionNumber) {
+        return this.versionService.getVersion(chapterId, parseInt(versionNumber));
+    }
+    async compareVersions(dto) {
+        return this.versionService.compareVersions(dto);
+    }
+    async restoreVersion(dto) {
+        return this.versionService.restoreVersion(dto);
+    }
+    async cleanupOldVersions(chapterId, keepCount) {
+        return this.versionService.cleanupOldVersions(chapterId, keepCount ? parseInt(keepCount.toString()) : 100);
+    }
+    async getVersionStats(chapterId) {
+        return this.versionService.getVersionStats(chapterId);
+    }
+};
+exports.VersionController = VersionController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: '创建章节版本快照' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof version_dto_1.CreateVersionDto !== "undefined" && version_dto_1.CreateVersionDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], VersionController.prototype, "createVersion", null);
+__decorate([
+    (0, common_1.Get)('chapter/:chapterId/history'),
+    (0, swagger_1.ApiOperation)({ summary: '获取章节版本历史' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number]),
+    __metadata("design:returntype", Promise)
+], VersionController.prototype, "getChapterVersionHistory", null);
+__decorate([
+    (0, common_1.Get)('chapter/:chapterId/version/:versionNumber'),
+    (0, swagger_1.ApiOperation)({ summary: '获取特定版本' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __param(1, (0, common_1.Param)('versionNumber')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], VersionController.prototype, "getVersion", null);
+__decorate([
+    (0, common_1.Post)('compare'),
+    (0, swagger_1.ApiOperation)({ summary: '对比两个版本' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof version_dto_1.CompareVersionsDto !== "undefined" && version_dto_1.CompareVersionsDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], VersionController.prototype, "compareVersions", null);
+__decorate([
+    (0, common_1.Post)('restore'),
+    (0, swagger_1.ApiOperation)({ summary: '回滚到指定版本' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof version_dto_1.RestoreVersionDto !== "undefined" && version_dto_1.RestoreVersionDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], VersionController.prototype, "restoreVersion", null);
+__decorate([
+    (0, common_1.Delete)('chapter/:chapterId/cleanup'),
+    (0, swagger_1.ApiOperation)({ summary: '清理旧版本' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __param(1, (0, common_1.Query)('keepCount')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number]),
+    __metadata("design:returntype", Promise)
+], VersionController.prototype, "cleanupOldVersions", null);
+__decorate([
+    (0, common_1.Get)('chapter/:chapterId/stats'),
+    (0, swagger_1.ApiOperation)({ summary: '获取版本统计信息' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], VersionController.prototype, "getVersionStats", null);
+exports.VersionController = VersionController = __decorate([
+    (0, swagger_1.ApiTags)('Version Control'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(common_2.JwtAuthGuard),
+    (0, common_1.Controller)('versions'),
+    __metadata("design:paramtypes", [typeof (_a = typeof version_service_1.VersionService !== "undefined" && version_service_1.VersionService) === "function" ? _a : Object])
+], VersionController);
+
+
+/***/ }),
+/* 54 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VersionService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let VersionService = class VersionService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async createVersion(dto) {
+        const chapter = await this.prisma.chapter.findUnique({
+            where: { id: dto.chapterId },
+        });
+        if (!chapter) {
+            throw new common_1.NotFoundException('章节不存在');
+        }
+        const latestVersion = await this.prisma.chapterVersion.findFirst({
+            where: { chapterId: dto.chapterId },
+            orderBy: { versionNumber: 'desc' },
+        });
+        const nextVersionNumber = latestVersion ? latestVersion.versionNumber + 1 : 1;
+        return this.prisma.chapterVersion.create({
+            data: {
+                chapterId: dto.chapterId,
+                versionNumber: nextVersionNumber,
+                title: chapter.title,
+                content: chapter.content,
+                wordCount: chapter.wordCount,
+                userId: dto.userId,
+                changeLog: dto.changeLog,
+            },
+        });
+    }
+    async getChapterVersionHistory(chapterId, limit = 50) {
+        return this.prisma.chapterVersion.findMany({
+            where: { chapterId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { versionNumber: 'desc' },
+            take: limit,
+        });
+    }
+    async getVersion(chapterId, versionNumber) {
+        const version = await this.prisma.chapterVersion.findUnique({
+            where: {
+                chapterId_versionNumber: {
+                    chapterId,
+                    versionNumber,
+                },
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!version) {
+            throw new common_1.NotFoundException('版本不存在');
+        }
+        return version;
+    }
+    async compareVersions(dto) {
+        const version1 = await this.getVersion(dto.chapterId, dto.version1);
+        const version2 = await this.getVersion(dto.chapterId, dto.version2);
+        const content1 = version1.content || '';
+        const content2 = version2.content || '';
+        const wordCountDiff = version2.wordCount - version1.wordCount;
+        const contentLengthDiff = content2.length - content1.length;
+        return {
+            version1: {
+                versionNumber: version1.versionNumber,
+                title: version1.title,
+                wordCount: version1.wordCount,
+                createdAt: version1.createdAt,
+                userId: version1.userId,
+            },
+            version2: {
+                versionNumber: version2.versionNumber,
+                title: version2.title,
+                wordCount: version2.wordCount,
+                createdAt: version2.createdAt,
+                userId: version2.userId,
+            },
+            diff: {
+                wordCountDiff,
+                contentLengthDiff,
+                titleChanged: version1.title !== version2.title,
+            },
+            content1,
+            content2,
+        };
+    }
+    async restoreVersion(dto) {
+        const version = await this.getVersion(dto.chapterId, dto.versionNumber);
+        const updatedChapter = await this.prisma.chapter.update({
+            where: { id: dto.chapterId },
+            data: {
+                title: version.title,
+                content: version.content,
+                wordCount: version.wordCount,
+            },
+        });
+        const newVersion = await this.createVersion({
+            chapterId: dto.chapterId,
+            userId: dto.userId,
+            changeLog: `回滚到版本 ${dto.versionNumber}`,
+        });
+        return {
+            chapter: updatedChapter,
+            newVersion,
+            restoredFrom: version,
+        };
+    }
+    async cleanupOldVersions(chapterId, keepCount = 100) {
+        const totalCount = await this.prisma.chapterVersion.count({
+            where: { chapterId },
+        });
+        if (totalCount <= keepCount) {
+            return { deleted: 0, message: '无需清理' };
+        }
+        const versionsToDelete = await this.prisma.chapterVersion.findMany({
+            where: { chapterId },
+            orderBy: { versionNumber: 'asc' },
+            take: totalCount - keepCount,
+            select: { id: true },
+        });
+        const deleteResult = await this.prisma.chapterVersion.deleteMany({
+            where: {
+                id: {
+                    in: versionsToDelete.map(v => v.id),
+                },
+            },
+        });
+        return {
+            deleted: deleteResult.count,
+            message: `清理了 ${deleteResult.count} 个旧版本`,
+        };
+    }
+    async getVersionStats(chapterId) {
+        const versions = await this.prisma.chapterVersion.findMany({
+            where: { chapterId },
+            orderBy: { versionNumber: 'asc' },
+        });
+        if (versions.length === 0) {
+            return {
+                totalVersions: 0,
+                firstVersion: null,
+                latestVersion: null,
+                totalWordCountChange: 0,
+            };
+        }
+        const firstVersion = versions[0];
+        const latestVersion = versions[versions.length - 1];
+        const totalWordCountChange = latestVersion.wordCount - firstVersion.wordCount;
+        return {
+            totalVersions: versions.length,
+            firstVersion: {
+                versionNumber: firstVersion.versionNumber,
+                createdAt: firstVersion.createdAt,
+                wordCount: firstVersion.wordCount,
+            },
+            latestVersion: {
+                versionNumber: latestVersion.versionNumber,
+                createdAt: latestVersion.createdAt,
+                wordCount: latestVersion.wordCount,
+            },
+            totalWordCountChange,
+        };
+    }
+};
+exports.VersionService = VersionService;
+exports.VersionService = VersionService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], VersionService);
+
+
+/***/ }),
+/* 55 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RestoreVersionDto = exports.CompareVersionsDto = exports.CreateVersionDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+class CreateVersionDto {
+}
+exports.CreateVersionDto = CreateVersionDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateVersionDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateVersionDto.prototype, "userId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateVersionDto.prototype, "changeLog", void 0);
+class CompareVersionsDto {
+}
+exports.CompareVersionsDto = CompareVersionsDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CompareVersionsDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], CompareVersionsDto.prototype, "version1", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], CompareVersionsDto.prototype, "version2", void 0);
+class RestoreVersionDto {
+}
+exports.RestoreVersionDto = RestoreVersionDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], RestoreVersionDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], RestoreVersionDto.prototype, "versionNumber", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], RestoreVersionDto.prototype, "userId", void 0);
+
+
+/***/ }),
+/* 56 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentModule = void 0;
+const common_1 = __webpack_require__(3);
+const comment_controller_1 = __webpack_require__(57);
+const comment_service_1 = __webpack_require__(58);
+const database_1 = __webpack_require__(9);
+let CommentModule = class CommentModule {
+};
+exports.CommentModule = CommentModule;
+exports.CommentModule = CommentModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        controllers: [comment_controller_1.CommentController],
+        providers: [comment_service_1.CommentService],
+        exports: [comment_service_1.CommentService],
+    })
+], CommentModule);
+
+
+/***/ }),
+/* 57 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const comment_service_1 = __webpack_require__(58);
+const comment_dto_1 = __webpack_require__(59);
+const common_2 = __webpack_require__(44);
+let CommentController = class CommentController {
+    constructor(commentService) {
+        this.commentService = commentService;
+    }
+    async createComment(dto, req) {
+        dto.userId = req.user.userId;
+        return this.commentService.createComment(dto);
+    }
+    async getChapterComments(chapterId, status, userId) {
+        return this.commentService.getChapterComments({
+            chapterId,
+            status,
+            userId,
+        });
+    }
+    async getComment(id) {
+        return this.commentService.getComment(id);
+    }
+    async updateComment(id, dto, req) {
+        return this.commentService.updateComment(id, req.user.userId, dto);
+    }
+    async deleteComment(id, req) {
+        return this.commentService.deleteComment(id, req.user.userId);
+    }
+    async resolveComment(id, req) {
+        return this.commentService.resolveComment(id, req.user.userId);
+    }
+    async getUserComments(userId, limit) {
+        return this.commentService.getUserComments(userId, limit ? parseInt(limit.toString()) : 50);
+    }
+    async getCommentStats(chapterId) {
+        return this.commentService.getCommentStats(chapterId);
+    }
+};
+exports.CommentController = CommentController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: '创建评论' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof comment_dto_1.CreateCommentDto !== "undefined" && comment_dto_1.CreateCommentDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "createComment", null);
+__decorate([
+    (0, common_1.Get)('chapter/:chapterId'),
+    (0, swagger_1.ApiOperation)({ summary: '获取章节评论列表' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __param(1, (0, common_1.Query)('status')),
+    __param(2, (0, common_1.Query)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_c = typeof comment_dto_1.CommentStatusEnum !== "undefined" && comment_dto_1.CommentStatusEnum) === "function" ? _c : Object, String]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "getChapterComments", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '获取单个评论' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "getComment", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '更新评论' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_d = typeof comment_dto_1.UpdateCommentDto !== "undefined" && comment_dto_1.UpdateCommentDto) === "function" ? _d : Object, Object]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "updateComment", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '删除评论' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "deleteComment", null);
+__decorate([
+    (0, common_1.Post)(':id/resolve'),
+    (0, swagger_1.ApiOperation)({ summary: '解决评论' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "resolveComment", null);
+__decorate([
+    (0, common_1.Get)('user/:userId'),
+    (0, swagger_1.ApiOperation)({ summary: '获取用户的评论列表' }),
+    __param(0, (0, common_1.Param)('userId')),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "getUserComments", null);
+__decorate([
+    (0, common_1.Get)('chapter/:chapterId/stats'),
+    (0, swagger_1.ApiOperation)({ summary: '获取评论统计' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], CommentController.prototype, "getCommentStats", null);
+exports.CommentController = CommentController = __decorate([
+    (0, swagger_1.ApiTags)('Comments'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(common_2.JwtAuthGuard),
+    (0, common_1.Controller)('comments'),
+    __metadata("design:paramtypes", [typeof (_a = typeof comment_service_1.CommentService !== "undefined" && comment_service_1.CommentService) === "function" ? _a : Object])
+], CommentController);
+
+
+/***/ }),
+/* 58 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+const comment_dto_1 = __webpack_require__(59);
+let CommentService = class CommentService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async createComment(dto) {
+        const chapter = await this.prisma.chapter.findUnique({
+            where: { id: dto.chapterId },
+        });
+        if (!chapter) {
+            throw new common_1.NotFoundException('章节不存在');
+        }
+        if (dto.parentId) {
+            const parentComment = await this.prisma.chapterComment.findUnique({
+                where: { id: dto.parentId },
+            });
+            if (!parentComment) {
+                throw new common_1.NotFoundException('父评论不存在');
+            }
+            if (parentComment.chapterId !== dto.chapterId) {
+                throw new common_1.ForbiddenException('父评论不属于该章节');
+            }
+        }
+        return this.prisma.chapterComment.create({
+            data: {
+                chapterId: dto.chapterId,
+                userId: dto.userId,
+                content: dto.content,
+                position: dto.position,
+                parentId: dto.parentId,
+                status: comment_dto_1.CommentStatusEnum.ACTIVE,
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+    }
+    async getChapterComments(dto) {
+        const where = {
+            chapterId: dto.chapterId,
+        };
+        if (dto.status) {
+            where.status = dto.status;
+        }
+        if (dto.userId) {
+            where.userId = dto.userId;
+        }
+        where.parentId = null;
+        return this.prisma.chapterComment.findMany({
+            where,
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                replies: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                profile: {
+                                    select: {
+                                        nickname: true,
+                                        avatar: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    orderBy: { createdAt: 'asc' },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async getComment(commentId) {
+        const comment = await this.prisma.chapterComment.findUnique({
+            where: { id: commentId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+                replies: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                email: true,
+                                profile: {
+                                    select: {
+                                        nickname: true,
+                                        avatar: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    orderBy: { createdAt: 'asc' },
+                },
+            },
+        });
+        if (!comment) {
+            throw new common_1.NotFoundException('评论不存在');
+        }
+        return comment;
+    }
+    async updateComment(commentId, userId, dto) {
+        const comment = await this.prisma.chapterComment.findUnique({
+            where: { id: commentId },
+        });
+        if (!comment) {
+            throw new common_1.NotFoundException('评论不存在');
+        }
+        if (comment.userId !== userId) {
+            throw new common_1.ForbiddenException('无权修改此评论');
+        }
+        return this.prisma.chapterComment.update({
+            where: { id: commentId },
+            data: dto,
+        });
+    }
+    async deleteComment(commentId, userId) {
+        const comment = await this.prisma.chapterComment.findUnique({
+            where: { id: commentId },
+        });
+        if (!comment) {
+            throw new common_1.NotFoundException('评论不存在');
+        }
+        if (comment.userId !== userId) {
+            throw new common_1.ForbiddenException('无权删除此评论');
+        }
+        return this.prisma.chapterComment.update({
+            where: { id: commentId },
+            data: { status: comment_dto_1.CommentStatusEnum.DELETED },
+        });
+    }
+    async resolveComment(commentId, userId) {
+        const comment = await this.prisma.chapterComment.findUnique({
+            where: { id: commentId },
+        });
+        if (!comment) {
+            throw new common_1.NotFoundException('评论不存在');
+        }
+        return this.prisma.chapterComment.update({
+            where: { id: commentId },
+            data: { status: comment_dto_1.CommentStatusEnum.RESOLVED },
+        });
+    }
+    async getUserComments(userId, limit = 50) {
+        return this.prisma.chapterComment.findMany({
+            where: {
+                userId,
+                status: { not: comment_dto_1.CommentStatusEnum.DELETED },
+            },
+            include: {
+                chapter: {
+                    select: {
+                        id: true,
+                        title: true,
+                        novel: {
+                            select: {
+                                id: true,
+                                title: true,
+                            },
+                        },
+                    },
+                },
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        profile: {
+                            select: {
+                                nickname: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: limit,
+        });
+    }
+    async getCommentStats(chapterId) {
+        const total = await this.prisma.chapterComment.count({
+            where: { chapterId },
+        });
+        const active = await this.prisma.chapterComment.count({
+            where: {
+                chapterId,
+                status: comment_dto_1.CommentStatusEnum.ACTIVE,
+            },
+        });
+        const resolved = await this.prisma.chapterComment.count({
+            where: {
+                chapterId,
+                status: comment_dto_1.CommentStatusEnum.RESOLVED,
+            },
+        });
+        return {
+            total,
+            active,
+            resolved,
+            deleted: total - active - resolved,
+        };
+    }
+};
+exports.CommentService = CommentService;
+exports.CommentService = CommentService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], CommentService);
+
+
+/***/ }),
+/* 59 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.QueryCommentsDto = exports.UpdateCommentDto = exports.CreateCommentDto = exports.CommentStatusEnum = void 0;
+const class_validator_1 = __webpack_require__(20);
+var CommentStatusEnum;
+(function (CommentStatusEnum) {
+    CommentStatusEnum["ACTIVE"] = "ACTIVE";
+    CommentStatusEnum["RESOLVED"] = "RESOLVED";
+    CommentStatusEnum["DELETED"] = "DELETED";
+})(CommentStatusEnum || (exports.CommentStatusEnum = CommentStatusEnum = {}));
+class CreateCommentDto {
+}
+exports.CreateCommentDto = CreateCommentDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCommentDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCommentDto.prototype, "userId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCommentDto.prototype, "content", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], CreateCommentDto.prototype, "position", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCommentDto.prototype, "parentId", void 0);
+class UpdateCommentDto {
+}
+exports.UpdateCommentDto = UpdateCommentDto;
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCommentDto.prototype, "content", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(CommentStatusEnum),
+    __metadata("design:type", String)
+], UpdateCommentDto.prototype, "status", void 0);
+class QueryCommentsDto {
+}
+exports.QueryCommentsDto = QueryCommentsDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryCommentsDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(CommentStatusEnum),
+    __metadata("design:type", String)
+], QueryCommentsDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryCommentsDto.prototype, "userId", void 0);
+
+
+/***/ }),
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3474,8 +5157,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(3);
-const health_controller_1 = __webpack_require__(40);
-const health_service_1 = __webpack_require__(41);
+const health_controller_1 = __webpack_require__(61);
+const health_service_1 = __webpack_require__(62);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -3488,7 +5171,7 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 40 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3505,7 +5188,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(3);
-const health_service_1 = __webpack_require__(41);
+const health_service_1 = __webpack_require__(62);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -3528,7 +5211,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 41 */
+/* 62 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3559,7 +5242,7 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 42 */
+/* 63 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3578,7 +5261,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
 const passport_1 = __webpack_require__(8);
-const passport_jwt_1 = __webpack_require__(43);
+const passport_jwt_1 = __webpack_require__(64);
 const database_1 = __webpack_require__(9);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, prisma) {
@@ -3631,13 +5314,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 43 */
+/* 64 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 44 */
+/* 65 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3700,7 +5383,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = __decorate([
 
 
 /***/ }),
-/* 45 */
+/* 66 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3713,7 +5396,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(46);
+const operators_1 = __webpack_require__(67);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -3736,7 +5419,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 46 */
+/* 67 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -3781,8 +5464,8 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(44);
-const response_interceptor_1 = __webpack_require__(45);
+const all_exceptions_filter_1 = __webpack_require__(65);
+const response_interceptor_1 = __webpack_require__(66);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.useGlobalPipes(new common_1.ValidationPipe({

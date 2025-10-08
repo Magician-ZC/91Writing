@@ -63,6 +63,11 @@
           <template #title>拆书工具</template>
         </el-menu-item>
         
+        <el-menu-item index="/materials">
+          <el-icon><FolderOpened /></el-icon>
+          <template #title>素材管理</template>
+        </el-menu-item>
+        
         <el-menu-item index="/data-migration">
           <el-icon><Switch /></el-icon>
           <template #title>数据迁移</template>
@@ -228,7 +233,7 @@ import {
   House, Document, Message, Collection, Notebook, Position, 
   CreditCard, Setting, Key, Tools, EditPen, DataAnalysis,
   Expand, Fold, Notification, UserFilled, User, ArrowDown, SwitchButton, Switch,
-  Monitor 
+  Monitor, FolderOpened 
 } from '@element-plus/icons-vue'
 import ApiConfig from '@/components/ApiConfig.vue'
 import AnnouncementDialog from '@/components/AnnouncementDialog.vue'

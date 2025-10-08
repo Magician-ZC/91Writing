@@ -8,6 +8,9 @@ import { ChapterModule } from './modules/chapter/chapter.module';
 import { MemoryModule } from './modules/memory/memory.module';
 import { MaterialModule } from './modules/material/material.module';
 import { PromptModule } from './modules/prompt/prompt.module';
+import { CollaborationModule } from './modules/collaboration/collaboration.module';
+import { VersionModule } from './modules/version/version.module';
+import { CommentModule } from './modules/comment/comment.module';
 import { HealthModule } from './modules/health/health.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
@@ -43,6 +46,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     MemoryModule,
     MaterialModule,
     PromptModule,
+    CollaborationModule,
+    VersionModule,
+    CommentModule,
     HealthModule,
   ],
   providers: [
