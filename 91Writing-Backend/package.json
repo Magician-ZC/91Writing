@@ -48,7 +48,9 @@
     "db:migrate:reset": "prisma migrate reset",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:format": "prisma format"
+    "db:format": "prisma format",
+    "check:services": "./scripts/check-services.sh",
+    "show:ports": "cat PORT-REFERENCE.txt"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.0",

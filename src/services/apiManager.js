@@ -520,6 +520,73 @@ class ApiManager {
     })
   }
 
+  // ===== 数据分析API =====
+  
+  async batchTrackActivities(events) {
+    return await this.request('/api/v1/admin/analytics/batch', {
+      method: 'POST',
+      data: { events },
+      fallbackLocal: false // 埋点数据必须发送到云端
+    })
+  }
+
+  async getAnalyticsOverview(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/analytics/overview${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getUserGrowthTrend(days = 30) {
+    return await this.request(`/api/v1/admin/analytics/user-growth?days=${days}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getFeatureUsageStats(limit = 10) {
+    return await this.request(`/api/v1/admin/analytics/feature-usage?limit=${limit}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getAIUsageStats(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/analytics/ai-usage${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getRevenueStats(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/analytics/revenue${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getUserRetentionData(cohortDate, days = 30) {
+    return await this.request(`/api/v1/admin/analytics/retention?cohortDate=${cohortDate}&days=${days}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async exportAnalyticsReport(params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/admin/analytics/export${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
   // ===== 工具方法 =====
   
   /**

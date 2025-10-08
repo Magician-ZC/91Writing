@@ -96,6 +96,12 @@ const routes = [
         meta: { title: '套餐管理 - 91Writing' }
       },
       {
+        path: 'analytics',
+        name: 'AdminAnalytics',
+        component: () => import('../views/admin/analytics/DataAnalytics.vue'),
+        meta: { title: '数据分析 - 91Writing' }
+      },
+      {
         path: 'settings',
         name: 'AdminSettings',
         component: () => import('../views/admin/settings/SystemSettings.vue'),

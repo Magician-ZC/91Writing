@@ -778,7 +778,7 @@ let AdminService = AdminService_1 = class AdminService {
         this.httpService = httpService;
         this.configService = configService;
         this.logger = new common_1.Logger(AdminService_1.name);
-        this.adminServiceUrl = this.configService.get('ADMIN_SERVICE_URL', 'http://localhost:3004');
+        this.adminServiceUrl = this.configService.get('ADMIN_SERVICE_URL', 'http://localhost:3006');
     }
     async proxyRequest(req) {
         const { method, url, headers, body } = req;

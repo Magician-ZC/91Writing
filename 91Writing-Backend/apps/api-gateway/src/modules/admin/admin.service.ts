@@ -15,7 +15,7 @@ export class AdminService {
   ) {
     this.adminServiceUrl = this.configService.get<string>(
       'ADMIN_SERVICE_URL',
-      'http://localhost:3004',
+      'http://localhost:3006',
     );
   }
 

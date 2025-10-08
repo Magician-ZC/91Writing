@@ -89,6 +89,11 @@
             <template #title>套餐管理</template>
           </el-menu-item>
 
+          <el-menu-item index="/admin/analytics">
+            <el-icon><TrendCharts /></el-icon>
+            <template #title>数据分析</template>
+          </el-menu-item>
+
           <el-menu-item index="/admin/settings">
             <el-icon><Setting /></el-icon>
             <template #title>系统设置</template>
@@ -127,6 +132,7 @@ import {
   Medal,
   ShoppingCart,
   Box,
+  TrendCharts,
   Setting
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/authStore'

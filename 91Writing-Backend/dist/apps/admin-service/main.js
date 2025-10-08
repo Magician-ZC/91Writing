@@ -45,6 +45,7 @@ const cache_manager_1 = __webpack_require__(7);
 const database_1 = __webpack_require__(8);
 const admin_module_1 = __webpack_require__(12);
 const health_module_1 = __webpack_require__(23);
+const analytics_module_1 = __webpack_require__(26);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -86,6 +87,7 @@ exports.AppModule = AppModule = __decorate([
             database_1.DatabaseModule,
             admin_module_1.AdminModule,
             health_module_1.HealthModule,
+            analytics_module_1.AnalyticsModule,
         ],
         controllers: [],
         providers: [],
@@ -1964,6 +1966,670 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AnalyticsModule = void 0;
+const common_1 = __webpack_require__(2);
+const analytics_controller_1 = __webpack_require__(27);
+const analytics_service_1 = __webpack_require__(28);
+const database_1 = __webpack_require__(8);
+let AnalyticsModule = class AnalyticsModule {
+};
+exports.AnalyticsModule = AnalyticsModule;
+exports.AnalyticsModule = AnalyticsModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        controllers: [analytics_controller_1.AnalyticsController],
+        providers: [analytics_service_1.AnalyticsService],
+        exports: [analytics_service_1.AnalyticsService],
+    })
+], AnalyticsModule);
+
+
+/***/ }),
+/* 27 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AnalyticsController = void 0;
+const common_1 = __webpack_require__(2);
+const analytics_service_1 = __webpack_require__(28);
+const guards_1 = __webpack_require__(29);
+const swagger_1 = __webpack_require__(3);
+const admin_auth_guard_1 = __webpack_require__(17);
+const analytics_dto_1 = __webpack_require__(33);
+let AnalyticsController = class AnalyticsController {
+    constructor(analyticsService) {
+        this.analyticsService = analyticsService;
+    }
+    async batchTrack(dto, req) {
+        const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+        return this.analyticsService.batchTrackActivities(dto.events, ipAddress);
+    }
+    async getOverview(query) {
+        const startDate = query.startDate ? new Date(query.startDate) : undefined;
+        const endDate = query.endDate ? new Date(query.endDate) : undefined;
+        return this.analyticsService.getOverviewStats(startDate, endDate);
+    }
+    async getUserGrowth(days = '30') {
+        return this.analyticsService.getUserGrowthTrend(parseInt(days, 10));
+    }
+    async getFeatureUsage(limit = '10') {
+        return this.analyticsService.getFeatureUsageStats(parseInt(limit, 10));
+    }
+    async getAIUsage(query) {
+        const startDate = query.startDate ? new Date(query.startDate) : undefined;
+        const endDate = query.endDate ? new Date(query.endDate) : undefined;
+        return this.analyticsService.getAIUsageStats(startDate, endDate);
+    }
+    async getRevenue(query) {
+        const startDate = query.startDate ? new Date(query.startDate) : undefined;
+        const endDate = query.endDate ? new Date(query.endDate) : undefined;
+        return this.analyticsService.getRevenueStats(startDate, endDate);
+    }
+    async getUserRetention(query) {
+        const cohortDate = new Date(query.cohortDate);
+        const days = query.days ? parseInt(query.days, 10) : 30;
+        return this.analyticsService.getUserRetention(cohortDate, days);
+    }
+    async exportReport(query) {
+        const startDate = query.startDate ? new Date(query.startDate) : undefined;
+        const endDate = query.endDate ? new Date(query.endDate) : undefined;
+        return this.analyticsService.exportAnalyticsReport(startDate, endDate);
+    }
+};
+exports.AnalyticsController = AnalyticsController;
+__decorate([
+    (0, common_1.Post)('batch'),
+    (0, swagger_1.ApiOperation)({ summary: '批量记录用户行为' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof analytics_dto_1.BatchTrackDto !== "undefined" && analytics_dto_1.BatchTrackDto) === "function" ? _b : Object, Object]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "batchTrack", null);
+__decorate([
+    (0, common_1.Get)('overview'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取概览统计' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof analytics_dto_1.DateRangeDto !== "undefined" && analytics_dto_1.DateRangeDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getOverview", null);
+__decorate([
+    (0, common_1.Get)('user-growth'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取用户增长趋势' }),
+    __param(0, (0, common_1.Query)('days')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getUserGrowth", null);
+__decorate([
+    (0, common_1.Get)('feature-usage'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取功能使用统计' }),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getFeatureUsage", null);
+__decorate([
+    (0, common_1.Get)('ai-usage'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取AI使用统计' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof analytics_dto_1.DateRangeDto !== "undefined" && analytics_dto_1.DateRangeDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getAIUsage", null);
+__decorate([
+    (0, common_1.Get)('revenue'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取收入统计' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_e = typeof analytics_dto_1.DateRangeDto !== "undefined" && analytics_dto_1.DateRangeDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getRevenue", null);
+__decorate([
+    (0, common_1.Get)('retention'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取用户留存数据' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_f = typeof analytics_dto_1.RetentionQueryDto !== "undefined" && analytics_dto_1.RetentionQueryDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getUserRetention", null);
+__decorate([
+    (0, common_1.Get)('export'),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard, admin_auth_guard_1.AdminAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: '导出分析报表' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_g = typeof analytics_dto_1.DateRangeDto !== "undefined" && analytics_dto_1.DateRangeDto) === "function" ? _g : Object]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "exportReport", null);
+exports.AnalyticsController = AnalyticsController = __decorate([
+    (0, swagger_1.ApiTags)('Analytics'),
+    (0, common_1.Controller)('analytics'),
+    __metadata("design:paramtypes", [typeof (_a = typeof analytics_service_1.AnalyticsService !== "undefined" && analytics_service_1.AnalyticsService) === "function" ? _a : Object])
+], AnalyticsController);
+
+
+/***/ }),
+/* 28 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var AnalyticsService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AnalyticsService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(8);
+let AnalyticsService = AnalyticsService_1 = class AnalyticsService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(AnalyticsService_1.name);
+    }
+    async batchTrackActivities(events, ipAddress) {
+        try {
+            const activities = events.map((event) => ({
+                userId: event.userId || null,
+                action: event.action,
+                targetType: event.details?.targetType || null,
+                targetId: event.details?.targetId || null,
+                details: event.details || {},
+                ipAddress: ipAddress || event.ipAddress || null,
+                userAgent: event.userAgent || null,
+            }));
+            await this.prisma.userActivity.createMany({
+                data: activities,
+                skipDuplicates: true,
+            });
+            return { success: true, count: activities.length };
+        }
+        catch (error) {
+            this.logger.error('批量记录用户行为失败', error);
+            throw error;
+        }
+    }
+    async trackAIUsage(data) {
+        try {
+            return await this.prisma.aIUsageLog.create({
+                data: {
+                    userId: data.userId || null,
+                    model: data.model,
+                    functionType: data.functionType,
+                    inputTokens: data.inputTokens || 0,
+                    outputTokens: data.outputTokens || 0,
+                    cost: data.cost || 0,
+                    responseTime: data.responseTime || null,
+                    success: data.success ?? true,
+                },
+            });
+        }
+        catch (error) {
+            this.logger.error('记录AI使用失败', error);
+            throw error;
+        }
+    }
+    async getOverviewStats(startDate, endDate) {
+        const dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.createdAt = {};
+            if (startDate)
+                dateFilter.createdAt.gte = startDate;
+            if (endDate)
+                dateFilter.createdAt.lte = endDate;
+        }
+        const [totalUsers, activeUsers, totalNovels, totalChapters, totalActivities, totalAIUsage, totalRevenue, activeSubscriptions,] = await Promise.all([
+            this.prisma.user.count(),
+            this.prisma.user.count({
+                where: {
+                    activities: {
+                        some: {
+                            createdAt: {
+                                gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                            },
+                        },
+                    },
+                },
+            }),
+            this.prisma.novel.count(),
+            this.prisma.chapter.count(),
+            this.prisma.userActivity.count({ where: dateFilter }),
+            this.prisma.aIUsageLog.count({
+                where: startDate || endDate
+                    ? {
+                        createdAt: {
+                            ...(startDate && { gte: startDate }),
+                            ...(endDate && { lte: endDate }),
+                        },
+                    }
+                    : {},
+            }),
+            this.prisma.paymentOrder.aggregate({
+                where: { status: 'PAID' },
+                _sum: { amount: true },
+            }),
+            this.prisma.subscription.count({
+                where: { status: 'ACTIVE' },
+            }),
+        ]);
+        return {
+            totalUsers,
+            activeUsers,
+            totalNovels,
+            totalChapters,
+            totalActivities,
+            totalAIUsage,
+            totalRevenue: totalRevenue._sum.amount || 0,
+            activeSubscriptions,
+        };
+    }
+    async getUserGrowthTrend(days = 30) {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        const users = await this.prisma.user.findMany({
+            where: {
+                createdAt: {
+                    gte: startDate,
+                },
+            },
+            select: {
+                createdAt: true,
+            },
+            orderBy: {
+                createdAt: 'asc',
+            },
+        });
+        const groupedByDate = users.reduce((acc, user) => {
+            const date = user.createdAt.toISOString().split('T')[0];
+            acc[date] = (acc[date] || 0) + 1;
+            return acc;
+        }, {});
+        return Object.entries(groupedByDate).map(([date, count]) => ({
+            date,
+            count,
+        }));
+    }
+    async getFeatureUsageStats(limit = 10) {
+        const activities = await this.prisma.userActivity.groupBy({
+            by: ['action'],
+            _count: {
+                action: true,
+            },
+            orderBy: {
+                _count: {
+                    action: 'desc',
+                },
+            },
+            take: limit,
+        });
+        return activities.map((item) => ({
+            feature: item.action,
+            count: item._count.action,
+        }));
+    }
+    async getAIUsageStats(startDate, endDate) {
+        const dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.createdAt = {};
+            if (startDate)
+                dateFilter.createdAt.gte = startDate;
+            if (endDate)
+                dateFilter.createdAt.lte = endDate;
+        }
+        const [totalUsage, byFunction, byModel, totalCost, avgResponseTime] = await Promise.all([
+            this.prisma.aIUsageLog.count({ where: dateFilter }),
+            this.prisma.aIUsageLog.groupBy({
+                by: ['functionType'],
+                _count: { functionType: true },
+                where: dateFilter,
+                orderBy: { _count: { functionType: 'desc' } },
+            }),
+            this.prisma.aIUsageLog.groupBy({
+                by: ['model'],
+                _count: { model: true },
+                where: dateFilter,
+                orderBy: { _count: { model: 'desc' } },
+            }),
+            this.prisma.aIUsageLog.aggregate({
+                where: dateFilter,
+                _sum: { cost: true },
+            }),
+            this.prisma.aIUsageLog.aggregate({
+                where: dateFilter,
+                _avg: { responseTime: true },
+            }),
+        ]);
+        return {
+            totalUsage,
+            byFunction: byFunction.map((item) => ({
+                function: item.functionType,
+                count: item._count.functionType,
+            })),
+            byModel: byModel.map((item) => ({
+                model: item.model,
+                count: item._count.model,
+            })),
+            totalCost: totalCost._sum.cost || 0,
+            avgResponseTime: avgResponseTime._avg.responseTime || 0,
+        };
+    }
+    async getRevenueStats(startDate, endDate) {
+        const dateFilter = {
+            status: 'PAID',
+        };
+        if (startDate || endDate) {
+            dateFilter.paidAt = {};
+            if (startDate)
+                dateFilter.paidAt.gte = startDate;
+            if (endDate)
+                dateFilter.paidAt.lte = endDate;
+        }
+        const [totalRevenue, orderCount, byPackage, byPaymentMethod] = await Promise.all([
+            this.prisma.paymentOrder.aggregate({
+                where: dateFilter,
+                _sum: { amount: true },
+            }),
+            this.prisma.paymentOrder.count({ where: dateFilter }),
+            this.prisma.paymentOrder.groupBy({
+                by: ['packageId'],
+                _sum: { amount: true },
+                _count: { packageId: true },
+                where: dateFilter,
+            }),
+            this.prisma.paymentOrder.groupBy({
+                by: ['paymentMethod'],
+                _sum: { amount: true },
+                _count: { paymentMethod: true },
+                where: dateFilter,
+            }),
+        ]);
+        const packages = await this.prisma.package.findMany({
+            where: {
+                id: { in: byPackage.map((item) => item.packageId) },
+            },
+        });
+        const packageMap = new Map(packages.map((pkg) => [pkg.id, pkg]));
+        return {
+            totalRevenue: totalRevenue._sum.amount || 0,
+            orderCount,
+            byPackage: byPackage.map((item) => ({
+                packageId: item.packageId,
+                packageName: packageMap.get(item.packageId)?.name || 'Unknown',
+                revenue: item._sum.amount || 0,
+                count: item._count.packageId,
+            })),
+            byPaymentMethod: byPaymentMethod.map((item) => ({
+                method: item.paymentMethod,
+                revenue: item._sum.amount || 0,
+                count: item._count.paymentMethod,
+            })),
+        };
+    }
+    async getUserRetention(cohortDate, days = 30) {
+        const cohortUsers = await this.prisma.user.findMany({
+            where: {
+                createdAt: {
+                    gte: cohortDate,
+                    lt: new Date(cohortDate.getTime() + 24 * 60 * 60 * 1000),
+                },
+            },
+            select: { id: true },
+        });
+        const cohortUserIds = cohortUsers.map((u) => u.id);
+        const totalCohortUsers = cohortUserIds.length;
+        if (totalCohortUsers === 0) {
+            return { totalUsers: 0, retention: [] };
+        }
+        const retentionData = [];
+        for (let day = 0; day <= days; day++) {
+            const targetDate = new Date(cohortDate.getTime() + day * 24 * 60 * 60 * 1000);
+            const nextDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+            const activeUsers = await this.prisma.userActivity.groupBy({
+                by: ['userId'],
+                where: {
+                    userId: { in: cohortUserIds },
+                    createdAt: {
+                        gte: targetDate,
+                        lt: nextDate,
+                    },
+                },
+            });
+            const retentionRate = (activeUsers.length / totalCohortUsers) * 100;
+            retentionData.push({
+                day,
+                date: targetDate.toISOString().split('T')[0],
+                activeUsers: activeUsers.length,
+                retentionRate: Math.round(retentionRate * 100) / 100,
+            });
+        }
+        return {
+            totalUsers: totalCohortUsers,
+            retention: retentionData,
+        };
+    }
+    async exportAnalyticsReport(startDate, endDate) {
+        const [overview, userGrowth, featureUsage, aiUsage, revenue] = await Promise.all([
+            this.getOverviewStats(startDate, endDate),
+            this.getUserGrowthTrend(30),
+            this.getFeatureUsageStats(20),
+            this.getAIUsageStats(startDate, endDate),
+            this.getRevenueStats(startDate, endDate),
+        ]);
+        return {
+            generatedAt: new Date().toISOString(),
+            period: {
+                startDate: startDate?.toISOString(),
+                endDate: endDate?.toISOString(),
+            },
+            overview,
+            userGrowth,
+            featureUsage,
+            aiUsage,
+            revenue,
+        };
+    }
+};
+exports.AnalyticsService = AnalyticsService;
+exports.AnalyticsService = AnalyticsService = AnalyticsService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], AnalyticsService);
+
+
+/***/ }),
+/* 29 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(30), exports);
+__exportStar(__webpack_require__(32), exports);
+
+
+/***/ }),
+/* 30 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JwtAuthGuard = void 0;
+const common_1 = __webpack_require__(2);
+const passport_1 = __webpack_require__(31);
+let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
+    handleRequest(err, user, info) {
+        if (err || !user) {
+            throw err || new common_1.UnauthorizedException('Invalid token');
+        }
+        return user;
+    }
+};
+exports.JwtAuthGuard = JwtAuthGuard;
+exports.JwtAuthGuard = JwtAuthGuard = __decorate([
+    (0, common_1.Injectable)()
+], JwtAuthGuard);
+
+
+/***/ }),
+/* 31 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/passport");
+
+/***/ }),
+/* 32 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TenantGuard = void 0;
+const common_1 = __webpack_require__(2);
+let TenantGuard = class TenantGuard {
+    async canActivate(context) {
+        const request = context.switchToHttp().getRequest();
+        const tenantId = request.headers['x-tenant-id'] || request.user?.tenantId;
+        if (!tenantId) {
+            return true;
+        }
+        request.tenantId = tenantId;
+        return true;
+    }
+};
+exports.TenantGuard = TenantGuard;
+exports.TenantGuard = TenantGuard = __decorate([
+    (0, common_1.Injectable)()
+], TenantGuard);
+
+
+/***/ }),
+/* 33 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RetentionQueryDto = exports.DateRangeDto = exports.BatchTrackDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const class_validator_1 = __webpack_require__(21);
+class BatchTrackDto {
+}
+exports.BatchTrackDto = BatchTrackDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '事件数组', type: [Object] }),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], BatchTrackDto.prototype, "events", void 0);
+class DateRangeDto {
+}
+exports.DateRangeDto = DateRangeDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '开始日期' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], DateRangeDto.prototype, "startDate", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '结束日期' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], DateRangeDto.prototype, "endDate", void 0);
+class RetentionQueryDto {
+}
+exports.RetentionQueryDto = RetentionQueryDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '队列日期' }),
+    (0, class_validator_1.IsDateString)(),
+    __metadata("design:type", String)
+], RetentionQueryDto.prototype, "cohortDate", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '分析天数', default: '30' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], RetentionQueryDto.prototype, "days", void 0);
+
+
+/***/ }),
+/* 34 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var AllExceptionsFilter_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AllExceptionsFilter = void 0;
@@ -2031,7 +2697,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 27 */
+/* 35 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2044,7 +2710,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(2);
-const operators_1 = __webpack_require__(28);
+const operators_1 = __webpack_require__(36);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -2086,7 +2752,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 28 */
+/* 36 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2130,8 +2796,8 @@ const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(26);
-const response_interceptor_1 = __webpack_require__(27);
+const all_exceptions_filter_1 = __webpack_require__(34);
+const response_interceptor_1 = __webpack_require__(35);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);

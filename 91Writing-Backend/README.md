@@ -3,6 +3,23 @@
 > **91Writing 商业化后端服务** - 企业级微服务架构  
 > 基于 NestJS + TypeScript + Prisma + MySQL
 
+## ⚠️ 开发者必读
+
+**🔥 开发新功能前必看：** [微服务配置文档 MICROSERVICES-CONFIG.md](./MICROSERVICES-CONFIG.md)
+
+**包含重要信息：**
+- ✅ 所有微服务端口配置（避免端口配置错误）
+- ✅ API路由规则和前缀处理
+- ✅ 常见配置错误和解决方案
+- ✅ 服务间通信规范
+
+**快速检查服务状态：**
+```bash
+./scripts/check-services.sh
+```
+
+---
+
 ## 🚀 快速启动
 
 ### 环境要求

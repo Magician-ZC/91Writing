@@ -6,6 +6,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { DatabaseModule } from '@app/database';
 import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './modules/health/health.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { HealthModule } from './modules/health/health.module';
     DatabaseModule,
     AdminModule,
     HealthModule,
+    AnalyticsModule,
   ],
   controllers: [],
   providers: [],
