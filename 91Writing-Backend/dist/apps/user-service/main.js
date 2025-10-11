@@ -61,6 +61,7 @@ const config_1 = __webpack_require__(5);
 const database_1 = __webpack_require__(9);
 const user_module_1 = __webpack_require__(13);
 const health_module_1 = __webpack_require__(35);
+const ai_config_module_1 = __webpack_require__(39);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -74,6 +75,7 @@ exports.AppModule = AppModule = __decorate([
             database_1.DatabaseModule,
             user_module_1.UserModule,
             health_module_1.HealthModule,
+            ai_config_module_1.UserAIConfigModule,
         ],
         controllers: [],
         providers: [],
@@ -2056,11 +2058,429 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserAIConfigModule = void 0;
+const common_1 = __webpack_require__(3);
+const ai_config_controller_1 = __webpack_require__(40);
+const ai_config_service_1 = __webpack_require__(41);
+const database_module_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/libs/database/database.module'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+let UserAIConfigModule = class UserAIConfigModule {
+};
+exports.UserAIConfigModule = UserAIConfigModule;
+exports.UserAIConfigModule = UserAIConfigModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_module_1.DatabaseModule],
+        controllers: [ai_config_controller_1.UserAIConfigController],
+        providers: [ai_config_service_1.UserAIConfigService],
+        exports: [ai_config_service_1.UserAIConfigService],
+    })
+], UserAIConfigModule);
+
+
+/***/ }),
+/* 40 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserAIConfigController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const ai_config_service_1 = __webpack_require__(41);
+const ai_config_dto_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/apps/novel-service/src/dto/ai-config.dto'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const jwt_auth_guard_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/libs/auth/guards/jwt-auth.guard'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+let UserAIConfigController = class UserAIConfigController {
+    constructor(aiConfigService) {
+        this.aiConfigService = aiConfigService;
+    }
+    async getAvailableConfigs(req) {
+        return this.aiConfigService.getAvailableConfigs(req.user.userId);
+    }
+    async getUserConfigs(req) {
+        return this.aiConfigService.getUserConfigs(req.user.userId);
+    }
+    async createConfig(req, dto) {
+        return this.aiConfigService.createConfig(req.user.userId, dto);
+    }
+    async updateConfig(req, id, dto) {
+        return this.aiConfigService.updateConfig(req.user.userId, id, dto);
+    }
+    async deleteConfig(req, id) {
+        await this.aiConfigService.deleteConfig(req.user.userId, id);
+        return { message: '配置已删除' };
+    }
+    async setDefaultConfig(req, id) {
+        await this.aiConfigService.setDefaultConfig(req.user.userId, id);
+        return { message: '默认配置已设置' };
+    }
+};
+exports.UserAIConfigController = UserAIConfigController;
+__decorate([
+    (0, common_1.Get)('available'),
+    (0, swagger_1.ApiOperation)({ summary: '获取可用的AI配置（全局+自定义）' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
+], UserAIConfigController.prototype, "getAvailableConfigs", null);
+__decorate([
+    (0, common_1.Get)('custom'),
+    (0, swagger_1.ApiOperation)({ summary: '获取用户自定义配置列表' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], UserAIConfigController.prototype, "getUserConfigs", null);
+__decorate([
+    (0, common_1.Post)('custom'),
+    (0, swagger_1.ApiOperation)({ summary: '创建用户自定义配置' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof ai_config_dto_1.CreateUserAIConfigDto !== "undefined" && ai_config_dto_1.CreateUserAIConfigDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], UserAIConfigController.prototype, "createConfig", null);
+__decorate([
+    (0, common_1.Put)('custom/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '更新用户自定义配置' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_f = typeof ai_config_dto_1.UpdateUserAIConfigDto !== "undefined" && ai_config_dto_1.UpdateUserAIConfigDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], UserAIConfigController.prototype, "updateConfig", null);
+__decorate([
+    (0, common_1.Delete)('custom/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '删除用户自定义配置' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], UserAIConfigController.prototype, "deleteConfig", null);
+__decorate([
+    (0, common_1.Post)('custom/:id/set-default'),
+    (0, swagger_1.ApiOperation)({ summary: '设置默认配置' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+], UserAIConfigController.prototype, "setDefaultConfig", null);
+exports.UserAIConfigController = UserAIConfigController = __decorate([
+    (0, swagger_1.ApiTags)('用户-AI配置'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.Controller)('ai-config'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof ai_config_service_1.UserAIConfigService !== "undefined" && ai_config_service_1.UserAIConfigService) === "function" ? _a : Object])
+], UserAIConfigController);
+
+
+/***/ }),
+/* 41 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserAIConfigService = void 0;
+const common_1 = __webpack_require__(3);
+const prisma_service_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/libs/database/prisma.service'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const client_1 = __webpack_require__(12);
+const crypto = __webpack_require__(42);
+let UserAIConfigService = class UserAIConfigService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.ENCRYPTION_KEY = process.env.AI_CONFIG_ENCRYPTION_KEY || 'your-32-character-encryption-key!!';
+        this.ALGORITHM = 'aes-256-cbc';
+    }
+    async getAvailableConfigs(userId) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                subscription: true,
+            },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('用户不存在');
+        }
+        const systemConfig = await this.prisma.systemConfig.findUnique({
+            where: { configKey: 'ai.global' },
+        });
+        let systemModels = [];
+        if (systemConfig) {
+            const configValue = systemConfig.configValue;
+            systemModels = (configValue.models || []).filter((model) => {
+                return this.checkModelAccess(model, user);
+            });
+            systemModels = systemModels.map((model) => ({
+                ...model,
+                apiKey: this.maskApiKey(this.decrypt(model.apiKey)),
+            }));
+        }
+        const userConfigs = await this.prisma.userAIConfig.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+        });
+        const userConfigsDto = userConfigs.map((config) => ({
+            id: config.id,
+            userId: config.userId,
+            name: config.name,
+            provider: config.provider,
+            model: config.model,
+            apiUrl: config.apiUrl,
+            enabled: config.enabled,
+            isDefault: config.isDefault,
+            parameters: config.parameters,
+            createdAt: config.createdAt,
+            updatedAt: config.updatedAt,
+        }));
+        let defaultConfigId = '';
+        const userDefaultConfig = userConfigs.find((c) => c.isDefault);
+        if (userDefaultConfig) {
+            defaultConfigId = `user:${userDefaultConfig.id}`;
+        }
+        else {
+            const systemDefaultModel = systemModels.find((m) => m.isDefault);
+            if (systemDefaultModel) {
+                defaultConfigId = `system:${systemDefaultModel.id}`;
+            }
+            else if (systemModels.length > 0) {
+                defaultConfigId = `system:${systemModels[0].id}`;
+            }
+            else if (userConfigsDto.length > 0) {
+                defaultConfigId = `user:${userConfigsDto[0].id}`;
+            }
+        }
+        return {
+            system: systemModels,
+            user: userConfigsDto,
+            default: defaultConfigId,
+        };
+    }
+    async getUserConfigs(userId) {
+        const configs = await this.prisma.userAIConfig.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+        });
+        return configs.map((config) => ({
+            id: config.id,
+            userId: config.userId,
+            name: config.name,
+            provider: config.provider,
+            model: config.model,
+            apiUrl: config.apiUrl,
+            enabled: config.enabled,
+            isDefault: config.isDefault,
+            parameters: config.parameters,
+            createdAt: config.createdAt,
+            updatedAt: config.updatedAt,
+        }));
+    }
+    async createConfig(userId, dto) {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { subscription: true },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('用户不存在');
+        }
+        if (dto.isDefault) {
+            await this.prisma.userAIConfig.updateMany({
+                where: { userId, isDefault: true },
+                data: { isDefault: false },
+            });
+        }
+        const encryptedApiKey = this.encrypt(dto.apiKey);
+        const config = await this.prisma.userAIConfig.create({
+            data: {
+                userId,
+                name: dto.name,
+                provider: dto.provider,
+                model: dto.model,
+                apiUrl: dto.apiUrl,
+                apiKey: encryptedApiKey,
+                enabled: dto.enabled ?? true,
+                isDefault: dto.isDefault ?? false,
+                parameters: dto.parameters || {},
+            },
+        });
+        return {
+            id: config.id,
+            userId: config.userId,
+            name: config.name,
+            provider: config.provider,
+            model: config.model,
+            apiUrl: config.apiUrl,
+            enabled: config.enabled,
+            isDefault: config.isDefault,
+            parameters: config.parameters,
+            createdAt: config.createdAt,
+            updatedAt: config.updatedAt,
+        };
+    }
+    async updateConfig(userId, configId, dto) {
+        const existingConfig = await this.prisma.userAIConfig.findFirst({
+            where: { id: configId, userId },
+        });
+        if (!existingConfig) {
+            throw new common_1.NotFoundException('配置不存在');
+        }
+        if (dto.isDefault) {
+            await this.prisma.userAIConfig.updateMany({
+                where: { userId, isDefault: true, id: { not: configId } },
+                data: { isDefault: false },
+            });
+        }
+        const updateData = {};
+        if (dto.name !== undefined)
+            updateData.name = dto.name;
+        if (dto.provider !== undefined)
+            updateData.provider = dto.provider;
+        if (dto.model !== undefined)
+            updateData.model = dto.model;
+        if (dto.apiUrl !== undefined)
+            updateData.apiUrl = dto.apiUrl;
+        if (dto.apiKey !== undefined)
+            updateData.apiKey = this.encrypt(dto.apiKey);
+        if (dto.enabled !== undefined)
+            updateData.enabled = dto.enabled;
+        if (dto.isDefault !== undefined)
+            updateData.isDefault = dto.isDefault;
+        if (dto.parameters !== undefined)
+            updateData.parameters = dto.parameters;
+        const config = await this.prisma.userAIConfig.update({
+            where: { id: configId },
+            data: updateData,
+        });
+        return {
+            id: config.id,
+            userId: config.userId,
+            name: config.name,
+            provider: config.provider,
+            model: config.model,
+            apiUrl: config.apiUrl,
+            enabled: config.enabled,
+            isDefault: config.isDefault,
+            parameters: config.parameters,
+            createdAt: config.createdAt,
+            updatedAt: config.updatedAt,
+        };
+    }
+    async deleteConfig(userId, configId) {
+        const config = await this.prisma.userAIConfig.findFirst({
+            where: { id: configId, userId },
+        });
+        if (!config) {
+            throw new common_1.NotFoundException('配置不存在');
+        }
+        await this.prisma.userAIConfig.delete({
+            where: { id: configId },
+        });
+    }
+    async setDefaultConfig(userId, configId) {
+        const config = await this.prisma.userAIConfig.findFirst({
+            where: { id: configId, userId },
+        });
+        if (!config) {
+            throw new common_1.NotFoundException('配置不存在');
+        }
+        await this.prisma.userAIConfig.updateMany({
+            where: { userId, isDefault: true },
+            data: { isDefault: false },
+        });
+        await this.prisma.userAIConfig.update({
+            where: { id: configId },
+            data: { isDefault: true },
+        });
+    }
+    checkModelAccess(model, user) {
+        const tier = model.tier;
+        if (!user.subscription || user.subscription.status !== 'ACTIVE') {
+            return tier === client_1.AITier.FREE;
+        }
+        return true;
+    }
+    maskApiKey(apiKey) {
+        if (apiKey.length <= 8) {
+            return '****';
+        }
+        return apiKey.substring(0, 4) + '****' + apiKey.substring(apiKey.length - 4);
+    }
+    encrypt(text) {
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv(this.ALGORITHM, Buffer.from(this.ENCRYPTION_KEY.slice(0, 32)), iv);
+        let encrypted = cipher.update(text, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return `${iv.toString('hex')}:${encrypted}`;
+    }
+    decrypt(text) {
+        try {
+            const parts = text.split(':');
+            const iv = Buffer.from(parts[0], 'hex');
+            const encryptedText = parts[1];
+            const decipher = crypto.createDecipheriv(this.ALGORITHM, Buffer.from(this.ENCRYPTION_KEY.slice(0, 32)), iv);
+            let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        catch (error) {
+            return text;
+        }
+    }
+};
+exports.UserAIConfigService = UserAIConfigService;
+exports.UserAIConfigService = UserAIConfigService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+], UserAIConfigService);
+
+
+/***/ }),
+/* 42 */
+/***/ ((module) => {
+
+module.exports = require("crypto");
+
+/***/ }),
+/* 43 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var AllExceptionsFilter_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AllExceptionsFilter = void 0;
 const common_1 = __webpack_require__(3);
-const library_1 = __webpack_require__(40);
+const library_1 = __webpack_require__(44);
 let AllExceptionsFilter = AllExceptionsFilter_1 = class AllExceptionsFilter {
     constructor() {
         this.logger = new common_1.Logger(AllExceptionsFilter_1.name);
@@ -2191,13 +2611,13 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 40 */
+/* 44 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client/runtime/library");
 
 /***/ }),
-/* 41 */
+/* 45 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2210,7 +2630,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(42);
+const operators_1 = __webpack_require__(46);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         const startTime = Date.now();
@@ -2266,7 +2686,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 42 */
+/* 46 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2314,8 +2734,8 @@ const config_1 = __webpack_require__(5);
 const helmet_1 = __webpack_require__(6);
 const compression = __webpack_require__(7);
 const app_module_1 = __webpack_require__(8);
-const all_exceptions_filter_1 = __webpack_require__(39);
-const response_interceptor_1 = __webpack_require__(41);
+const all_exceptions_filter_1 = __webpack_require__(43);
+const response_interceptor_1 = __webpack_require__(45);
 const common_2 = __webpack_require__(3);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);

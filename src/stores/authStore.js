@@ -101,6 +101,19 @@ export const useAuthStore = defineStore('auth', {
           // 保存到localStorage
           this.saveAuthData()
           
+          // 登录成功后，如果是在线模式，触发数据同步
+          if (navigator.onLine) {
+            // 动态导入避免循环依赖
+            import('@/services/dataSync').then(({ dataSyncService }) => {
+              setTimeout(() => {
+                console.log('登录成功，开始同步数据')
+                dataSyncService.autoSync()
+              }, 1000) // 延迟1秒，避免阻塞登录流程
+            }).catch(err => {
+              console.warn('数据同步服务加载失败:', err)
+            })
+          }
+          
           ElMessage.success('登录成功')
           return { success: true }
         } else {

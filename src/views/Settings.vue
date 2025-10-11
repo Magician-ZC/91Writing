@@ -6,16 +6,7 @@
       <el-tabs v-model="activeTab" class="settings-tabs">
         <!-- API配置 -->
         <el-tab-pane label="API配置" name="api">
-          <el-card shadow="never">
-            <template #header>
-              <div class="card-header">
-                <span>🔑 AI模型API配置</span>
-                <el-button type="primary" @click="testAllConnections">测试所有连接</el-button>
-              </div>
-            </template>
-            
-            <ApiConfig />
-          </el-card>
+          <AIConfigManager />
         </el-tab-pane>
 
         
@@ -335,6 +326,7 @@ import { ref, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, Upload, Document, Setting, Delete, Message, Collection } from '@element-plus/icons-vue'
 import ApiConfig from '@/components/ApiConfig.vue'
+import AIConfigManager from '@/components/settings/AIConfigManager.vue'
 
 // 响应式数据
 const activeTab = ref('api')

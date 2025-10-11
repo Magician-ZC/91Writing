@@ -15,7 +15,7 @@
           <el-icon><Download /></el-icon>
           导出列表
         </el-button>
-        <el-button type="primary" @click="showCreateDialog = true">
+        <el-button type="primary" @click="handleCreateNovel">
           <el-icon><Plus /></el-icon>
           创建新小说
         </el-button>
@@ -171,7 +171,7 @@
     <!-- 空状态 -->
     <div v-if="filteredNovels.length === 0" class="empty-state">
       <el-empty description="暂无小说作品">
-        <el-button type="primary" @click="showCreateDialog = true">创建第一部小说</el-button>
+        <el-button type="primary" @click="handleCreateNovel">创建第一部小说</el-button>
       </el-empty>
     </div>
 
@@ -1233,6 +1233,58 @@ const deleteNovel = async (novel) => {
     }
   } catch (error) {
     // 用户取消删除
+  }
+}
+
+// 处理创建小说
+const handleCreateNovel = async () => {
+  // 检查是否有未完成的向导进度
+  try {
+    const saved = localStorage.getItem('wizardProgress')
+    
+    if (saved) {
+      const progressData = JSON.parse(saved)
+      
+      // 检查是否已完成
+      const isCompleted = progressData.wizardData?._completed === true
+      
+      if (!isCompleted) {
+        // 有未完成的进度，询问用户
+        const progressInfo = `当前进度：第 ${progressData.currentStep + 1} 步，共 6 步`
+        const timeInfo = `保存时间：${new Date(progressData.timestamp).toLocaleString()}`
+        
+        try {
+          await ElMessageBox.confirm(
+            `发现上次未完成的创作进度\n\n${progressInfo}\n${timeInfo}\n\n是否继续上次的创作？`,
+            '恢复创作进度',
+            {
+              confirmButtonText: '继续创作',
+              cancelButtonText: '重新开始',
+              type: 'info',
+              center: true
+            }
+          )
+          
+          // 用户选择继续创作，直接跳转到向导页面
+          router.push({ name: 'NovelWizard' })
+          return
+        } catch (dismiss) {
+          // 用户选择重新开始，清除旧进度
+          localStorage.removeItem('wizardProgress')
+          ElMessage.info('已清除旧进度，开始新的创作')
+        }
+      } else {
+        // 已完成的进度，清除它
+        localStorage.removeItem('wizardProgress')
+      }
+    }
+    
+    // 没有进度或用户选择重新开始，显示创建方式选择对话框
+    showCreateDialog.value = true
+  } catch (error) {
+    console.error('检查向导进度失败:', error)
+    // 出错时直接显示创建对话框
+    showCreateDialog.value = true
   }
 }
 

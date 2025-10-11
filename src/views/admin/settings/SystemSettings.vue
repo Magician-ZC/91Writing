@@ -130,40 +130,7 @@
 
         <!-- AI配置 -->
         <el-tab-pane label="AI配置" name="ai">
-          <div class="setting-section">
-            <h3>OpenAI配置</h3>
-            <el-form :model="settings.ai.openai" label-width="120px">
-              <el-form-item label="启用OpenAI">
-                <el-switch v-model="settings.ai.openai.enabled" />
-              </el-form-item>
-              
-              <el-form-item label="API密钥">
-                <el-input
-                  v-model="settings.ai.openai.apiKey"
-                  type="password"
-                  placeholder="sk-..."
-                  show-password
-                />
-              </el-form-item>
-              
-              <el-form-item label="默认模型">
-                <el-select v-model="settings.ai.openai.model" style="width: 100%;">
-                  <el-option label="GPT-3.5 Turbo" value="gpt-3.5-turbo" />
-                  <el-option label="GPT-4" value="gpt-4" />
-                  <el-option label="GPT-4 Turbo" value="gpt-4-turbo" />
-                </el-select>
-              </el-form-item>
-              
-              <el-form-item label="最大Token数">
-                <el-input-number
-                  v-model="settings.ai.openai.maxTokens"
-                  :min="100"
-                  :max="8000"
-                  style="width: 100%;"
-                />
-              </el-form-item>
-            </el-form>
-          </div>
+          <AIConfigAdmin />
         </el-tab-pane>
 
         <!-- 安全配置 -->
@@ -246,6 +213,7 @@ import {
   Refresh
 } from '@element-plus/icons-vue'
 import { adminService } from '@/services/adminService'
+import AIConfigAdmin from '@/components/admin/AIConfigAdmin.vue'
 
 // 响应式数据
 const loading = ref(false)

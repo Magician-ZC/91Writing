@@ -1,8 +1,12 @@
 import apiConfig from '../config/api.json'
 import billingService from './billing.js'
+import { unifiedAIService } from './unifiedAIService'
+import { aiConfigService } from './aiConfigService'
 
 class APIService {
   constructor() {
+    // 标记是否使用新的AI服务
+    this.useUnifiedService = true
     this.config = { ...apiConfig.openai }
     this.proxyConfig = apiConfig.proxy
     // 尝试从localStorage加载用户配置
@@ -79,6 +83,44 @@ class APIService {
 
   // 生成文本内容
   async generateText(prompt, options = {}) {
+    // 优先使用新的统一AI服务
+    if (this.useUnifiedService) {
+      try {
+        // 检查是否有可用配置
+        const status = await unifiedAIService.checkStatus()
+        if (status.available) {
+          // 估算token用于记录
+          const estimatedInputTokens = billingService.estimateTokens(prompt)
+          
+          const response = await unifiedAIService.chat([
+            { role: 'user', content: prompt }
+          ], {
+            parameters: {
+              maxTokens: options.maxTokens || this.config.maxTokens || 2000,
+              temperature: options.temperature || this.config.temperature || 0.7
+            }
+          })
+          
+          // 记录API调用
+          billingService.recordAPICall({
+            type: options.type || 'generation',
+            model: response.model || 'unified',
+            content: prompt,
+            response: response.content,
+            inputTokens: response.tokensUsed || estimatedInputTokens,
+            outputTokens: billingService.estimateTokens(response.content),
+            status: 'success'
+          })
+          
+          return response.content
+        }
+      } catch (error) {
+        console.warn('统一AI服务调用失败，降级到旧服务:', error.message)
+        // 降级到旧服务
+      }
+    }
+    
+    // 降级方案：使用旧的直接API调用
     const model = options.model || this.config.selectedModel || this.config.defaultModel || 'gpt-3.5-turbo'
     
     if (!this.config.apiKey) {
@@ -171,6 +213,46 @@ class APIService {
   async generateTextStream(prompt, options = {}, onChunk = null) {
     console.log('开始流式生成，prompt:', prompt.substring(0, 100) + '...') // 调试日志
     
+    // 优先使用新的统一AI服务
+    if (this.useUnifiedService) {
+      try {
+        const status = await unifiedAIService.checkStatus()
+        if (status.available) {
+          // 注意：当前unifiedAIService的chatStream未完全实现，降级使用普通chat
+          const response = await unifiedAIService.chat([
+            { role: 'user', content: prompt }
+          ], {
+            parameters: {
+              maxTokens: options.maxTokens || this.config.maxTokens || 2000,
+              temperature: options.temperature || this.config.temperature || 0.7
+            }
+          })
+          
+          // 模拟流式输出
+          if (onChunk) {
+            onChunk(response.content, response.content)
+          }
+          
+          // 记录API调用
+          billingService.recordAPICall({
+            type: options.type || 'generation',
+            model: response.model || 'unified',
+            content: prompt,
+            response: response.content,
+            inputTokens: response.tokensUsed || billingService.estimateTokens(prompt),
+            outputTokens: billingService.estimateTokens(response.content),
+            status: 'success'
+          })
+          
+          return response.content
+        }
+      } catch (error) {
+        console.warn('统一AI服务流式调用失败，降级到旧服务:', error.message)
+        // 降级到旧服务
+      }
+    }
+    
+    // 降级方案：使用旧的直接API调用
     const model = options.model || this.config.selectedModel || this.config.defaultModel || 'gpt-3.5-turbo'
     
     if (!this.config.apiKey) {
@@ -316,6 +398,23 @@ class APIService {
 
   // 生成小说大纲
   async generateOutline(theme, keywords, template) {
+    // 优先使用unifiedAIService的预设场景方法
+    if (this.useUnifiedService) {
+      try {
+        const status = await unifiedAIService.checkStatus()
+        if (status.available) {
+          const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
+          const keywordList = keywords ? `\n关键词：${keywords}` : ''
+          const idea = `${theme}${templateInfo}${keywordList}`
+          
+          return await unifiedAIService.generateOutline(idea)
+        }
+      } catch (error) {
+        console.warn('统一AI服务生成大纲失败，降级:', error.message)
+      }
+    }
+    
+    // 降级方案
     const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
     const keywordList = keywords ? `\n关键词：${keywords}` : ''
     
@@ -336,6 +435,27 @@ class APIService {
 
   // 流式生成小说大纲
   async generateOutlineStream(theme, keywords, template, onChunk = null) {
+    // 优先使用unifiedAIService
+    if (this.useUnifiedService) {
+      try {
+        const status = await unifiedAIService.checkStatus()
+        if (status.available) {
+          const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
+          const keywordList = keywords ? `\n关键词：${keywords}` : ''
+          const idea = `${theme}${templateInfo}${keywordList}`
+          
+          const result = await unifiedAIService.generateOutline(idea)
+          if (onChunk) {
+            onChunk(result, result)
+          }
+          return result
+        }
+      } catch (error) {
+        console.warn('统一AI服务流式生成大纲失败，降级:', error.message)
+      }
+    }
+    
+    // 降级方案
     const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
     const keywordList = keywords ? `\n关键词：${keywords}` : ''
     

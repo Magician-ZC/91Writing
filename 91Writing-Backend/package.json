@@ -50,7 +50,8 @@
     "db:studio": "prisma studio",
     "db:format": "prisma format",
     "check:services": "./scripts/check-services.sh",
-    "show:ports": "cat PORT-REFERENCE.txt"
+    "show:ports": "cat PORT-REFERENCE.txt",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.0",

@@ -9,6 +9,7 @@ import { DatabaseModule } from '@app/database';
 import { AdminModule } from './modules/admin/admin.module';
 import { HealthModule } from './modules/health/health.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AIConfigModule } from './modules/ai-config/ai-config.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -71,6 +72,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     AdminModule,
     HealthModule,
     AnalyticsModule,
+    AIConfigModule,
   ],
   controllers: [],
   providers: [JwtStrategy],

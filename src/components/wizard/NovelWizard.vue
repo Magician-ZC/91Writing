@@ -211,6 +211,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { storeToRefs } from 'pinia'
+import { useRouter, useRoute } from 'vue-router'
 import {
   ArrowLeft,
   ArrowRight,
@@ -242,6 +243,10 @@ const props = defineProps({
 
 // Emits
 const emit = defineEmits(['wizard-completed', 'wizard-exited'])
+
+// Router
+const router = useRouter()
+const route = useRoute()
 
 // Store
 const wizardStore = useWizardStore()
@@ -331,57 +336,6 @@ const {
   exitWizard
 } = wizardStore
 
-// 检查向导是否已完成
-const isWizardCompleted = (progressData) => {
-  if (!progressData || !progressData.wizardData) return false
-  
-  // 检查是否到达最后一步并且有完成标记
-  const isAtLastStep = progressData.currentStep >= (wizardSteps.value?.length - 1 || 5)
-  const hasCompleteFlag = progressData.wizardData._completed === true
-  
-  // 检查关键步骤是否都有数据
-  const hasBasicData = !!(
-    progressData.wizardData.concept?.coreIdea &&
-    progressData.wizardData.concept?.selectedGenre &&
-    progressData.wizardData.synopsisWriting?.shortSynopsis
-  )
-  
-  return hasCompleteFlag || (isAtLastStep && hasBasicData)
-}
-
-// 显示进度选择对话框
-const showProgressChoiceDialog = async (progressData) => {
-  const isCompleted = isWizardCompleted(progressData)
-  const progressInfo = `当前进度：第 ${progressData.currentStep + 1} 步，共 ${wizardSteps.value?.length || 6} 步`
-  const timeInfo = `保存时间：${new Date(progressData.timestamp).toLocaleString()}`
-  
-  let message = `发现上次未完成的创作进度\n\n${progressInfo}\n${timeInfo}`
-  let title = '恢复创作进度'
-  
-  if (isCompleted) {
-    message = `发现上次已完成的创作记录\n\n${timeInfo}\n\n上次创作已完成，建议重新开始新的创作`
-    title = '创作记录'
-  }
-  
-  try {
-    const action = await ElMessageBox.confirm(
-      message,
-      title,
-      {
-        confirmButtonText: isCompleted ? '重新开始' : '继续创作',
-        cancelButtonText: isCompleted ? '查看记录' : '重新开始',
-        type: 'info',
-        center: true,
-        customClass: 'progress-choice-dialog'
-      }
-    )
-    
-    return isCompleted ? 'restart' : 'continue'
-  } catch (dismiss) {
-    return isCompleted ? 'view' : 'restart'
-  }
-}
-
 // 初始化向导
 const initializeWizard = async () => {
   console.log('=== 向导初始化开始 ===')
@@ -399,61 +353,39 @@ const initializeWizard = async () => {
     return
   }
   
-  // 检查是否有保存的进度
+  // 检查是否有保存的进度（从小说管理页面继续创作的情况）
   console.log('检查保存的进度...')
   try {
     const saved = localStorage.getItem('wizardProgress')
     
     if (saved) {
+      // 有保存的进度，直接恢复（在小说管理页面已经确认过了）
       const progressData = JSON.parse(saved)
-      console.log('发现保存的进度:', {
+      console.log('恢复保存的进度:', {
         currentStep: progressData.currentStep,
-        isActive: progressData.isWizardActive,
-        timestamp: new Date(progressData.timestamp).toLocaleString(),
-        isCompleted: isWizardCompleted(progressData)
+        timestamp: new Date(progressData.timestamp).toLocaleString()
       })
       
-      // 显示选择对话框
-      const userChoice = await showProgressChoiceDialog(progressData)
-      
-      switch (userChoice) {
-        case 'continue':
-          // 继续上次进度
-          const hasProgress = wizardStore.loadWizardProgress()
-          if (hasProgress && wizardStore.isWizardActive) {
-            ElMessage.success('已恢复上次的创作进度')
-          } else {
-            throw new Error('恢复进度失败')
-          }
-          break
-          
-        case 'restart':
-          // 重新开始，清除旧进度
-          localStorage.removeItem('wizardProgress')
-          wizardStore.startWizard(props.initialTitle || '新小说')
-          ElMessage.success('开始新的创作')
-          break
-          
-        case 'view':
-          // 查看记录（已完成的情况下）
-          wizardStore.loadWizardProgress()
-          ElMessage.info('已加载创作记录，您可以查看详情')
-          break
-          
-        default:
-          // 默认重新开始
-          wizardStore.startWizard(props.initialTitle || '新小说')
-          break
+      const hasProgress = wizardStore.loadWizardProgress()
+      if (hasProgress) {
+        // 确保向导处于激活状态
+        wizardStore.isWizardActive = true
+        ElMessage.success('已恢复上次的创作进度')
+      } else {
+        // 恢复失败，启动新向导
+        throw new Error('恢复进度失败')
       }
     } else {
-      // 没有保存的进度，启动新向导
+      // 没有保存的进度，启动新向导（从创建对话框进来的）
       console.log('没有保存的进度，启动新向导')
-      wizardStore.startWizard(props.initialTitle || '新小说')
+      const initialTitle = props.initialTitle || route.query.title || '新小说'
+      wizardStore.startWizard(initialTitle)
     }
   } catch (error) {
     console.error('处理进度失败:', error)
     // 出错时启动新向导
-    wizardStore.startWizard(props.initialTitle || '新小说')
+    const initialTitle = props.initialTitle || route.query.title || '新小说'
+    wizardStore.startWizard(initialTitle)
     ElMessage.warning('进度处理异常，已开始新的创作')
   }
   
@@ -621,6 +553,9 @@ const completeWizard = async () => {
     const novelData = await completeWizardStore()
     ElMessage.success('小说创建完成！')
     emit('wizard-completed', novelData)
+    
+    // 导航回小说管理页面
+    router.push({ name: 'NovelManagement' })
   } catch (error) {
     if (error !== 'cancel') {
       console.error('完成向导失败:', error)
@@ -633,10 +568,19 @@ const completeWizard = async () => {
 
 // 保存并退出
 const saveAndExit = async () => {
-  await saveProgress()
-  exitWizard()
-  showExitDialog.value = false
-  emit('wizard-exited', { saved: true })
+  try {
+    await saveProgress()
+    exitWizard()
+    showExitDialog.value = false
+    emit('wizard-exited', { saved: true })
+    
+    // 导航回小说管理页面
+    router.push({ name: 'NovelManagement' })
+    ElMessage.success('进度已保存，已退出向导')
+  } catch (error) {
+    console.error('保存并退出失败:', error)
+    ElMessage.error('保存失败：' + error.message)
+  }
 }
 
 // 直接退出
@@ -644,6 +588,10 @@ const exitWithoutSave = () => {
   exitWizard()
   showExitDialog.value = false
   emit('wizard-exited', { saved: false })
+  
+  // 导航回小说管理页面
+  router.push({ name: 'NovelManagement' })
+  ElMessage.info('已退出向导')
 }
 
 // 工具配置

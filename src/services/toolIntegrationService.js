@@ -4,6 +4,7 @@
 
 import { useNovelStore } from '@/stores/novel'
 import { useWizardStore } from '@/stores/wizardStore'
+import { unifiedAIService } from './unifiedAIService'
 
 class ToolIntegrationService {
   constructor() {
@@ -174,8 +175,77 @@ class ToolIntegrationService {
     
     console.log('callTool 被调用:', { toolType, prompt: prompt.substring(0, 100) + '...', params })
     
-    // 这里应该调用实际的工具API
-    // 目前使用 novelStore 的 generateContent 方法
+    try {
+      // 优先使用unifiedAIService的预设场景方法
+      const status = await unifiedAIService.checkStatus()
+      if (status.available) {
+        console.log('使用统一AI服务调用工具:', toolType)
+        
+        // 根据工具类型选择最佳的AI服务方法
+        let result
+        switch (toolType) {
+          case 'brainstorm':
+          case 'outline':
+            // 使用大纲生成方法
+            result = await unifiedAIService.generateOutline(prompt)
+            break
+            
+          case 'character':
+            // 如果有角色信息，使用角色生成方法
+            if (params?.characterInfo) {
+              result = await unifiedAIService.generateCharacter(params.characterInfo)
+            } else {
+              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+              result = result.content
+            }
+            break
+            
+          case 'opening':
+            // 使用续写方法
+            if (params?.context) {
+              result = await unifiedAIService.continueWriting(params.context)
+            } else {
+              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+              result = result.content
+            }
+            break
+            
+          case 'synopsis':
+            // 使用内容润色方法
+            if (params?.rawContent) {
+              result = await unifiedAIService.polishContent(params.rawContent)
+            } else {
+              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+              result = result.content
+            }
+            break
+            
+          case 'title':
+            // 使用标题生成方法
+            if (params?.content) {
+              const titles = await unifiedAIService.generateTitles(params.content, params.count || 5)
+              result = titles.join('\n')
+            } else {
+              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+              result = result.content
+            }
+            break
+            
+          default:
+            // 其他工具使用通用聊天接口
+            const response = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+            result = response.content
+        }
+        
+        console.log('统一AI服务调用成功:', result ? result.substring(0, 100) + '...' : result)
+        return result
+      }
+    } catch (error) {
+      console.warn('统一AI服务调用失败，降级到novelStore:', error.message)
+      // 降级到原来的方法
+    }
+    
+    // 降级方案：使用 novelStore 的 generateContent 方法
     try {
       const result = await this.novelStore.generateContent(prompt)
       console.log('callTool 返回结果:', result ? result.substring(0, 100) + '...' : result)

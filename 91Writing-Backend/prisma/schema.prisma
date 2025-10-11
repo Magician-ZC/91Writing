@@ -56,6 +56,9 @@ model User {
   chapterVersions ChapterVersion[]
   comments        ChapterComment[]
 
+  // AI配置
+  aiConfigs       UserAIConfig[]
+
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -623,4 +626,77 @@ enum CommentStatus {
   ACTIVE // 活跃
   RESOLVED // 已解决
   DELETED // 已删除
+}
+
+// ===== AI配置系统 =====
+// 用户AI配置表
+model UserAIConfig {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  name       String // 配置名称
+  provider   AIProvider // AI服务商
+  model      String // 模型名称
+  apiUrl     String   @map("api_url") @db.VarChar(500)
+  apiKey     String   @map("api_key") @db.VarChar(500) // 加密存储
+  enabled    Boolean  @default(true)
+  isDefault  Boolean  @default(false) @map("is_default")
+  parameters Json // 模型参数配置
+  
+  // 关联
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([userId, enabled])
+  @@index([userId, isDefault])
+  @@map("user_ai_configs")
+}
+
+// AI使用统计表（扩展）
+model AIUsageStats {
+  id             Int      @id @default(autoincrement())
+  userId         String   @map("user_id")
+  configId       String?  @map("config_id") // 使用的配置ID
+  configType     ConfigType @map("config_type") // 配置类型：SYSTEM/USER
+  provider       AIProvider
+  model          String
+  tokensUsed     Int      @default(0) @map("tokens_used")
+  requestCount   Int      @default(0) @map("request_count")
+  successCount   Int      @default(0) @map("success_count")
+  failureCount   Int      @default(0) @map("failure_count")
+  totalCost      Decimal  @default(0) @db.Decimal(10, 4) @map("total_cost") // 总成本
+  date           DateTime @db.Date // 统计日期
+  
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@unique([userId, configType, date])
+  @@index([userId, date])
+  @@index([date])
+  @@map("ai_usage_stats")
+}
+
+// ===== AI配置系统枚举 =====
+enum AIProvider {
+  OPENAI // OpenAI GPT系列
+  CLAUDE // Anthropic Claude
+  WENXIN // 百度文心一言
+  QWEN // 阿里通义千问
+  ZHIPU // 智谱AI
+  CUSTOM // 自定义/其他
+}
+
+enum ConfigType {
+  SYSTEM // 系统全局配置
+  USER // 用户自定义配置
+}
+
+enum AITier {
+  FREE // 免费额度
+  BASIC // 基础会员
+  PREMIUM // 高级会员
+  UNLIMITED // 无限制
 }

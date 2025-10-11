@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '@app/database';
 import { UserModule } from './modules/user/user.module';
 import { HealthModule } from './modules/health/health.module';
+import { UserAIConfigModule } from './modules/ai-config/ai-config.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { HealthModule } from './modules/health/health.module';
     // 功能模块
     UserModule,
     HealthModule,
+    UserAIConfigModule,
   ],
   controllers: [],
   providers: [],

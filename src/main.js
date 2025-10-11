@@ -45,8 +45,10 @@ async function initApp() {
     // 设置网络状态监听
     setupNetworkListeners(
       () => {
-        console.log('网络已连接，开始同步数据')
-        if (apiManager.getMode() === 'hybrid') {
+        console.log('网络已连接')
+        // 只有用户已登录时才同步数据
+        if (apiManager.getMode() === 'hybrid' && authStore.isAuthenticated) {
+          console.log('用户已登录，开始同步数据')
           dataSyncService.autoSync()
         }
       },
@@ -58,8 +60,8 @@ async function initApp() {
     // 设置token拦截器（保留兼容性）
     authStore.setupTokenInterceptor()
     
-    // 如果是混合模式且在线，执行自动同步
-    if (apiManager.getMode() === 'hybrid' && navigator.onLine) {
+    // 如果是混合模式且在线，且用户已登录，才执行自动同步
+    if (apiManager.getMode() === 'hybrid' && navigator.onLine && authStore.isAuthenticated) {
       // 延迟执行同步，避免阻塞应用启动
       setTimeout(() => dataSyncService.autoSync(), 2000)
     }
