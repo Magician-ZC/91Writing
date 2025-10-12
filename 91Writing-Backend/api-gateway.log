@@ -1,0 +1,79 @@
+[dotenv@17.2.2] injecting env (20) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHttpModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHttpModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHttpModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mProxyModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPaymentModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHealthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNovelModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCacheModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/v1/auth}:[39m[38;5;3m +58ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/auth/*, ALL} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUsersController {/api/v1/users}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNovelController {/api/v1}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/novels*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/chapters*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/memories*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/materials*, ALL} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/prompts*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/collaboration*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/versions*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/comments*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mProxyController {/api/v1/proxy}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/proxy/status, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPaymentsController {/api/v1/payments}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/payments/*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mSubscriptionsController {/api/v1/subscriptions}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/subscriptions/*, ALL} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPackagesController {/api/v1/packages}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/packages/*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminController {/api/v1/admin}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/admin/*, ALL} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/api/v1/health}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/health/ready, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/health/live, GET} route[39m[38;5;3m +0ms[39m
+prisma:info Starting a mysql pool with 21 connections.
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32m数据库连接成功[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:17 AM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +2ms[39m
+🚀 API Gateway is running on: http://localhost:3000
+📖 Swagger docs available at: http://localhost:3000/api/docs
+[32m[Nest] 95843  - [39m10/12/2025, 1:11:27 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/ai-config/available (原始URL: /api/v1/users/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:12:58 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: POST http://localhost:3002/login (原始URL: /api/v1/auth/login)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:12:58 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:12:58 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:13 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: POST http://localhost:3002/login (原始URL: /api/v1/auth/login)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:13 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:13 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:21 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: POST http://localhost:3002/login (原始URL: /api/v1/auth/login)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:21 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:24 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:28 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/me (原始URL: /api/v1/auth/me)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:28 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/my-code (原始URL: /api/v1/auth/invite/my-code)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:28 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/stats (原始URL: /api/v1/auth/invite/stats)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:28 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/invitees (原始URL: /api/v1/auth/invite/invitees)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:13:37 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:14:12 AM [32m    LOG[39m [38;5;3m[AdminService] [39m[32m代理请求: POST http://localhost:3006/ai-config/test (原始URL: /api/v1/admin/ai-config/test)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:15:20 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/me (原始URL: /api/v1/auth/me)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:15:20 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/my-code (原始URL: /api/v1/auth/invite/my-code)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:15:20 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/stats (原始URL: /api/v1/auth/invite/stats)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:15:20 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/invitees (原始URL: /api/v1/auth/invite/invitees)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:04 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: POST http://localhost:3002/login (原始URL: /api/v1/auth/login)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:05 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/me (原始URL: /api/v1/auth/me)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:05 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/my-code (原始URL: /api/v1/auth/invite/my-code)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:05 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/stats (原始URL: /api/v1/auth/invite/stats)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:05 AM [32m    LOG[39m [38;5;3m[AuthService] [39m[32m代理请求: GET http://localhost:3002/invite/invitees (原始URL: /api/v1/auth/invite/invitees)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:05 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:11 AM [32m    LOG[39m [38;5;3m[UsersService] [39m[32m代理请求: GET http://localhost:3001/api/v1/users/v1/ai-config/available (原始URL: /api/v1/users/v1/ai-config/available)[39m
+[32m[Nest] 95843  - [39m10/12/2025, 1:20:28 AM [32m    LOG[39m [38;5;3m[AdminService] [39m[32m代理请求: POST http://localhost:3006/ai-config/test (原始URL: /api/v1/admin/ai-config/test)[39m

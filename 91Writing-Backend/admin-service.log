@@ -1,0 +1,126 @@
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +8ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHttpModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +3ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mCacheModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHealthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAIConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnalyticsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminController {/}:[39m[38;5;3m +13ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/dashboard/stats, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/dashboard/charts, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id/ban, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id/unban, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions/stats, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions/:id, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/subscriptions/:id/extend, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/orders, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/orders/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/orders/:orderNo/refund, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/system/config, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/system/config, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/system/logs, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/packages, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/packages, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/packages/:id, PUT} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/packages/:id, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/health}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/health/detailed, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnalyticsController {/analytics}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/batch, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/overview, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/user-growth, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/feature-usage, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/ai-usage, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/revenue, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/retention, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/analytics/export, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAIConfigController {/ai-config}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/ai-config/system, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/ai-config/system, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/ai-config/test, POST} route[39m[38;5;3m +0ms[39m
+prisma:info Starting a mysql pool with 21 connections.
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32m数据库连接成功[39m
+[32m[Nest] 89663  - [39m10/12/2025, 12:55:11 AM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +3ms[39m
+🚀 管理后台服务启动成功: http://localhost:3006
+📖 API文档地址: http://localhost:3006/api-docs
+[33m[Nest] 89663  - [39m10/12/2025, 12:58:49 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33m客户端错误[39m
+[33m[Nest] 89663  - [39m10/12/2025, 12:58:49 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33mObject:[39m
+{
+  "timestamp": "2025-10-11T16:58:49.885Z",
+  "path": "/ai-config/test",
+  "method": "POST",
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "访问令牌缺失",
+  "userAgent": "curl/8.7.1",
+  "ip": "::1"
+}
+
+[33m[Nest] 89663  - [39m10/12/2025, 12:59:18 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33m客户端错误[39m
+[33m[Nest] 89663  - [39m10/12/2025, 12:59:18 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33mObject:[39m
+{
+  "timestamp": "2025-10-11T16:59:18.615Z",
+  "path": "/ai-config/test",
+  "method": "POST",
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "访问令牌缺失",
+  "userAgent": "curl/8.7.1",
+  "ip": "::1"
+}
+
+[33m[Nest] 89663  - [39m10/12/2025, 1:00:47 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33m客户端错误[39m
+[33m[Nest] 89663  - [39m10/12/2025, 1:00:47 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33mObject:[39m
+{
+  "timestamp": "2025-10-11T17:00:47.814Z",
+  "path": "/ai-config/test",
+  "method": "POST",
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "权限不足，需要管理员权限",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  "ip": "::1"
+}
+
+[33m[Nest] 89663  - [39m10/12/2025, 1:14:12 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33m客户端错误[39m
+[33m[Nest] 89663  - [39m10/12/2025, 1:14:12 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33mObject:[39m
+{
+  "timestamp": "2025-10-11T17:14:12.362Z",
+  "path": "/ai-config/test",
+  "method": "POST",
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "权限不足，需要管理员权限",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  "ip": "::1"
+}
+
+[33m[Nest] 89663  - [39m10/12/2025, 1:20:28 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33m客户端错误[39m
+[33m[Nest] 89663  - [39m10/12/2025, 1:20:28 AM [33m   WARN[39m [38;5;3m[AllExceptionsFilter] [39m[33mObject:[39m
+{
+  "timestamp": "2025-10-11T17:20:28.341Z",
+  "path": "/ai-config/test",
+  "method": "POST",
+  "statusCode": 401,
+  "error": "Unauthorized",
+  "message": "权限不足，需要管理员权限",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  "ip": "::1"
+}
+

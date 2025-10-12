@@ -367,15 +367,94 @@ export default {
     // 获取功能文本描述
     const getFeatureText = (key, value) => {
       const featureTexts = {
-        maxNovels: `最多创建 ${value} 部小说`,
-        maxChaptersPerNovel: `每部小说最多 ${value} 章`,
-        aiGenerationLimit: `AI生成限制 ${value} 次/天`,
-        advancedFeatures: value ? '高级功能' : '基础功能',
-        customPrompts: value ? '自定义提示词' : '标准提示词',
-        prioritySupport: value ? '优先客服支持' : '标准客服支持',
-        dataBackup: value ? '数据备份' : '基础数据存储'
+        // 小说相关
+        maxNovels: value === -1 ? '小说数量不限' : `最多创建 ${value} 部小说`,
+        maxChaptersPerNovel: value === -1 ? '章节数量不限' : `每部小说最多 ${value} 章`,
+        
+        // AI生成相关
+        aiGenerationLimit: value === -1 ? 'AI生成次数不限' : `AI生成 ${value} 次/天`,
+        aiTokenLimit: value === -1 ? 'AI Token 不限' : `AI Token 限额 ${formatNumber(value)}/月`,
+        aiModelAccess: getAIModelAccessText(value),
+        
+        // 功能权限
+        advancedFeatures: value ? '✓ 高级功能' : '基础功能',
+        customPrompts: value ? '✓ 自定义提示词' : '标准提示词',
+        materialUpload: value ? '✓ 素材上传' : '不支持素材上传',
+        collaboration: value ? '✓ 多人协作' : '不支持协作',
+        versionControl: value ? '✓ 版本控制' : '不支持版本控制',
+        exportFormats: getExportFormatsText(value),
+        
+        // 服务相关
+        prioritySupport: value ? '✓ 优先客服支持' : '标准客服支持',
+        dataBackup: value ? '✓ 自动数据备份' : '基础数据存储',
+        adFree: value ? '✓ 无广告体验' : '含广告',
+        
+        // 存储相关
+        storageLimit: value === -1 ? '存储空间不限' : `${value}GB 存储空间`,
+        
+        // 其他
+        concurrentEditing: value ? '✓ 多设备同步编辑' : '单设备编辑'
       }
-      return featureTexts[key] || `${key}: ${value}`
+      
+      return featureTexts[key] || formatFeatureValue(key, value)
+    }
+    
+    // 格式化数字
+    const formatNumber = (num) => {
+      if (num >= 1000000) {
+        return (num / 1000000) + 'M'
+      } else if (num >= 1000) {
+        return (num / 1000) + 'K'
+      }
+      return num.toString()
+    }
+    
+    // 获取AI模型访问权限文本
+    const getAIModelAccessText = (value) => {
+      if (typeof value === 'string') {
+        const accessLevels = {
+          FREE: '基础AI模型',
+          BASIC: '✓ 标准AI模型',
+          PREMIUM: '✓ 高级AI模型（含GPT-4）',
+          UNLIMITED: '✓ 全部AI模型（含最新模型）'
+        }
+        return accessLevels[value] || value
+      }
+      return value ? '✓ 高级AI模型' : '基础AI模型'
+    }
+    
+    // 获取导出格式文本
+    const getExportFormatsText = (value) => {
+      if (Array.isArray(value)) {
+        const formats = {
+          txt: 'TXT',
+          docx: 'Word',
+          pdf: 'PDF',
+          epub: 'EPUB',
+          mobi: 'MOBI'
+        }
+        return '✓ 导出格式：' + value.map(f => formats[f] || f).join('、')
+      }
+      return value ? '✓ 多格式导出' : '仅TXT导出'
+    }
+    
+    // 格式化功能值（通用）
+    const formatFeatureValue = (key, value) => {
+      // 将驼峰命名转换为中文
+      const keyMap = {
+        maxNovels: '最大小说数',
+        maxChapters: '最大章节数',
+        aiGeneration: 'AI生成',
+        customPrompt: '自定义提示词',
+        priority: '优先级'
+      }
+      
+      const displayKey = keyMap[key] || key
+      
+      if (typeof value === 'boolean') {
+        return value ? `✓ ${displayKey}` : displayKey
+      }
+      return `${displayKey}: ${value}`
     }
 
     onMounted(() => {
@@ -400,7 +479,11 @@ export default {
       cancelSubscription,
       formatDate,
       getFeatureText,
-      isCurrentPackage
+      isCurrentPackage,
+      formatNumber,
+      getAIModelAccessText,
+      getExportFormatsText,
+      formatFeatureValue
     }
   }
 }

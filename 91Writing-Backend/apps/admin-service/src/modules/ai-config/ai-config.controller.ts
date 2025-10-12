@@ -11,7 +11,7 @@ import { RoleGuard } from '../admin/guards/role.guard';
 
 @ApiTags('管理员-AI配置')
 @ApiBearerAuth()
-@Controller('admin/ai-config')
+@Controller('ai-config')
 @UseGuards(AdminAuthGuard, RoleGuard)
 export class AIConfigController {
   constructor(private readonly aiConfigService: AIConfigService) {}

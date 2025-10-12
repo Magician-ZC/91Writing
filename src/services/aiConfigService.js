@@ -12,8 +12,7 @@ class AIConfigService {
    */
   async getAvailableConfigs() {
     try {
-      const response = await apiManager.request('GET', '/ai-config/available')
-      return response.data || { system: [], user: [], default: '' }
+      return await apiManager.getAvailableAIConfigs()
     } catch (error) {
       console.error('获取可用AI配置失败:', error)
       // 降级到localStorage
@@ -27,8 +26,7 @@ class AIConfigService {
    */
   async getUserConfigs() {
     try {
-      const response = await apiManager.request('GET', '/ai-config/custom')
-      return response.data || []
+      return await apiManager.getUserAIConfigs()
     } catch (error) {
       console.error('获取用户配置失败:', error)
       return []
@@ -42,8 +40,7 @@ class AIConfigService {
    */
   async createConfig(config) {
     try {
-      const response = await apiManager.request('POST', '/ai-config/custom', config)
-      return response.data
+      return await apiManager.createAIConfig(config)
     } catch (error) {
       console.error('创建配置失败:', error)
       throw error
@@ -58,8 +55,7 @@ class AIConfigService {
    */
   async updateConfig(configId, config) {
     try {
-      const response = await apiManager.request('PUT', `/ai-config/custom/${configId}`, config)
-      return response.data
+      return await apiManager.updateAIConfig(configId, config)
     } catch (error) {
       console.error('更新配置失败:', error)
       throw error
@@ -73,7 +69,7 @@ class AIConfigService {
    */
   async deleteConfig(configId) {
     try {
-      await apiManager.request('DELETE', `/ai-config/custom/${configId}`)
+      return await apiManager.deleteAIConfig(configId)
     } catch (error) {
       console.error('删除配置失败:', error)
       throw error
@@ -87,7 +83,7 @@ class AIConfigService {
    */
   async setDefaultConfig(configId) {
     try {
-      await apiManager.request('POST', `/ai-config/custom/${configId}/set-default`)
+      return await apiManager.setDefaultAIConfig(configId)
     } catch (error) {
       console.error('设置默认配置失败:', error)
       throw error
@@ -173,8 +169,7 @@ class AIConfigService {
    */
   async testConfig(config) {
     try {
-      const response = await apiManager.request('POST', '/admin/ai-config/test', config)
-      return response.data
+      return await apiManager.testAIConfig(config)
     } catch (error) {
       return {
         success: false,

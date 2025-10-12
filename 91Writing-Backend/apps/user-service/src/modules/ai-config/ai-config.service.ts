@@ -6,8 +6,8 @@ import {
   UserAIConfigResponseDto,
   AvailableAIConfigsResponseDto,
   SystemAIModelDto,
+  AITier,
 } from '@app/common/dto/ai-config.dto';
-import { AITier } from '@prisma/client';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -161,7 +161,7 @@ export class UserAIConfigService {
         apiKey: encryptedApiKey,
         enabled: dto.enabled ?? true,
         isDefault: dto.isDefault ?? false,
-        parameters: dto.parameters || {},
+        parameters: dto.parameters ? JSON.parse(JSON.stringify(dto.parameters)) : {},
       },
     });
 
@@ -214,7 +214,7 @@ export class UserAIConfigService {
     if (dto.apiKey !== undefined) updateData.apiKey = this.encrypt(dto.apiKey);
     if (dto.enabled !== undefined) updateData.enabled = dto.enabled;
     if (dto.isDefault !== undefined) updateData.isDefault = dto.isDefault;
-    if (dto.parameters !== undefined) updateData.parameters = dto.parameters;
+    if (dto.parameters !== undefined) updateData.parameters = JSON.parse(JSON.stringify(dto.parameters));
 
     // 更新配置
     const config = await this.prisma.userAIConfig.update({

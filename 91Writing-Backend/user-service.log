@@ -1,0 +1,41 @@
+[dotenv@17.2.2] injecting env (20) from .env -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +7ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mTerminusModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +5ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHealthModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUserAIConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUserModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUserController {/api/v1/users} (version: 1):[39m[38;5;3m +14ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users, POST} (version: 1) route[39m[38;5;3m +3ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/stats, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/email/:email, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/:id, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/:id, PATCH} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/:id/password, PATCH} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/:id/last-login, PATCH} (version: 1) route[39m[38;5;3m +1ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/:id, DELETE} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/:id/hard, DELETE} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHealthController {/api/v1/users/health} (version: 1):[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/health, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/health/ready, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/health/live, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/health/detailed, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUserAIConfigController {/api/v1/users/ai-config} (version: 1):[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/ai-config/available, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/ai-config/custom, GET} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/ai-config/custom, POST} (version: 1) route[39m[38;5;3m +1ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/ai-config/custom/:id, PUT} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/ai-config/custom/:id, DELETE} (version: 1) route[39m[38;5;3m +0ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/v1/users/ai-config/custom/:id/set-default, POST} (version: 1) route[39m[38;5;3m +0ms[39m
+prisma:info Starting a mysql pool with 21 connections.
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[PrismaService] [39m[32m数据库连接成功[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +2ms[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[UserService] [39m[32m🚀 用户服务已启动: http://localhost:3001[39m
+[32m[Nest] 99323  - [39m10/12/2025, 1:32:25 AM [32m    LOG[39m [38;5;3m[UserService] [39m[32m📖 API文档地址: http://localhost:3001/api/docs/users[39m

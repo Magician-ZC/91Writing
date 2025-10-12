@@ -58,10 +58,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppModule = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(5);
-const database_1 = __webpack_require__(9);
-const user_module_1 = __webpack_require__(13);
-const health_module_1 = __webpack_require__(35);
-const ai_config_module_1 = __webpack_require__(39);
+const jwt_1 = __webpack_require__(9);
+const passport_1 = __webpack_require__(10);
+const database_1 = __webpack_require__(11);
+const user_module_1 = __webpack_require__(15);
+const health_module_1 = __webpack_require__(36);
+const ai_config_module_1 = __webpack_require__(40);
+const jwt_strategy_1 = __webpack_require__(45);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -72,19 +75,44 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
                 envFilePath: ['.env.local', '.env'],
             }),
+            passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET', '91writing_default_secret'),
+                    signOptions: {
+                        expiresIn: configService.get('JWT_EXPIRES_IN', '7d'),
+                    },
+                }),
+                inject: [config_1.ConfigService],
+            }),
             database_1.DatabaseModule,
             user_module_1.UserModule,
             health_module_1.HealthModule,
             ai_config_module_1.UserAIConfigModule,
         ],
         controllers: [],
-        providers: [],
+        providers: [
+            jwt_strategy_1.JwtStrategy,
+        ],
     })
 ], AppModule);
 
 
 /***/ }),
 /* 9 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/jwt");
+
+/***/ }),
+/* 10 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/passport");
+
+/***/ }),
+/* 11 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -103,12 +131,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(10), exports);
-__exportStar(__webpack_require__(11), exports);
+__exportStar(__webpack_require__(12), exports);
+__exportStar(__webpack_require__(13), exports);
 
 
 /***/ }),
-/* 10 */
+/* 12 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -122,7 +150,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(5);
-const prisma_service_1 = __webpack_require__(11);
+const prisma_service_1 = __webpack_require__(13);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -137,7 +165,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 11 */
+/* 13 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -156,7 +184,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(5);
-const client_1 = __webpack_require__(12);
+const client_1 = __webpack_require__(14);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -283,13 +311,13 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -302,8 +330,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserModule = void 0;
 const common_1 = __webpack_require__(3);
-const user_controller_1 = __webpack_require__(14);
-const user_service_1 = __webpack_require__(15);
+const user_controller_1 = __webpack_require__(16);
+const user_service_1 = __webpack_require__(17);
 let UserModule = class UserModule {
 };
 exports.UserModule = UserModule;
@@ -317,7 +345,7 @@ exports.UserModule = UserModule = __decorate([
 
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -338,12 +366,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const user_service_1 = __webpack_require__(15);
-const create_user_dto_1 = __webpack_require__(19);
-const update_user_dto_1 = __webpack_require__(21);
-const query_user_dto_1 = __webpack_require__(22);
-const user_response_dto_1 = __webpack_require__(16);
-const common_2 = __webpack_require__(23);
+const user_service_1 = __webpack_require__(17);
+const create_user_dto_1 = __webpack_require__(21);
+const update_user_dto_1 = __webpack_require__(23);
+const query_user_dto_1 = __webpack_require__(24);
+const user_response_dto_1 = __webpack_require__(18);
+const common_2 = __webpack_require__(25);
 let UserController = class UserController {
     constructor(userService) {
         this.userService = userService;
@@ -635,7 +663,7 @@ exports.UserController = UserController = __decorate([
 
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -652,11 +680,11 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserService = void 0;
 const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(9);
-const user_response_dto_1 = __webpack_require__(16);
-const class_transformer_1 = __webpack_require__(17);
-const bcrypt = __webpack_require__(18);
-const client_1 = __webpack_require__(12);
+const database_1 = __webpack_require__(11);
+const user_response_dto_1 = __webpack_require__(18);
+const class_transformer_1 = __webpack_require__(19);
+const bcrypt = __webpack_require__(20);
+const client_1 = __webpack_require__(14);
 let UserService = class UserService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -925,7 +953,7 @@ exports.UserService = UserService = __decorate([
 
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -942,8 +970,8 @@ var _a, _b, _c, _d, _e, _f, _g;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserStatsResponseDto = exports.UserListResponseDto = exports.UserProfileResponseDto = exports.UserResponseDto = void 0;
 const swagger_1 = __webpack_require__(4);
-const class_transformer_1 = __webpack_require__(17);
-const client_1 = __webpack_require__(12);
+const class_transformer_1 = __webpack_require__(19);
+const client_1 = __webpack_require__(14);
 class UserResponseDto {
     constructor(partial) {
         Object.assign(this, partial);
@@ -1159,19 +1187,19 @@ __decorate([
 
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ ((module) => {
 
 module.exports = require("class-transformer");
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ ((module) => {
 
 module.exports = require("bcrypt");
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1188,8 +1216,8 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateUserDto = void 0;
 const swagger_1 = __webpack_require__(4);
-const class_validator_1 = __webpack_require__(20);
-const client_1 = __webpack_require__(12);
+const class_validator_1 = __webpack_require__(22);
+const client_1 = __webpack_require__(14);
 class CreateUserDto {
     constructor() {
         this.role = client_1.UserRole.USER;
@@ -1279,13 +1307,13 @@ __decorate([
 
 
 /***/ }),
-/* 20 */
+/* 22 */
 /***/ ((module) => {
 
 module.exports = require("class-validator");
 
 /***/ }),
-/* 21 */
+/* 23 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1302,9 +1330,9 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdatePasswordDto = exports.UpdateUserDto = void 0;
 const swagger_1 = __webpack_require__(4);
-const class_validator_1 = __webpack_require__(20);
-const client_1 = __webpack_require__(12);
-const create_user_dto_1 = __webpack_require__(19);
+const class_validator_1 = __webpack_require__(22);
+const client_1 = __webpack_require__(14);
+const create_user_dto_1 = __webpack_require__(21);
 class UpdateUserDto extends (0, swagger_1.PartialType)((0, swagger_1.OmitType)(create_user_dto_1.CreateUserDto, ['email', 'password', 'tenantId'])) {
 }
 exports.UpdateUserDto = UpdateUserDto;
@@ -1386,7 +1414,7 @@ __decorate([
 
 
 /***/ }),
-/* 22 */
+/* 24 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1403,9 +1431,9 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserStatsDto = exports.QueryUserDto = void 0;
 const swagger_1 = __webpack_require__(4);
-const class_validator_1 = __webpack_require__(20);
-const class_transformer_1 = __webpack_require__(17);
-const client_1 = __webpack_require__(12);
+const class_validator_1 = __webpack_require__(22);
+const class_transformer_1 = __webpack_require__(19);
+const client_1 = __webpack_require__(14);
 class QueryUserDto {
     constructor() {
         this.page = 1;
@@ -1546,7 +1574,7 @@ __decorate([
 
 
 /***/ }),
-/* 23 */
+/* 25 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1565,16 +1593,16 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(24), exports);
-__exportStar(__webpack_require__(27), exports);
-__exportStar(__webpack_require__(31), exports);
+__exportStar(__webpack_require__(26), exports);
+__exportStar(__webpack_require__(29), exports);
 __exportStar(__webpack_require__(32), exports);
 __exportStar(__webpack_require__(33), exports);
 __exportStar(__webpack_require__(34), exports);
+__exportStar(__webpack_require__(35), exports);
 
 
 /***/ }),
-/* 24 */
+/* 26 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1593,12 +1621,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(25), exports);
-__exportStar(__webpack_require__(26), exports);
+__exportStar(__webpack_require__(27), exports);
+__exportStar(__webpack_require__(28), exports);
 
 
 /***/ }),
-/* 25 */
+/* 27 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -1616,7 +1644,7 @@ exports.TenantId = (0, common_1.createParamDecorator)((data, ctx) => {
 
 
 /***/ }),
-/* 26 */
+/* 28 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -1635,7 +1663,7 @@ exports.CurrentUser = (0, common_1.createParamDecorator)((data, ctx) => {
 
 
 /***/ }),
-/* 27 */
+/* 29 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1654,12 +1682,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(28), exports);
 __exportStar(__webpack_require__(30), exports);
+__exportStar(__webpack_require__(31), exports);
 
 
 /***/ }),
-/* 28 */
+/* 30 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1672,7 +1700,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.JwtAuthGuard = void 0;
 const common_1 = __webpack_require__(3);
-const passport_1 = __webpack_require__(29);
+const passport_1 = __webpack_require__(10);
 let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
     handleRequest(err, user, info) {
         if (err || !user) {
@@ -1688,13 +1716,7 @@ exports.JwtAuthGuard = JwtAuthGuard = __decorate([
 
 
 /***/ }),
-/* 29 */
-/***/ ((module) => {
-
-module.exports = require("@nestjs/passport");
-
-/***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1725,14 +1747,6 @@ exports.TenantGuard = TenantGuard = __decorate([
 
 
 /***/ }),
-/* 31 */
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-
-/***/ }),
 /* 32 */
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -1758,6 +1772,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 /***/ }),
 /* 35 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1770,9 +1792,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(3);
-const terminus_1 = __webpack_require__(36);
-const health_controller_1 = __webpack_require__(37);
-const health_service_1 = __webpack_require__(38);
+const terminus_1 = __webpack_require__(37);
+const health_controller_1 = __webpack_require__(38);
+const health_service_1 = __webpack_require__(39);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -1786,13 +1808,13 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 36 */
+/* 37 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/terminus");
 
 /***/ }),
-/* 37 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1810,8 +1832,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const terminus_1 = __webpack_require__(36);
-const database_1 = __webpack_require__(9);
+const terminus_1 = __webpack_require__(37);
+const database_1 = __webpack_require__(11);
 let HealthController = class HealthController {
     constructor(health, prismaHealth, memory, disk, prisma) {
         this.health = health;
@@ -1956,7 +1978,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 39 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1973,7 +1995,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthService = void 0;
 const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(9);
+const database_1 = __webpack_require__(11);
 let HealthService = class HealthService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -2048,7 +2070,7 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 39 */
+/* 40 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2061,15 +2083,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserAIConfigModule = void 0;
 const common_1 = __webpack_require__(3);
-const ai_config_controller_1 = __webpack_require__(40);
-const ai_config_service_1 = __webpack_require__(41);
-const database_module_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/libs/database/database.module'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const ai_config_controller_1 = __webpack_require__(41);
+const ai_config_service_1 = __webpack_require__(42);
+const database_1 = __webpack_require__(11);
 let UserAIConfigModule = class UserAIConfigModule {
 };
 exports.UserAIConfigModule = UserAIConfigModule;
 exports.UserAIConfigModule = UserAIConfigModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule],
+        imports: [database_1.DatabaseModule],
         controllers: [ai_config_controller_1.UserAIConfigController],
         providers: [ai_config_service_1.UserAIConfigService],
         exports: [ai_config_service_1.UserAIConfigService],
@@ -2078,7 +2100,7 @@ exports.UserAIConfigModule = UserAIConfigModule = __decorate([
 
 
 /***/ }),
-/* 40 */
+/* 41 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2099,9 +2121,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserAIConfigController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const ai_config_service_1 = __webpack_require__(41);
-const ai_config_dto_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/apps/novel-service/src/dto/ai-config.dto'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
-const jwt_auth_guard_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/libs/auth/guards/jwt-auth.guard'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const ai_config_service_1 = __webpack_require__(42);
+const ai_config_dto_1 = __webpack_require__(43);
+const jwt_auth_guard_1 = __webpack_require__(30);
 let UserAIConfigController = class UserAIConfigController {
     constructor(aiConfigService) {
         this.aiConfigService = aiConfigService;
@@ -2191,7 +2213,7 @@ exports.UserAIConfigController = UserAIConfigController = __decorate([
 
 
 /***/ }),
-/* 41 */
+/* 42 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2208,9 +2230,9 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UserAIConfigService = void 0;
 const common_1 = __webpack_require__(3);
-const prisma_service_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module '@/libs/database/prisma.service'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
-const client_1 = __webpack_require__(12);
-const crypto = __webpack_require__(42);
+const database_1 = __webpack_require__(11);
+const ai_config_dto_1 = __webpack_require__(43);
+const crypto = __webpack_require__(44);
 let UserAIConfigService = class UserAIConfigService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -2325,7 +2347,7 @@ let UserAIConfigService = class UserAIConfigService {
                 apiKey: encryptedApiKey,
                 enabled: dto.enabled ?? true,
                 isDefault: dto.isDefault ?? false,
-                parameters: dto.parameters || {},
+                parameters: dto.parameters ? JSON.parse(JSON.stringify(dto.parameters)) : {},
             },
         });
         return {
@@ -2371,7 +2393,7 @@ let UserAIConfigService = class UserAIConfigService {
         if (dto.isDefault !== undefined)
             updateData.isDefault = dto.isDefault;
         if (dto.parameters !== undefined)
-            updateData.parameters = dto.parameters;
+            updateData.parameters = JSON.parse(JSON.stringify(dto.parameters));
         const config = await this.prisma.userAIConfig.update({
             where: { id: configId },
             data: updateData,
@@ -2420,7 +2442,7 @@ let UserAIConfigService = class UserAIConfigService {
     checkModelAccess(model, user) {
         const tier = model.tier;
         if (!user.subscription || user.subscription.status !== 'ACTIVE') {
-            return tier === client_1.AITier.FREE;
+            return tier === ai_config_dto_1.AITier.FREE;
         }
         return true;
     }
@@ -2455,18 +2477,472 @@ let UserAIConfigService = class UserAIConfigService {
 exports.UserAIConfigService = UserAIConfigService;
 exports.UserAIConfigService = UserAIConfigService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof prisma_service_1.PrismaService !== "undefined" && prisma_service_1.PrismaService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
 ], UserAIConfigService);
 
 
 /***/ }),
-/* 42 */
+/* 43 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AIUsageStatsResponseDto = exports.AIChatResponseDto = exports.AIChatRequestDto = exports.AIChatMessageDto = exports.AvailableAIConfigsResponseDto = exports.UserAIConfigResponseDto = exports.UpdateUserAIConfigDto = exports.CreateUserAIConfigDto = exports.TestAIConfigDto = exports.UpdateSystemAIConfigDto = exports.GetSystemAIConfigResponseDto = exports.SystemAIModelDto = exports.AIModelLimitsDto = exports.AIModelParametersDto = exports.AITier = void 0;
+const class_validator_1 = __webpack_require__(22);
+const class_transformer_1 = __webpack_require__(19);
+const client_1 = __webpack_require__(14);
+var AITier;
+(function (AITier) {
+    AITier["FREE"] = "FREE";
+    AITier["BASIC"] = "BASIC";
+    AITier["PREMIUM"] = "PREMIUM";
+    AITier["UNLIMITED"] = "UNLIMITED";
+})(AITier || (exports.AITier = AITier = {}));
+class AIModelParametersDto {
+    constructor() {
+        this.temperature = 0.7;
+        this.topP = 1.0;
+        this.frequencyPenalty = 0;
+        this.presencePenalty = 0;
+        this.timeout = 30;
+        this.stream = true;
+    }
+}
+exports.AIModelParametersDto = AIModelParametersDto;
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(2),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "temperature", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "topP", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(-2),
+    (0, class_validator_1.Max)(2),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "frequencyPenalty", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(-2),
+    (0, class_validator_1.Max)(2),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "presencePenalty", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "maxTokens", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(300),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "timeout", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], AIModelParametersDto.prototype, "stream", void 0);
+class AIModelLimitsDto {
+}
+exports.AIModelLimitsDto = AIModelLimitsDto;
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "maxTokens", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "dailyLimit", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "monthlyLimit", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "concurrentLimit", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "rateLimit", void 0);
+class SystemAIModelDto {
+    constructor() {
+        this.enabled = true;
+        this.isDefault = false;
+        this.tier = AITier.FREE;
+    }
+}
+exports.SystemAIModelDto = SystemAIModelDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "id", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    __metadata("design:type", typeof (_a = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _a : Object)
+], SystemAIModelDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], SystemAIModelDto.prototype, "enabled", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], SystemAIModelDto.prototype, "isDefault", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(AITier),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "tier", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelLimitsDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelLimitsDto)
+], SystemAIModelDto.prototype, "limits", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], SystemAIModelDto.prototype, "parameters", void 0);
+class GetSystemAIConfigResponseDto {
+}
+exports.GetSystemAIConfigResponseDto = GetSystemAIConfigResponseDto;
+__decorate([
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => SystemAIModelDto),
+    __metadata("design:type", Array)
+], GetSystemAIConfigResponseDto.prototype, "models", void 0);
+class UpdateSystemAIConfigDto {
+}
+exports.UpdateSystemAIConfigDto = UpdateSystemAIConfigDto;
+__decorate([
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => SystemAIModelDto),
+    __metadata("design:type", Array)
+], UpdateSystemAIConfigDto.prototype, "models", void 0);
+class TestAIConfigDto {
+}
+exports.TestAIConfigDto = TestAIConfigDto;
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    __metadata("design:type", typeof (_b = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _b : Object)
+], TestAIConfigDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], TestAIConfigDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], TestAIConfigDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], TestAIConfigDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], TestAIConfigDto.prototype, "parameters", void 0);
+class CreateUserAIConfigDto {
+    constructor() {
+        this.enabled = true;
+        this.isDefault = false;
+    }
+}
+exports.CreateUserAIConfigDto = CreateUserAIConfigDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    __metadata("design:type", typeof (_c = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _c : Object)
+], CreateUserAIConfigDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], CreateUserAIConfigDto.prototype, "enabled", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], CreateUserAIConfigDto.prototype, "isDefault", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], CreateUserAIConfigDto.prototype, "parameters", void 0);
+class UpdateUserAIConfigDto {
+}
+exports.UpdateUserAIConfigDto = UpdateUserAIConfigDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", typeof (_d = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _d : Object)
+], UpdateUserAIConfigDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], UpdateUserAIConfigDto.prototype, "enabled", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], UpdateUserAIConfigDto.prototype, "isDefault", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], UpdateUserAIConfigDto.prototype, "parameters", void 0);
+class UserAIConfigResponseDto {
+}
+exports.UserAIConfigResponseDto = UserAIConfigResponseDto;
+class AvailableAIConfigsResponseDto {
+}
+exports.AvailableAIConfigsResponseDto = AvailableAIConfigsResponseDto;
+class AIChatMessageDto {
+}
+exports.AIChatMessageDto = AIChatMessageDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], AIChatMessageDto.prototype, "role", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], AIChatMessageDto.prototype, "content", void 0);
+class AIChatRequestDto {
+    constructor() {
+        this.stream = false;
+    }
+}
+exports.AIChatRequestDto = AIChatRequestDto;
+__decorate([
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => AIChatMessageDto),
+    __metadata("design:type", Array)
+], AIChatRequestDto.prototype, "messages", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], AIChatRequestDto.prototype, "configId", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], AIChatRequestDto.prototype, "stream", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], AIChatRequestDto.prototype, "options", void 0);
+class AIChatResponseDto {
+}
+exports.AIChatResponseDto = AIChatResponseDto;
+class AIUsageStatsResponseDto {
+}
+exports.AIUsageStatsResponseDto = AIUsageStatsResponseDto;
+
+
+/***/ }),
+/* 44 */
 /***/ ((module) => {
 
 module.exports = require("crypto");
 
 /***/ }),
-/* 43 */
+/* 45 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JwtStrategy = void 0;
+const common_1 = __webpack_require__(3);
+const config_1 = __webpack_require__(5);
+const passport_1 = __webpack_require__(10);
+const passport_jwt_1 = __webpack_require__(46);
+const database_1 = __webpack_require__(11);
+let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
+    constructor(configService, prisma) {
+        super({
+            jwtFromRequest: passport_jwt_1.ExtractJwt.fromAuthHeaderAsBearerToken(),
+            ignoreExpiration: false,
+            secretOrKey: configService.get('JWT_SECRET', '91writing_default_secret'),
+        });
+        this.configService = configService;
+        this.prisma = prisma;
+    }
+    async validate(payload) {
+        const { sub, email, role } = payload;
+        const user = await this.prisma.user.findUnique({
+            where: { id: sub },
+            include: {
+                profile: true,
+                subscription: {
+                    include: {
+                        package: true,
+                    },
+                },
+            },
+        });
+        if (!user) {
+            throw new common_1.UnauthorizedException('用户不存在');
+        }
+        if (user.status !== 'ACTIVE') {
+            throw new common_1.UnauthorizedException('用户账号已被禁用');
+        }
+        return {
+            userId: user.id,
+            id: user.id,
+            email: user.email,
+            nickname: user.nickname,
+            role: user.role,
+            status: user.status,
+            isActive: user.isActive,
+            tenantId: user.tenantId,
+            profile: user.profile,
+            subscription: user.subscription,
+            lastLoginAt: user.lastLoginAt,
+        };
+    }
+};
+exports.JwtStrategy = JwtStrategy;
+exports.JwtStrategy = JwtStrategy = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object, typeof (_b = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _b : Object])
+], JwtStrategy);
+
+
+/***/ }),
+/* 46 */
+/***/ ((module) => {
+
+module.exports = require("passport-jwt");
+
+/***/ }),
+/* 47 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2480,7 +2956,7 @@ var AllExceptionsFilter_1;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AllExceptionsFilter = void 0;
 const common_1 = __webpack_require__(3);
-const library_1 = __webpack_require__(44);
+const library_1 = __webpack_require__(48);
 let AllExceptionsFilter = AllExceptionsFilter_1 = class AllExceptionsFilter {
     constructor() {
         this.logger = new common_1.Logger(AllExceptionsFilter_1.name);
@@ -2611,13 +3087,13 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 44 */
+/* 48 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client/runtime/library");
 
 /***/ }),
-/* 45 */
+/* 49 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2630,7 +3106,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(46);
+const operators_1 = __webpack_require__(50);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         const startTime = Date.now();
@@ -2686,7 +3162,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 46 */
+/* 50 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2734,8 +3210,8 @@ const config_1 = __webpack_require__(5);
 const helmet_1 = __webpack_require__(6);
 const compression = __webpack_require__(7);
 const app_module_1 = __webpack_require__(8);
-const all_exceptions_filter_1 = __webpack_require__(43);
-const response_interceptor_1 = __webpack_require__(45);
+const all_exceptions_filter_1 = __webpack_require__(47);
+const response_interceptor_1 = __webpack_require__(49);
 const common_2 = __webpack_require__(3);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);

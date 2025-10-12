@@ -1076,6 +1076,59 @@ class ApiManager {
     })
   }
 
+  // ----- AI配置管理 -----
+  async getAvailableAIConfigs() {
+    return await this.request('/api/v1/users/v1/ai-config/available', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getUserAIConfigs() {
+    return await this.request('/api/v1/users/v1/ai-config/custom', {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createAIConfig(config) {
+    return await this.request('/api/v1/users/v1/ai-config/custom', {
+      method: 'POST',
+      data: config,
+      fallbackLocal: false
+    })
+  }
+
+  async updateAIConfig(configId, config) {
+    return await this.request(`/api/v1/users/v1/ai-config/custom/${configId}`, {
+      method: 'PUT',
+      data: config,
+      fallbackLocal: false
+    })
+  }
+
+  async deleteAIConfig(configId) {
+    return await this.request(`/api/v1/users/v1/ai-config/custom/${configId}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  async setDefaultAIConfig(configId) {
+    return await this.request(`/api/v1/users/v1/ai-config/custom/${configId}/set-default`, {
+      method: 'POST',
+      fallbackLocal: false
+    })
+  }
+
+  async testAIConfig(config) {
+    return await this.request('/api/v1/admin/ai-config/test', {
+      method: 'POST',
+      data: config,
+      fallbackLocal: false
+    })
+  }
+
   // ----- 套餐管理 -----
   async getPackages(params = {}) {
     const query = new URLSearchParams(params).toString()

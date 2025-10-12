@@ -111,17 +111,17 @@
               style="width: 220px"
               placeholder="选择模型"
             >
-              <!-- 官方模型组 -->
-              <el-option-group label="🏢 91写作官方模型">
+              <!-- 系统模型组 -->
+              <el-option-group label="🏢 系统模型" v-if="systemModels.length > 0">
                 <el-option
-                  v-for="model in officialModels"
+                  v-for="model in systemModels"
                   :key="model.id"
                   :label="model.name"
-                  :value="model.id"
+                  :value="`system:${model.id}`"
                 >
                   <span>{{ model.name }}</span>
                   <span style="float: right; color: #8492a6; font-size: 12px">
-                    {{ model.price }}
+                    {{ model.model }}
                   </span>
                 </el-option>
               </el-option-group>
@@ -239,6 +239,7 @@ import ApiConfig from '@/components/ApiConfig.vue'
 import AnnouncementDialog from '@/components/AnnouncementDialog.vue'
 import ModeSwitch from '@/components/ModeSwitch.vue'
 import { getLatestAnnouncement } from '@/config/announcements.js'
+import { aiConfigService } from '@/services/aiConfigService'
 
 const router = useRouter()
 const route = useRoute()
@@ -254,6 +255,7 @@ const activeMenu = ref('/')
 const currentModel = ref('')
 const configType = ref('official')
 const forceUpdate = ref(0) // 用于强制更新计算属性
+const systemModels = ref([]) // 系统提供的模型列表
 
 // 计算属性
 const isApiConfigured = computed(() => novelStore.isApiConfigured)
@@ -269,33 +271,15 @@ const currentApiConfig = computed(() => {
   return novelStore.getCurrentApiConfig()
 })
 
-// 官方模型列表（固定）
-const officialModels = computed(() => [
-  {
-    id: 'claude-4-sonnet',
-    name: 'Claude-4 Sonnet',
-    description: '最新一代Claude模型，擅长创意写作和长文本处理',
-    price: '￥0.1/次'
-  },
-  {
-    id: 'claude-opus-4-20250514',
-    name: 'Claude Opus 4',
-    description: '最强性能Claude模型，顶级创作能力',
-    price: '￥0.5/次'
-  },
-  {
-    id: 'claude-3-7-sonnet-thinking',
-    name: 'Claude-3.7 Sonnet Thinking',
-    description: '具备思维链的Claude模型，逻辑推理强',
-    price: '￥0.2/次'
-  },
-  {
-    id: 'claude-3-7-sonnet-20250219',
-    name: 'Claude-3.7 Sonnet',
-    description: '高性能版本，平衡性能与成本',
-    price: '￥0.1/次'
+// 加载系统模型配置
+const loadSystemModels = async () => {
+  try {
+    const configs = await aiConfigService.getAvailableConfigs()
+    systemModels.value = configs.system.filter(m => m.enabled) || []
+  } catch (error) {
+    console.error('加载系统模型失败:', error)
   }
-])
+}
 
 // 自定义模型列表（从API配置中读取）
 const customModels = computed(() => {
@@ -478,30 +462,27 @@ const handleModelChange = (modelId) => {
   try {
     console.log('切换模型:', modelId) // 调试日志
     
-    // 判断选择的是官方模型还是自定义模型
-    const isOfficialModel = officialModels.value.find(m => m.id === modelId)
+    // 判断选择的是系统模型还是自定义模型
+    const isSystemModel = modelId.startsWith('system:')
     const isCustomModel = customModels.value.find(m => m.id === modelId)
     
     let newConfig = {}
     let newConfigType = ''
     
-    if (isOfficialModel) {
-      console.log('选择了官方模型，切换到官方配置') // 调试日志
-      // 选择了官方模型，切换到官方配置
-      newConfigType = 'official'
+    if (isSystemModel) {
+      console.log('选择了系统模型') // 调试日志
+      // 选择了系统模型，使用系统配置
+      newConfigType = 'system'
       
-      // 加载官方配置的基础参数
-      const savedOfficialConfig = localStorage.getItem('officialApiConfig')
-      if (savedOfficialConfig) {
-        newConfig = JSON.parse(savedOfficialConfig)
-      } else {
-        // 如果没有保存的官方配置，使用默认值
+      // 系统模型配置由后端管理，前端只需要保存选择
+      const systemModelId = modelId.replace('system:', '')
+      const selectedModel = systemModels.value.find(m => m.id === systemModelId)
+      if (selectedModel) {
         newConfig = {
-          baseURL: 'https://ai.91hub.vip/v1',
-          maxTokens: 2000000,
-          unlimitedTokens: false,
-          temperature: 0.7,
-          apiKey: '' // 需要用户配置
+          configId: modelId,
+          modelName: selectedModel.name,
+          model: selectedModel.model,
+          provider: selectedModel.provider
         }
       }
       newConfig.selectedModel = modelId
@@ -578,12 +559,15 @@ const handleModelChange = (modelId) => {
 }
 
 const getModelDisplayName = (modelId) => {
-  // 先在官方模型中查找
-  let model = officialModels.value.find(m => m.id === modelId)
-  if (model) return model.name
+  // 先检查是否为系统模型
+  if (modelId.startsWith('system:')) {
+    const systemModelId = modelId.replace('system:', '')
+    const model = systemModels.value.find(m => m.id === systemModelId)
+    if (model) return model.name
+  }
   
   // 再在自定义模型中查找
-  model = customModels.value.find(m => m.id === modelId)
+  const model = customModels.value.find(m => m.id === modelId)
   if (model) return model.name
   
   // 都找不到就返回原ID
@@ -634,6 +618,7 @@ const handleStorageChange = (event) => {
 
 // 组件挂载时初始化
 onMounted(() => {
+  loadSystemModels() // 加载系统模型配置
   initializeModelSelector()
   // 监听localStorage变化
   window.addEventListener('storage', handleStorageChange)

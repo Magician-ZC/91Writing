@@ -48,7 +48,8 @@ const health_module_1 = __webpack_require__(18);
 const payment_module_1 = __webpack_require__(21);
 const admin_module_1 = __webpack_require__(25);
 const novel_module_1 = __webpack_require__(28);
-const database_1 = __webpack_require__(31);
+const users_module_1 = __webpack_require__(31);
+const database_1 = __webpack_require__(34);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -89,6 +90,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             database_1.DatabaseModule,
             auth_module_1.AuthModule,
+            users_module_1.UsersModule,
             novel_module_1.NovelModule,
             proxy_module_1.ProxyModule,
             payment_module_1.PaymentModule,
@@ -1227,6 +1229,192 @@ exports.NovelService = NovelService = __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UsersModule = void 0;
+const common_1 = __webpack_require__(3);
+const axios_1 = __webpack_require__(10);
+const users_controller_1 = __webpack_require__(32);
+const users_service_1 = __webpack_require__(33);
+let UsersModule = class UsersModule {
+};
+exports.UsersModule = UsersModule;
+exports.UsersModule = UsersModule = __decorate([
+    (0, common_1.Module)({
+        imports: [axios_1.HttpModule],
+        controllers: [users_controller_1.UsersController],
+        providers: [users_service_1.UsersService],
+    })
+], UsersModule);
+
+
+/***/ }),
+/* 32 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UsersController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const express_1 = __webpack_require__(12);
+const users_service_1 = __webpack_require__(33);
+let UsersController = class UsersController {
+    constructor(usersService) {
+        this.usersService = usersService;
+    }
+    async proxyToUserService(req, res) {
+        try {
+            const response = await this.usersService.proxyRequest(req);
+            Object.keys(response.headers).forEach(key => {
+                if (key.toLowerCase() !== 'content-encoding') {
+                    res.set(key, response.headers[key]);
+                }
+            });
+            res.status(response.status).send(response.data);
+        }
+        catch (error) {
+            console.error('用户服务代理错误:', error);
+            if (error.response) {
+                res.status(error.response.status).json(error.response.data);
+            }
+            else {
+                throw new common_1.HttpException({
+                    message: '用户服务暂时不可用',
+                    error: 'User Service Unavailable',
+                }, common_1.HttpStatus.SERVICE_UNAVAILABLE);
+            }
+        }
+    }
+};
+exports.UsersController = UsersController;
+__decorate([
+    (0, common_1.All)('*'),
+    (0, swagger_1.ApiExcludeEndpoint)(),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _b : Object, typeof (_c = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "proxyToUserService", null);
+exports.UsersController = UsersController = __decorate([
+    (0, swagger_1.ApiTags)('用户服务代理'),
+    (0, common_1.Controller)('users'),
+    __metadata("design:paramtypes", [typeof (_a = typeof users_service_1.UsersService !== "undefined" && users_service_1.UsersService) === "function" ? _a : Object])
+], UsersController);
+
+
+/***/ }),
+/* 33 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var UsersService_1;
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UsersService = void 0;
+const common_1 = __webpack_require__(3);
+const config_1 = __webpack_require__(6);
+const axios_1 = __webpack_require__(10);
+const rxjs_1 = __webpack_require__(14);
+let UsersService = UsersService_1 = class UsersService {
+    constructor(httpService, configService) {
+        this.httpService = httpService;
+        this.configService = configService;
+        this.logger = new common_1.Logger(UsersService_1.name);
+        this.userServiceUrl = this.configService.get('USER_SERVICE_URL', 'http://localhost:3001');
+    }
+    async proxyRequest(req) {
+        const { method, url, headers, body } = req;
+        let targetPath = url;
+        const prefixes = ['/api/v1/users', '/users'];
+        for (const prefix of prefixes) {
+            if (targetPath.startsWith(prefix)) {
+                targetPath = targetPath.substring(prefix.length);
+                break;
+            }
+        }
+        if (!targetPath.startsWith('/')) {
+            targetPath = '/' + targetPath;
+        }
+        const targetUrl = `${this.userServiceUrl}/api/v1/users${targetPath}`;
+        const cleanHeaders = this.cleanHeaders(headers);
+        this.logger.log(`代理请求: ${method} ${targetUrl} (原始URL: ${url})`);
+        try {
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request({
+                method: method,
+                url: targetUrl,
+                headers: cleanHeaders,
+                data: body,
+                timeout: 30000,
+                validateStatus: () => true,
+            }));
+            return response;
+        }
+        catch (error) {
+            this.logger.error(`代理请求失败: ${method} ${targetUrl}`, error);
+            throw error;
+        }
+    }
+    cleanHeaders(headers) {
+        const cleanHeaders = { ...headers };
+        const headersToRemove = [
+            'host',
+            'connection',
+            'content-length',
+            'transfer-encoding',
+            'x-forwarded-for',
+            'x-forwarded-proto',
+            'x-forwarded-host',
+        ];
+        headersToRemove.forEach(header => {
+            delete cleanHeaders[header];
+            delete cleanHeaders[header.toLowerCase()];
+        });
+        cleanHeaders['x-forwarded-by'] = 'api-gateway';
+        cleanHeaders['x-original-host'] = headers.host;
+        return cleanHeaders;
+    }
+};
+exports.UsersService = UsersService;
+exports.UsersService = UsersService = UsersService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof axios_1.HttpService !== "undefined" && axios_1.HttpService) === "function" ? _a : Object, typeof (_b = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _b : Object])
+], UsersService);
+
+
+/***/ }),
+/* 34 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -1242,12 +1430,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(32), exports);
-__exportStar(__webpack_require__(33), exports);
+__exportStar(__webpack_require__(35), exports);
+__exportStar(__webpack_require__(36), exports);
 
 
 /***/ }),
-/* 32 */
+/* 35 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1261,7 +1449,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const prisma_service_1 = __webpack_require__(33);
+const prisma_service_1 = __webpack_require__(36);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -1276,7 +1464,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 33 */
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1295,7 +1483,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const client_1 = __webpack_require__(34);
+const client_1 = __webpack_require__(37);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -1422,19 +1610,19 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 34 */
+/* 37 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 35 */
+/* 38 */
 /***/ ((module) => {
 
 module.exports = require("compression");
 
 /***/ }),
-/* 36 */
+/* 39 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
@@ -1479,8 +1667,8 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const compression = __webpack_require__(35);
-const helmet_1 = __webpack_require__(36);
+const compression = __webpack_require__(38);
+const helmet_1 = __webpack_require__(39);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['error', 'warn', 'log', 'debug', 'verbose'],

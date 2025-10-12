@@ -1,6 +1,18 @@
 import { IsString, IsBoolean, IsOptional, IsEnum, IsObject, IsNumber, Min, Max, IsNotEmpty, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { AIProvider, AITier } from '@prisma/client';
+import { AIProvider } from '@prisma/client';
+
+// ===== AI 配置枚举 =====
+
+/**
+ * AI服务层级枚举
+ */
+export enum AITier {
+  FREE = 'FREE',           // 免费额度
+  BASIC = 'BASIC',         // 基础会员
+  PREMIUM = 'PREMIUM',     // 高级会员
+  UNLIMITED = 'UNLIMITED', // 无限制
+}
 
 // ===== 系统AI配置相关DTO =====
 

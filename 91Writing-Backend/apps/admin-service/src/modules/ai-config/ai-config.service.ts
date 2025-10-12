@@ -64,11 +64,11 @@ export class AIConfigService {
       where: { configKey: this.CONFIG_KEY },
       create: {
         configKey: this.CONFIG_KEY,
-        configValue: { models: encryptedModels },
+        configValue: JSON.parse(JSON.stringify({ models: encryptedModels })),
         description: '全局AI模型配置',
       },
       update: {
-        configValue: { models: encryptedModels },
+        configValue: JSON.parse(JSON.stringify({ models: encryptedModels })),
       },
     });
 
@@ -133,9 +133,29 @@ export class AIConfigService {
    * 测试OpenAI连接
    */
   private async testOpenAI(dto: TestAIConfigDto, message: any) {
-    const url = dto.apiUrl.startsWith('http') 
-      ? dto.apiUrl 
-      : `https://${dto.apiUrl}`;
+    // 确保URL以http或https开头
+    let baseUrl = dto.apiUrl;
+    if (!baseUrl.startsWith('http')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    
+    // 移除末尾的斜杠
+    baseUrl = baseUrl.replace(/\/+$/, '');
+    
+    // 如果URL不包含chat/completions，则添加它
+    let url = baseUrl;
+    if (!url.includes('/chat/completions')) {
+      // 如果以/v1结尾，直接添加/chat/completions
+      if (url.endsWith('/v1')) {
+        url = `${url}/chat/completions`;
+      } else if (!url.includes('/v1')) {
+        // 如果不包含/v1，添加/v1/chat/completions
+        url = `${url}/v1/chat/completions`;
+      } else {
+        // 其他情况（如已经包含/v1/但不以它结尾），添加chat/completions
+        url = `${url}/chat/completions`;
+      }
+    }
 
     const response = await axios.post(
       url,
@@ -161,9 +181,29 @@ export class AIConfigService {
    * 测试Claude连接
    */
   private async testClaude(dto: TestAIConfigDto, message: any) {
-    const url = dto.apiUrl.startsWith('http') 
-      ? dto.apiUrl 
-      : `https://${dto.apiUrl}`;
+    // 确保URL以http或https开头
+    let baseUrl = dto.apiUrl;
+    if (!baseUrl.startsWith('http')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+    
+    // 移除末尾的斜杠
+    baseUrl = baseUrl.replace(/\/+$/, '');
+    
+    // Claude API的消息端点
+    let url = baseUrl;
+    if (!url.includes('/messages')) {
+      // 如果以/v1结尾，直接添加/messages
+      if (url.endsWith('/v1')) {
+        url = `${url}/messages`;
+      } else if (!url.includes('/v1')) {
+        // 如果不包含/v1，添加/v1/messages
+        url = `${url}/v1/messages`;
+      } else {
+        // 其他情况，添加messages
+        url = `${url}/messages`;
+      }
+    }
 
     const response = await axios.post(
       url,

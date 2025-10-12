@@ -48,7 +48,8 @@ const database_1 = __webpack_require__(10);
 const admin_module_1 = __webpack_require__(14);
 const health_module_1 = __webpack_require__(24);
 const analytics_module_1 = __webpack_require__(27);
-const jwt_strategy_1 = __webpack_require__(34);
+const ai_config_module_1 = __webpack_require__(34);
+const jwt_strategy_1 = __webpack_require__(40);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -102,6 +103,7 @@ exports.AppModule = AppModule = __decorate([
             admin_module_1.AdminModule,
             health_module_1.HealthModule,
             analytics_module_1.AnalyticsModule,
+            ai_config_module_1.AIConfigModule,
         ],
         controllers: [],
         providers: [jwt_strategy_1.JwtStrategy],
@@ -2658,6 +2660,783 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AIConfigModule = void 0;
+const common_1 = __webpack_require__(2);
+const jwt_1 = __webpack_require__(9);
+const passport_1 = __webpack_require__(8);
+const config_1 = __webpack_require__(4);
+const ai_config_controller_1 = __webpack_require__(35);
+const ai_config_service_1 = __webpack_require__(36);
+const database_1 = __webpack_require__(10);
+let AIConfigModule = class AIConfigModule {
+};
+exports.AIConfigModule = AIConfigModule;
+exports.AIConfigModule = AIConfigModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            database_1.DatabaseModule,
+            passport_1.PassportModule,
+            config_1.ConfigModule,
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET') || '91writing_jwt_secret_dev_2024',
+                    signOptions: { expiresIn: '7d' },
+                }),
+            }),
+        ],
+        controllers: [ai_config_controller_1.AIConfigController],
+        providers: [ai_config_service_1.AIConfigService],
+        exports: [ai_config_service_1.AIConfigService],
+    })
+], AIConfigModule);
+
+
+/***/ }),
+/* 35 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AIConfigController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const ai_config_service_1 = __webpack_require__(36);
+const ai_config_dto_1 = __webpack_require__(39);
+const admin_auth_guard_1 = __webpack_require__(18);
+const role_guard_1 = __webpack_require__(19);
+let AIConfigController = class AIConfigController {
+    constructor(aiConfigService) {
+        this.aiConfigService = aiConfigService;
+    }
+    async getSystemConfig() {
+        return this.aiConfigService.getSystemConfig();
+    }
+    async updateSystemConfig(dto) {
+        return this.aiConfigService.updateSystemConfig(dto);
+    }
+    async testConfig(dto) {
+        return this.aiConfigService.testConfig(dto);
+    }
+};
+exports.AIConfigController = AIConfigController;
+__decorate([
+    (0, common_1.Get)('system'),
+    (0, swagger_1.ApiOperation)({ summary: '获取系统AI配置' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
+], AIConfigController.prototype, "getSystemConfig", null);
+__decorate([
+    (0, common_1.Put)('system'),
+    (0, swagger_1.ApiOperation)({ summary: '更新系统AI配置' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof ai_config_dto_1.UpdateSystemAIConfigDto !== "undefined" && ai_config_dto_1.UpdateSystemAIConfigDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], AIConfigController.prototype, "updateSystemConfig", null);
+__decorate([
+    (0, common_1.Post)('test'),
+    (0, swagger_1.ApiOperation)({ summary: '测试AI配置连接' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_e = typeof ai_config_dto_1.TestAIConfigDto !== "undefined" && ai_config_dto_1.TestAIConfigDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], AIConfigController.prototype, "testConfig", null);
+exports.AIConfigController = AIConfigController = __decorate([
+    (0, swagger_1.ApiTags)('管理员-AI配置'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.Controller)('ai-config'),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof ai_config_service_1.AIConfigService !== "undefined" && ai_config_service_1.AIConfigService) === "function" ? _a : Object])
+], AIConfigController);
+
+
+/***/ }),
+/* 36 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AIConfigService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(10);
+const crypto = __webpack_require__(37);
+const axios_1 = __webpack_require__(38);
+let AIConfigService = class AIConfigService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.ENCRYPTION_KEY = process.env.AI_CONFIG_ENCRYPTION_KEY || 'your-32-character-encryption-key!!';
+        this.ALGORITHM = 'aes-256-cbc';
+        this.CONFIG_KEY = 'ai.global';
+    }
+    async getSystemConfig() {
+        const config = await this.prisma.systemConfig.findUnique({
+            where: { configKey: this.CONFIG_KEY },
+        });
+        if (!config) {
+            return {
+                models: [],
+            };
+        }
+        const configValue = config.configValue;
+        const models = configValue.models || [];
+        const decryptedModels = models.map((model) => ({
+            ...model,
+            apiKey: this.decrypt(model.apiKey),
+        }));
+        return {
+            models: decryptedModels,
+        };
+    }
+    async updateSystemConfig(dto) {
+        this.validateConfig(dto);
+        const encryptedModels = dto.models.map((model) => ({
+            ...model,
+            apiKey: this.encrypt(model.apiKey),
+        }));
+        await this.prisma.systemConfig.upsert({
+            where: { configKey: this.CONFIG_KEY },
+            create: {
+                configKey: this.CONFIG_KEY,
+                configValue: JSON.parse(JSON.stringify({ models: encryptedModels })),
+                description: '全局AI模型配置',
+            },
+            update: {
+                configValue: JSON.parse(JSON.stringify({ models: encryptedModels })),
+            },
+        });
+        return this.getSystemConfig();
+    }
+    async testConfig(dto) {
+        const startTime = Date.now();
+        try {
+            const testMessage = {
+                role: 'user',
+                content: 'Hello, this is a test message.',
+            };
+            let response;
+            switch (dto.provider) {
+                case 'OPENAI':
+                    response = await this.testOpenAI(dto, testMessage);
+                    break;
+                case 'CLAUDE':
+                    response = await this.testClaude(dto, testMessage);
+                    break;
+                case 'WENXIN':
+                    response = await this.testWenxin(dto, testMessage);
+                    break;
+                case 'QWEN':
+                    response = await this.testQwen(dto, testMessage);
+                    break;
+                case 'ZHIPU':
+                    response = await this.testZhipu(dto, testMessage);
+                    break;
+                default:
+                    throw new common_1.BadRequestException('不支持的AI服务商');
+            }
+            const responseTime = Date.now() - startTime;
+            return {
+                success: true,
+                message: '连接测试成功',
+                responseTime,
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                message: `连接测试失败: ${error.message}`,
+            };
+        }
+    }
+    async testOpenAI(dto, message) {
+        let baseUrl = dto.apiUrl;
+        if (!baseUrl.startsWith('http')) {
+            baseUrl = `https://${baseUrl}`;
+        }
+        baseUrl = baseUrl.replace(/\/+$/, '');
+        let url = baseUrl;
+        if (!url.includes('/chat/completions')) {
+            if (url.endsWith('/v1')) {
+                url = `${url}/chat/completions`;
+            }
+            else if (!url.includes('/v1')) {
+                url = `${url}/v1/chat/completions`;
+            }
+            else {
+                url = `${url}/chat/completions`;
+            }
+        }
+        const response = await axios_1.default.post(url, {
+            model: dto.model,
+            messages: [message],
+            max_tokens: 10,
+            temperature: dto.parameters?.temperature || 0.7,
+        }, {
+            headers: {
+                'Authorization': `Bearer ${dto.apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            timeout: 10000,
+        });
+        return response.data;
+    }
+    async testClaude(dto, message) {
+        let baseUrl = dto.apiUrl;
+        if (!baseUrl.startsWith('http')) {
+            baseUrl = `https://${baseUrl}`;
+        }
+        baseUrl = baseUrl.replace(/\/+$/, '');
+        let url = baseUrl;
+        if (!url.includes('/messages')) {
+            if (url.endsWith('/v1')) {
+                url = `${url}/messages`;
+            }
+            else if (!url.includes('/v1')) {
+                url = `${url}/v1/messages`;
+            }
+            else {
+                url = `${url}/messages`;
+            }
+        }
+        const response = await axios_1.default.post(url, {
+            model: dto.model,
+            messages: [message],
+            max_tokens: 10,
+            temperature: dto.parameters?.temperature || 0.7,
+        }, {
+            headers: {
+                'x-api-key': dto.apiKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json',
+            },
+            timeout: 10000,
+        });
+        return response.data;
+    }
+    async testWenxin(dto, message) {
+        const url = dto.apiUrl.startsWith('http')
+            ? dto.apiUrl
+            : `https://${dto.apiUrl}`;
+        const response = await axios_1.default.post(url, {
+            messages: [message],
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            params: {
+                access_token: dto.apiKey,
+            },
+            timeout: 10000,
+        });
+        return response.data;
+    }
+    async testQwen(dto, message) {
+        const url = dto.apiUrl.startsWith('http')
+            ? dto.apiUrl
+            : `https://${dto.apiUrl}`;
+        const response = await axios_1.default.post(url, {
+            model: dto.model,
+            input: {
+                messages: [message],
+            },
+            parameters: {
+                result_format: 'message',
+            },
+        }, {
+            headers: {
+                'Authorization': `Bearer ${dto.apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            timeout: 10000,
+        });
+        return response.data;
+    }
+    async testZhipu(dto, message) {
+        const url = dto.apiUrl.startsWith('http')
+            ? dto.apiUrl
+            : `https://${dto.apiUrl}`;
+        const response = await axios_1.default.post(url, {
+            model: dto.model,
+            messages: [message],
+        }, {
+            headers: {
+                'Authorization': dto.apiKey,
+                'Content-Type': 'application/json',
+            },
+            timeout: 10000,
+        });
+        return response.data;
+    }
+    validateConfig(dto) {
+        const { models } = dto;
+        const ids = models.map((m) => m.id);
+        const uniqueIds = new Set(ids);
+        if (ids.length !== uniqueIds.size) {
+            throw new common_1.BadRequestException('模型ID不能重复');
+        }
+        const defaultModels = models.filter((m) => m.isDefault);
+        if (defaultModels.length > 1) {
+            throw new common_1.BadRequestException('只能有一个默认模型');
+        }
+        models.forEach((model) => {
+            if (!model.name || !model.provider || !model.model || !model.apiUrl || !model.apiKey) {
+                throw new common_1.BadRequestException(`模型 ${model.id} 配置不完整`);
+            }
+        });
+    }
+    encrypt(text) {
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv(this.ALGORITHM, Buffer.from(this.ENCRYPTION_KEY.slice(0, 32)), iv);
+        let encrypted = cipher.update(text, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return `${iv.toString('hex')}:${encrypted}`;
+    }
+    decrypt(text) {
+        try {
+            const parts = text.split(':');
+            const iv = Buffer.from(parts[0], 'hex');
+            const encryptedText = parts[1];
+            const decipher = crypto.createDecipheriv(this.ALGORITHM, Buffer.from(this.ENCRYPTION_KEY.slice(0, 32)), iv);
+            let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        catch (error) {
+            return text;
+        }
+    }
+};
+exports.AIConfigService = AIConfigService;
+exports.AIConfigService = AIConfigService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], AIConfigService);
+
+
+/***/ }),
+/* 37 */
+/***/ ((module) => {
+
+module.exports = require("crypto");
+
+/***/ }),
+/* 38 */
+/***/ ((module) => {
+
+module.exports = require("axios");
+
+/***/ }),
+/* 39 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AIUsageStatsResponseDto = exports.AIChatResponseDto = exports.AIChatRequestDto = exports.AIChatMessageDto = exports.AvailableAIConfigsResponseDto = exports.UserAIConfigResponseDto = exports.UpdateUserAIConfigDto = exports.CreateUserAIConfigDto = exports.TestAIConfigDto = exports.UpdateSystemAIConfigDto = exports.GetSystemAIConfigResponseDto = exports.SystemAIModelDto = exports.AIModelLimitsDto = exports.AIModelParametersDto = exports.AITier = void 0;
+const class_validator_1 = __webpack_require__(22);
+const class_transformer_1 = __webpack_require__(23);
+const client_1 = __webpack_require__(13);
+var AITier;
+(function (AITier) {
+    AITier["FREE"] = "FREE";
+    AITier["BASIC"] = "BASIC";
+    AITier["PREMIUM"] = "PREMIUM";
+    AITier["UNLIMITED"] = "UNLIMITED";
+})(AITier || (exports.AITier = AITier = {}));
+class AIModelParametersDto {
+    constructor() {
+        this.temperature = 0.7;
+        this.topP = 1.0;
+        this.frequencyPenalty = 0;
+        this.presencePenalty = 0;
+        this.timeout = 30;
+        this.stream = true;
+    }
+}
+exports.AIModelParametersDto = AIModelParametersDto;
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(2),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "temperature", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "topP", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(-2),
+    (0, class_validator_1.Max)(2),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "frequencyPenalty", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(-2),
+    (0, class_validator_1.Max)(2),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "presencePenalty", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "maxTokens", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(300),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelParametersDto.prototype, "timeout", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], AIModelParametersDto.prototype, "stream", void 0);
+class AIModelLimitsDto {
+}
+exports.AIModelLimitsDto = AIModelLimitsDto;
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "maxTokens", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "dailyLimit", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "monthlyLimit", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "concurrentLimit", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], AIModelLimitsDto.prototype, "rateLimit", void 0);
+class SystemAIModelDto {
+    constructor() {
+        this.enabled = true;
+        this.isDefault = false;
+        this.tier = AITier.FREE;
+    }
+}
+exports.SystemAIModelDto = SystemAIModelDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "id", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    __metadata("design:type", typeof (_a = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _a : Object)
+], SystemAIModelDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], SystemAIModelDto.prototype, "enabled", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], SystemAIModelDto.prototype, "isDefault", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(AITier),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "tier", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], SystemAIModelDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelLimitsDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelLimitsDto)
+], SystemAIModelDto.prototype, "limits", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], SystemAIModelDto.prototype, "parameters", void 0);
+class GetSystemAIConfigResponseDto {
+}
+exports.GetSystemAIConfigResponseDto = GetSystemAIConfigResponseDto;
+__decorate([
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => SystemAIModelDto),
+    __metadata("design:type", Array)
+], GetSystemAIConfigResponseDto.prototype, "models", void 0);
+class UpdateSystemAIConfigDto {
+}
+exports.UpdateSystemAIConfigDto = UpdateSystemAIConfigDto;
+__decorate([
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => SystemAIModelDto),
+    __metadata("design:type", Array)
+], UpdateSystemAIConfigDto.prototype, "models", void 0);
+class TestAIConfigDto {
+}
+exports.TestAIConfigDto = TestAIConfigDto;
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    __metadata("design:type", typeof (_b = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _b : Object)
+], TestAIConfigDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], TestAIConfigDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], TestAIConfigDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], TestAIConfigDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], TestAIConfigDto.prototype, "parameters", void 0);
+class CreateUserAIConfigDto {
+    constructor() {
+        this.enabled = true;
+        this.isDefault = false;
+    }
+}
+exports.CreateUserAIConfigDto = CreateUserAIConfigDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    __metadata("design:type", typeof (_c = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _c : Object)
+], CreateUserAIConfigDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateUserAIConfigDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], CreateUserAIConfigDto.prototype, "enabled", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], CreateUserAIConfigDto.prototype, "isDefault", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], CreateUserAIConfigDto.prototype, "parameters", void 0);
+class UpdateUserAIConfigDto {
+}
+exports.UpdateUserAIConfigDto = UpdateUserAIConfigDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.AIProvider),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", typeof (_d = typeof client_1.AIProvider !== "undefined" && client_1.AIProvider) === "function" ? _d : Object)
+], UpdateUserAIConfigDto.prototype, "provider", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "model", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "apiUrl", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateUserAIConfigDto.prototype, "apiKey", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], UpdateUserAIConfigDto.prototype, "enabled", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], UpdateUserAIConfigDto.prototype, "isDefault", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], UpdateUserAIConfigDto.prototype, "parameters", void 0);
+class UserAIConfigResponseDto {
+}
+exports.UserAIConfigResponseDto = UserAIConfigResponseDto;
+class AvailableAIConfigsResponseDto {
+}
+exports.AvailableAIConfigsResponseDto = AvailableAIConfigsResponseDto;
+class AIChatMessageDto {
+}
+exports.AIChatMessageDto = AIChatMessageDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], AIChatMessageDto.prototype, "role", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], AIChatMessageDto.prototype, "content", void 0);
+class AIChatRequestDto {
+    constructor() {
+        this.stream = false;
+    }
+}
+exports.AIChatRequestDto = AIChatRequestDto;
+__decorate([
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => AIChatMessageDto),
+    __metadata("design:type", Array)
+], AIChatRequestDto.prototype, "messages", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], AIChatRequestDto.prototype, "configId", void 0);
+__decorate([
+    (0, class_validator_1.IsBoolean)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Boolean)
+], AIChatRequestDto.prototype, "stream", void 0);
+__decorate([
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => AIModelParametersDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", AIModelParametersDto)
+], AIChatRequestDto.prototype, "options", void 0);
+class AIChatResponseDto {
+}
+exports.AIChatResponseDto = AIChatResponseDto;
+class AIUsageStatsResponseDto {
+}
+exports.AIUsageStatsResponseDto = AIUsageStatsResponseDto;
+
+
+/***/ }),
+/* 40 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -2667,7 +3446,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
 const passport_1 = __webpack_require__(8);
-const passport_jwt_1 = __webpack_require__(35);
+const passport_jwt_1 = __webpack_require__(41);
 const database_1 = __webpack_require__(10);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, prisma) {
@@ -2720,13 +3499,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 35 */
+/* 41 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 36 */
+/* 42 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2803,7 +3582,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 37 */
+/* 43 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2816,7 +3595,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(2);
-const operators_1 = __webpack_require__(38);
+const operators_1 = __webpack_require__(44);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -2858,7 +3637,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 44 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -2902,8 +3681,8 @@ const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(36);
-const response_interceptor_1 = __webpack_require__(37);
+const all_exceptions_filter_1 = __webpack_require__(42);
+const response_interceptor_1 = __webpack_require__(43);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);

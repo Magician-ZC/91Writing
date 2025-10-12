@@ -295,7 +295,7 @@ const rules = {
 const loadConfigs = async () => {
   loading.value = true
   try {
-    const response = await apiManager.request('GET', '/admin/ai-config/system')
+    const response = await apiManager.request('/api/v1/admin/ai-config/system', { method: 'GET' })
     models.value = response.data?.models || []
   } catch (error) {
     console.error('加载配置失败:', error)
@@ -320,12 +320,15 @@ const toggleEnabled = async (model) => {
 const testModel = async (model) => {
   testing.value = true
   try {
-    const response = await apiManager.request('POST', '/admin/ai-config/test', {
-      provider: model.provider,
-      apiUrl: model.apiUrl,
-      apiKey: model.apiKey,
-      model: model.model,
-      parameters: model.parameters
+    const response = await apiManager.request('/api/v1/admin/ai-config/test', {
+      method: 'POST',
+      data: {
+        provider: model.provider,
+        apiUrl: model.apiUrl,
+        apiKey: model.apiKey,
+        model: model.model,
+        parameters: model.parameters
+      }
     })
 
     if (response.data.success) {
@@ -394,12 +397,15 @@ const testConnection = async () => {
 
   testing.value = true
   try {
-    const response = await apiManager.request('POST', '/admin/ai-config/test', {
-      provider: form.provider,
-      apiUrl: form.apiUrl,
-      apiKey: form.apiKey,
-      model: form.model,
-      parameters: form.parameters
+    const response = await apiManager.request('/api/v1/admin/ai-config/test', {
+      method: 'POST',
+      data: {
+        provider: form.provider,
+        apiUrl: form.apiUrl,
+        apiKey: form.apiKey,
+        model: form.model,
+        parameters: form.parameters
+      }
     })
 
     if (response.data.success) {
@@ -457,8 +463,11 @@ const submitForm = async () => {
 // 保存配置到后端
 const saveConfigs = async () => {
   try {
-    await apiManager.request('PUT', '/admin/ai-config/system', {
-      models: models.value
+    await apiManager.request('/api/v1/admin/ai-config/system', {
+      method: 'PUT',
+      data: {
+        models: models.value
+      }
     })
   } catch (error) {
     throw new Error('保存失败：' + error.message)
