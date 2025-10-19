@@ -1078,21 +1078,21 @@ class ApiManager {
 
   // ----- AI配置管理 -----
   async getAvailableAIConfigs() {
-    return await this.request('/api/v1/users/v1/ai-config/available', {
+    return await this.request('/api/v1/users/ai-config/available', {
       method: 'GET',
       fallbackLocal: false
     })
   }
 
   async getUserAIConfigs() {
-    return await this.request('/api/v1/users/v1/ai-config/custom', {
+    return await this.request('/api/v1/users/ai-config/custom', {
       method: 'GET',
       fallbackLocal: false
     })
   }
 
   async createAIConfig(config) {
-    return await this.request('/api/v1/users/v1/ai-config/custom', {
+    return await this.request('/api/v1/users/ai-config/custom', {
       method: 'POST',
       data: config,
       fallbackLocal: false
@@ -1100,7 +1100,7 @@ class ApiManager {
   }
 
   async updateAIConfig(configId, config) {
-    return await this.request(`/api/v1/users/v1/ai-config/custom/${configId}`, {
+    return await this.request(`/api/v1/users/ai-config/custom/${configId}`, {
       method: 'PUT',
       data: config,
       fallbackLocal: false
@@ -1108,14 +1108,14 @@ class ApiManager {
   }
 
   async deleteAIConfig(configId) {
-    return await this.request(`/api/v1/users/v1/ai-config/custom/${configId}`, {
+    return await this.request(`/api/v1/users/ai-config/custom/${configId}`, {
       method: 'DELETE',
       fallbackLocal: false
     })
   }
 
   async setDefaultAIConfig(configId) {
-    return await this.request(`/api/v1/users/v1/ai-config/custom/${configId}/set-default`, {
+    return await this.request(`/api/v1/users/ai-config/custom/${configId}/set-default`, {
       method: 'POST',
       fallbackLocal: false
     })

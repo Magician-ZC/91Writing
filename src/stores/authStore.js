@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { authService } from '@/services/authService'
 import apiManager from '@/services/apiManager'
 import { ElMessage } from 'element-plus'
+import { useNovelStore } from '@/stores/novel'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -113,6 +114,17 @@ export const useAuthStore = defineStore('auth', {
               console.warn('数据同步服务加载失败:', err)
             })
           }
+          
+          // 检查新的AI配置系统
+          setTimeout(() => {
+            try {
+              const novelStore = useNovelStore()
+              console.log('登录后检查AI配置...')
+              novelStore.checkNewAIConfigAsync()
+            } catch (error) {
+              console.warn('检查AI配置失败:', error)
+            }
+          }, 500)
           
           ElMessage.success('登录成功')
           return { success: true }
@@ -337,6 +349,14 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('auth-remember')
       sessionStorage.removeItem('auth-tokens')
       sessionStorage.removeItem('auth-user')
+      
+      // 重置 novelStore 的 API 配置状态
+      try {
+        const novelStore = useNovelStore()
+        novelStore.resetApiConfigStatus()
+      } catch (error) {
+        console.warn('重置 API 配置状态失败:', error)
+      }
     },
 
     // 设置令牌拦截器

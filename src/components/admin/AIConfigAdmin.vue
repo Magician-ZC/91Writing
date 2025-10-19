@@ -116,6 +116,7 @@
           <el-select v-model="form.provider" class="w-full">
             <el-option label="OpenAI" value="OPENAI" />
             <el-option label="Claude (Anthropic)" value="CLAUDE" />
+            <el-option label="DeepSeek" value="DEEPSEEK" />
             <el-option label="文心一言" value="WENXIN" />
             <el-option label="通义千问" value="QWEN" />
             <el-option label="智谱AI" value="ZHIPU" />
@@ -509,6 +510,7 @@ const getProviderName = (provider) => {
   const names = {
     OPENAI: 'OpenAI',
     CLAUDE: 'Claude',
+    DEEPSEEK: 'DeepSeek',
     WENXIN: '文心',
     QWEN: '千问',
     ZHIPU: '智谱',
@@ -521,6 +523,7 @@ const getProviderTagType = (provider) => {
   const types = {
     OPENAI: 'success',
     CLAUDE: 'warning',
+    DEEPSEEK: 'primary',
     WENXIN: 'danger',
     QWEN: 'info',
     ZHIPU: 'primary',

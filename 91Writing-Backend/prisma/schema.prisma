@@ -683,6 +683,7 @@ model AIUsageStats {
 enum AIProvider {
   OPENAI // OpenAI GPT系列
   CLAUDE // Anthropic Claude
+  DEEPSEEK // DeepSeek
   WENXIN // 百度文心一言
   QWEN // 阿里通义千问
   ZHIPU // 智谱AI

@@ -2720,6 +2720,7 @@ const ai_config_service_1 = __webpack_require__(36);
 const ai_config_dto_1 = __webpack_require__(39);
 const admin_auth_guard_1 = __webpack_require__(18);
 const role_guard_1 = __webpack_require__(19);
+const jwt_auth_guard_1 = __webpack_require__(31);
 let AIConfigController = class AIConfigController {
     constructor(aiConfigService) {
         this.aiConfigService = aiConfigService;
@@ -2737,14 +2738,16 @@ let AIConfigController = class AIConfigController {
 exports.AIConfigController = AIConfigController;
 __decorate([
     (0, common_1.Get)('system'),
-    (0, swagger_1.ApiOperation)({ summary: '获取系统AI配置' }),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
+    (0, swagger_1.ApiOperation)({ summary: '获取系统AI配置（管理员）' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
 ], AIConfigController.prototype, "getSystemConfig", null);
 __decorate([
     (0, common_1.Put)('system'),
-    (0, swagger_1.ApiOperation)({ summary: '更新系统AI配置' }),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
+    (0, swagger_1.ApiOperation)({ summary: '更新系统AI配置（管理员）' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [typeof (_c = typeof ai_config_dto_1.UpdateSystemAIConfigDto !== "undefined" && ai_config_dto_1.UpdateSystemAIConfigDto) === "function" ? _c : Object]),
@@ -2752,17 +2755,17 @@ __decorate([
 ], AIConfigController.prototype, "updateSystemConfig", null);
 __decorate([
     (0, common_1.Post)('test'),
-    (0, swagger_1.ApiOperation)({ summary: '测试AI配置连接' }),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiOperation)({ summary: '测试AI配置连接（用户）' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [typeof (_e = typeof ai_config_dto_1.TestAIConfigDto !== "undefined" && ai_config_dto_1.TestAIConfigDto) === "function" ? _e : Object]),
     __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
 ], AIConfigController.prototype, "testConfig", null);
 exports.AIConfigController = AIConfigController = __decorate([
-    (0, swagger_1.ApiTags)('管理员-AI配置'),
+    (0, swagger_1.ApiTags)('AI配置'),
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('ai-config'),
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
     __metadata("design:paramtypes", [typeof (_a = typeof ai_config_service_1.AIConfigService !== "undefined" && ai_config_service_1.AIConfigService) === "function" ? _a : Object])
 ], AIConfigController);
 
@@ -2856,6 +2859,12 @@ let AIConfigService = class AIConfigService {
                     break;
                 case 'ZHIPU':
                     response = await this.testZhipu(dto, testMessage);
+                    break;
+                case 'DEEPSEEK':
+                    response = await this.testOpenAI(dto, testMessage);
+                    break;
+                case 'CUSTOM':
+                    response = await this.testOpenAI(dto, testMessage);
                     break;
                 default:
                     throw new common_1.BadRequestException('不支持的AI服务商');

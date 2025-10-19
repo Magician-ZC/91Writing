@@ -469,4 +469,5 @@ class DataSyncService {
 // 创建单例实例
 const dataSyncService = new DataSyncService()
 
+export { dataSyncService }
 export default dataSyncService

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import apiService from '../services/api.js'
+import aiConfigService from '../services/aiConfigService.js'
 
 export const useNovelStore = defineStore('novel', () => {
   // 状态
@@ -81,12 +82,100 @@ export const useNovelStore = defineStore('novel', () => {
       
       // 使用当前配置类型的配置
       const currentConfig = getCurrentApiConfig()
-      isApiConfigured.value = !!currentConfig.apiKey
+      // 更严格的检查：apiKey 必须存在且不为空白字符串
+      const hasValidKey = !!(currentConfig.apiKey && currentConfig.apiKey.trim())
+      isApiConfigured.value = hasValidKey
+      
+      // 清理所有可能的旧配置键（如果配置无效）
+      if (!hasValidKey) {
+        console.log('检测到无效配置，开始清理...')
+        
+        // 清理当前配置类型的数据
+        if (savedType === 'official' && savedOfficial) {
+          const config = JSON.parse(savedOfficial)
+          if (!config.apiKey || !config.apiKey.trim()) {
+            localStorage.removeItem('officialApiConfig')
+            console.log('✓ 已清除无效的官方配置')
+          }
+        }
+        
+        if (savedType === 'custom' && savedCustom) {
+          const config = JSON.parse(savedCustom)
+          if (!config.apiKey || !config.apiKey.trim()) {
+            localStorage.removeItem('customApiConfig')
+            console.log('✓ 已清除无效的自定义配置')
+          }
+        }
+        
+        // 清理其他可能的旧配置键
+        const oldConfigKeys = ['apiConfig', 'api-config', 'aiApiConfigs']
+        let cleaned = false
+        oldConfigKeys.forEach(key => {
+          if (localStorage.getItem(key)) {
+            try {
+              const oldConfig = JSON.parse(localStorage.getItem(key))
+              // 检查是否是无效配置
+              if (!oldConfig || (Array.isArray(oldConfig) && oldConfig.length === 0) || 
+                  (!Array.isArray(oldConfig) && (!oldConfig.apiKey || !oldConfig.apiKey.trim()))) {
+                localStorage.removeItem(key)
+                console.log(`✓ 已清除旧配置键: ${key}`)
+                cleaned = true
+              }
+            } catch (e) {
+              // 如果解析失败，也清除
+              localStorage.removeItem(key)
+              console.log(`✓ 已清除无效配置键: ${key}`)
+              cleaned = true
+            }
+          }
+        })
+        
+        if (cleaned) {
+          console.log('✓ 配置清理完成')
+        }
+      }
+      
       apiService.updateConfig(currentConfig)
+      
+      // 如果旧配置无效，异步检查新的AI配置系统
+      if (!hasValidKey) {
+        checkNewAIConfigAsync()
+      }
       
     } catch (error) {
       console.error('初始化API配置失败:', error)
     }
+  }
+  
+  // 异步检查新的AI配置系统
+  const checkNewAIConfigAsync = async () => {
+    try {
+      const configs = await aiConfigService.getAvailableConfigs()
+      console.log('检查AI配置:', configs)
+      
+      // 检查用户是否有启用的自定义配置
+      const hasUserConfig = configs?.user?.some(c => c.enabled) || false
+      // 检查是否有默认配置（系统或用户）
+      const hasDefault = !!configs?.default
+      
+      // 更新状态
+      isApiConfigured.value = hasUserConfig || hasDefault
+      
+      if (isApiConfigured.value) {
+        console.log('✓ 检测到新的AI配置系统中有可用配置')
+      } else {
+        console.log('✗ 未检测到可用的AI配置')
+      }
+    } catch (error) {
+      console.error('检查新AI配置失败:', error)
+      isApiConfigured.value = false
+    }
+  }
+  
+  // 重置API配置状态
+  const resetApiConfigStatus = () => {
+    isApiConfigured.value = false
+    console.log('✓ 已重置API配置状态')
   }
   
   // 立即执行初始化
@@ -333,7 +422,8 @@ export const useNovelStore = defineStore('novel', () => {
     // 更新apiService配置为当前活动配置
     const currentConfig = getCurrentApiConfig()
     apiService.updateConfig(currentConfig)
-    isApiConfigured.value = !!currentConfig.apiKey
+    // 更严格的检查：apiKey 必须存在且不为空白字符串
+    isApiConfigured.value = !!(currentConfig.apiKey && currentConfig.apiKey.trim())
   }
   
   // 切换配置类型
@@ -344,7 +434,8 @@ export const useNovelStore = defineStore('novel', () => {
     // 更新apiService配置
     const currentConfig = getCurrentApiConfig()
     apiService.updateConfig(currentConfig)
-    isApiConfigured.value = !!currentConfig.apiKey
+    // 更严格的检查：apiKey 必须存在且不为空白字符串
+    isApiConfigured.value = !!(currentConfig.apiKey && currentConfig.apiKey.trim())
   }
 
   const validateApiKey = async () => {
@@ -355,6 +446,54 @@ export const useNovelStore = defineStore('novel', () => {
     } catch (error) {
       console.error('API密钥验证失败:', error)
       isApiConfigured.value = false
+      return false
+    }
+  }
+
+  // 清除所有API配置
+  const clearAllApiConfigs = () => {
+    try {
+      console.log('开始清除所有API配置...')
+      
+      // 清除配置数据
+      localStorage.removeItem('officialApiConfig')
+      localStorage.removeItem('customApiConfig')
+      localStorage.removeItem('apiConfigType')
+      
+      // 清除旧版本的配置键
+      localStorage.removeItem('apiConfig')
+      localStorage.removeItem('api-config')
+      localStorage.removeItem('aiApiConfigs')
+      localStorage.removeItem('aiApiConfigs.backup')
+      
+      // 重置为默认值
+      officialApiConfig.value = {
+        apiKey: '',
+        baseURL: 'https://ai.91hub.vip/v1',
+        selectedModel: 'claude-4-sonnet',
+        maxTokens: 2000000,
+        unlimitedTokens: false,
+        temperature: 0.7
+      }
+      
+      customApiConfig.value = {
+        apiKey: '',
+        baseURL: 'https://api.openai.com/v1',
+        selectedModel: 'gpt-3.5-turbo',
+        maxTokens: 2000000,
+        unlimitedTokens: false,
+        temperature: 0.7
+      }
+      
+      currentConfigType.value = 'official'
+      isApiConfigured.value = false
+      
+      apiService.updateConfig(officialApiConfig.value)
+      
+      console.log('✓ 所有API配置已清除')
+      return true
+    } catch (error) {
+      console.error('清除API配置失败:', error)
       return false
     }
   }
@@ -832,6 +971,9 @@ export const useNovelStore = defineStore('novel', () => {
     switchConfigType,
     getCurrentApiConfig,
     validateApiKey,
+    clearAllApiConfigs,
+    checkNewAIConfigAsync,
+    resetApiConfigStatus,
     generateOutlineWithAPI,
     generateOutlineWithAPIStream,
     generateChapterWithAPI,

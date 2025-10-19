@@ -2,7 +2,7 @@ import { config } from 'dotenv';
 config(); // 加载环境变量
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
@@ -19,12 +19,6 @@ async function bootstrap() {
 
   // 全局前缀
   app.setGlobalPrefix('api/v1/users');
-
-  // API版本控制
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: '1',
-  });
 
   // 安全中间件
   app.use(helmet());

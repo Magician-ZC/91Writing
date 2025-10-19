@@ -8,22 +8,24 @@ import {
 } from '@app/common/dto/ai-config.dto';
 import { AdminAuthGuard } from '../admin/guards/admin-auth.guard';
 import { RoleGuard } from '../admin/guards/role.guard';
+import { JwtAuthGuard } from '@app/common/guards/jwt-auth.guard';
 
-@ApiTags('管理员-AI配置')
+@ApiTags('AI配置')
 @ApiBearerAuth()
 @Controller('ai-config')
-@UseGuards(AdminAuthGuard, RoleGuard)
 export class AIConfigController {
   constructor(private readonly aiConfigService: AIConfigService) {}
 
   @Get('system')
-  @ApiOperation({ summary: '获取系统AI配置' })
+  @UseGuards(AdminAuthGuard, RoleGuard)
+  @ApiOperation({ summary: '获取系统AI配置（管理员）' })
   async getSystemConfig(): Promise<GetSystemAIConfigResponseDto> {
     return this.aiConfigService.getSystemConfig();
   }
 
   @Put('system')
-  @ApiOperation({ summary: '更新系统AI配置' })
+  @UseGuards(AdminAuthGuard, RoleGuard)
+  @ApiOperation({ summary: '更新系统AI配置（管理员）' })
   async updateSystemConfig(
     @Body() dto: UpdateSystemAIConfigDto,
   ): Promise<GetSystemAIConfigResponseDto> {
@@ -31,7 +33,8 @@ export class AIConfigController {
   }
 
   @Post('test')
-  @ApiOperation({ summary: '测试AI配置连接' })
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: '测试AI配置连接（用户）' })
   async testConfig(
     @Body() dto: TestAIConfigDto,
   ): Promise<{

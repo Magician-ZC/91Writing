@@ -184,6 +184,7 @@
           <el-select v-model="form.provider" placeholder="选择AI服务商" class="w-full">
             <el-option label="OpenAI" value="OPENAI" />
             <el-option label="Claude (Anthropic)" value="CLAUDE" />
+            <el-option label="DeepSeek" value="DEEPSEEK" />
             <el-option label="文心一言" value="WENXIN" />
             <el-option label="通义千问" value="QWEN" />
             <el-option label="智谱AI" value="ZHIPU" />
@@ -264,7 +265,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Platform,
@@ -277,8 +278,12 @@ import {
   Connection
 } from '@element-plus/icons-vue'
 import { aiConfigService } from '@/services/aiConfigService'
+import { useNovelStore } from '@/stores/novel'
+import { useAuthStore } from '@/stores/authStore'
 
 // 状态
+const novelStore = useNovelStore()
+const authStore = useAuthStore()
 const loading = ref(false)
 const testing = ref(false)
 const submitting = ref(false)
@@ -331,9 +336,15 @@ const loadConfigs = async () => {
   loading.value = true
   try {
     const configs = await aiConfigService.getAvailableConfigs()
-    systemConfigs.value = configs.system
-    userConfigs.value = configs.user
-    defaultConfigId.value = configs.default
+    console.log('加载配置成功:', configs)
+    systemConfigs.value = configs?.system || []
+    userConfigs.value = configs?.user || []
+    defaultConfigId.value = configs?.default || ''
+    console.log('用户配置数量:', userConfigs.value.length)
+    // 触发状态更新，同步到旧的API配置系统（不阻塞）
+    novelStore.checkNewAIConfigAsync().catch(err => {
+      console.warn('同步API配置状态失败:', err)
+    })
   } catch (error) {
     console.error('加载配置失败:', error)
     ElMessage.error('加载配置失败：' + error.message)
@@ -516,6 +527,7 @@ const getProviderName = (provider) => {
   const names = {
     OPENAI: 'OpenAI',
     CLAUDE: 'Claude',
+    DEEPSEEK: 'DeepSeek',
     WENXIN: '文心一言',
     QWEN: '通义千问',
     ZHIPU: '智谱AI',
@@ -529,6 +541,7 @@ const getProviderTagType = (provider) => {
   const types = {
     OPENAI: 'success',
     CLAUDE: 'warning',
+    DEEPSEEK: 'primary',
     WENXIN: 'danger',
     QWEN: 'info',
     ZHIPU: 'primary',
@@ -539,8 +552,34 @@ const getProviderTagType = (provider) => {
 
 // 初始化
 onMounted(() => {
-  loadConfigs()
+  console.log('AIConfigManager 组件挂载')
+  console.log('认证状态:', authStore.isAuthenticated)
+  console.log('用户信息:', authStore.user)
+  
+  // 添加延迟确保 token 已设置
+  setTimeout(() => {
+    loadConfigs()
+  }, 300)
 })
+
+// 监听认证状态变化
+watch(
+  () => authStore.isAuthenticated,
+  (newVal, oldVal) => {
+    console.log('认证状态变化:', oldVal, '->', newVal)
+    if (newVal && !oldVal) {
+      // 用户刚登录，重新加载配置
+      setTimeout(() => {
+        loadConfigs()
+      }, 300)
+    } else if (!newVal && oldVal) {
+      // 用户登出，清空配置
+      systemConfigs.value = []
+      userConfigs.value = []
+      defaultConfigId.value = ''
+    }
+  }
+)
 </script>
 
 <style scoped>

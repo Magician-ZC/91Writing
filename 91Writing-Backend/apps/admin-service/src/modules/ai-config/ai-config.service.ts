@@ -110,6 +110,14 @@ export class AIConfigService {
         case 'ZHIPU':
           response = await this.testZhipu(dto, testMessage);
           break;
+        case 'DEEPSEEK':
+          // DeepSeek 使用 OpenAI 兼容的 API 格式
+          response = await this.testOpenAI(dto, testMessage);
+          break;
+        case 'CUSTOM':
+          // 自定义服务商默认使用 OpenAI 兼容格式
+          response = await this.testOpenAI(dto, testMessage);
+          break;
         default:
           throw new BadRequestException('不支持的AI服务商');
       }

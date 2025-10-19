@@ -12,7 +12,15 @@ class AIConfigService {
    */
   async getAvailableConfigs() {
     try {
-      return await apiManager.getAvailableAIConfigs()
+      const response = await apiManager.getAvailableAIConfigs()
+      // 从响应中提取 data 字段
+      const result = response?.data || response
+      // 确保返回的数据结构正确
+      return {
+        system: result?.system || [],
+        user: result?.user || [],
+        default: result?.default || ''
+      }
     } catch (error) {
       console.error('获取可用AI配置失败:', error)
       // 降级到localStorage
@@ -26,7 +34,8 @@ class AIConfigService {
    */
   async getUserConfigs() {
     try {
-      return await apiManager.getUserAIConfigs()
+      const response = await apiManager.getUserAIConfigs()
+      return response?.data || response || []
     } catch (error) {
       console.error('获取用户配置失败:', error)
       return []
@@ -40,7 +49,8 @@ class AIConfigService {
    */
   async createConfig(config) {
     try {
-      return await apiManager.createAIConfig(config)
+      const response = await apiManager.createAIConfig(config)
+      return response?.data || response
     } catch (error) {
       console.error('创建配置失败:', error)
       throw error
@@ -55,7 +65,8 @@ class AIConfigService {
    */
   async updateConfig(configId, config) {
     try {
-      return await apiManager.updateAIConfig(configId, config)
+      const response = await apiManager.updateAIConfig(configId, config)
+      return response?.data || response
     } catch (error) {
       console.error('更新配置失败:', error)
       throw error
@@ -69,7 +80,8 @@ class AIConfigService {
    */
   async deleteConfig(configId) {
     try {
-      return await apiManager.deleteAIConfig(configId)
+      const response = await apiManager.deleteAIConfig(configId)
+      return response?.data || response
     } catch (error) {
       console.error('删除配置失败:', error)
       throw error
@@ -83,7 +95,8 @@ class AIConfigService {
    */
   async setDefaultConfig(configId) {
     try {
-      return await apiManager.setDefaultAIConfig(configId)
+      const response = await apiManager.setDefaultAIConfig(configId)
+      return response?.data || response
     } catch (error) {
       console.error('设置默认配置失败:', error)
       throw error
@@ -102,9 +115,9 @@ class AIConfigService {
     const [type, id] = configId.split(':')
 
     if (type === 'system') {
-      return available.system.find(c => c.id === id) || null
+      return (available.system || []).find(c => c.id === id) || null
     } else if (type === 'user') {
-      return available.user.find(c => c.id === id) || null
+      return (available.user || []).find(c => c.id === id) || null
     }
 
     return null

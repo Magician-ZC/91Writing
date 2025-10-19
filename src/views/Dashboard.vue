@@ -275,7 +275,7 @@ const currentApiConfig = computed(() => {
 const loadSystemModels = async () => {
   try {
     const configs = await aiConfigService.getAvailableConfigs()
-    systemModels.value = configs.system.filter(m => m.enabled) || []
+    systemModels.value = (configs?.system || []).filter(m => m.enabled)
   } catch (error) {
     console.error('加载系统模型失败:', error)
   }
@@ -578,7 +578,14 @@ const getModelDisplayName = (modelId) => {
 const initializeModelSelector = () => {
   try {
     // 获取配置类型
-    const savedConfigType = localStorage.getItem('apiConfigType') || 'official'
+    let savedConfigType = localStorage.getItem('apiConfigType')
+    
+    // 如果localStorage中没有值，设置默认值并保存
+    if (!savedConfigType) {
+      savedConfigType = 'official'
+      localStorage.setItem('apiConfigType', savedConfigType)
+    }
+    
     configType.value = savedConfigType
     
     // 获取当前选中的模型
@@ -625,10 +632,11 @@ onMounted(() => {
   
   // 手动触发一次检查（处理同页面内的变化）
   const checkConfigChange = () => {
-    const currentType = localStorage.getItem('apiConfigType')
+    const currentType = localStorage.getItem('apiConfigType') || 'official'
+    // 只有当值真正不同时才更新（避免null和'official'导致的循环）
     if (currentType !== configType.value) {
       console.log('检测到配置类型变化:', configType.value, '->', currentType)
-      initializeModelSelector()
+      configType.value = currentType
     }
   }
   

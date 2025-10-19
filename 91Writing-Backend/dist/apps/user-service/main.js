@@ -3218,10 +3218,6 @@ async function bootstrap() {
     const configService = app.get(config_1.ConfigService);
     const logger = new common_2.Logger('UserService');
     app.setGlobalPrefix('api/v1/users');
-    app.enableVersioning({
-        type: common_1.VersioningType.URI,
-        defaultVersion: '1',
-    });
     app.use((0, helmet_1.default)());
     app.use(compression());
     app.enableCors({
