@@ -234,16 +234,23 @@ class ApiManager {
         // 这样可以统一路由、认证、限流等功能
         const fullUrl = this.baseURL + endpoint
         
-        const response = await axios({
+        // 构建请求配置
+        const requestConfig = {
           url: fullUrl,
           method,
-          data,
           params,
           headers: {
             'Authorization': this.getAuthToken() ? `Bearer ${this.getAuthToken()}` : undefined,
-            'Content-Type': 'application/json'
           }
-        })
+        }
+        
+        // 只有在有 data 且不是 GET/DELETE 请求时才添加 data 和 Content-Type
+        if (data && method !== 'GET' && method !== 'DELETE') {
+          requestConfig.data = data
+          requestConfig.headers['Content-Type'] = 'application/json'
+        }
+        
+        const response = await axios(requestConfig)
         
         // 处理响应数据
         const responseData = response.data

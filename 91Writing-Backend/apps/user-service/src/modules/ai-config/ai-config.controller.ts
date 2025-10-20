@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { UserAIConfigService } from './ai-config.service';
 import {
   CreateUserAIConfigDto,
@@ -49,6 +49,8 @@ export class UserAIConfigController {
 
   @Delete('custom/:id')
   @ApiOperation({ summary: '删除用户自定义配置' })
+  @ApiParam({ name: 'id', description: '配置ID' })
+  @HttpCode(HttpStatus.OK)
   async deleteConfig(@Request() req, @Param('id') id: string): Promise<{ message: string }> {
     await this.aiConfigService.deleteConfig(req.user.userId, id);
     return { message: '配置已删除' };
@@ -56,6 +58,8 @@ export class UserAIConfigController {
 
   @Post('custom/:id/set-default')
   @ApiOperation({ summary: '设置默认配置' })
+  @ApiParam({ name: 'id', description: '配置ID' })
+  @HttpCode(HttpStatus.OK)
   async setDefaultConfig(@Request() req, @Param('id') id: string): Promise<{ message: string }> {
     await this.aiConfigService.setDefaultConfig(req.user.userId, id);
     return { message: '默认配置已设置' };

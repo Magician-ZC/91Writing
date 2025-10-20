@@ -2188,6 +2188,8 @@ __decorate([
 __decorate([
     (0, common_1.Delete)('custom/:id'),
     (0, swagger_1.ApiOperation)({ summary: '删除用户自定义配置' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '配置ID' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -2197,6 +2199,8 @@ __decorate([
 __decorate([
     (0, common_1.Post)('custom/:id/set-default'),
     (0, swagger_1.ApiOperation)({ summary: '设置默认配置' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '配置ID' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),

@@ -21,17 +21,24 @@ export class NovelService {
     const url = `${this.novelServiceUrl}${path}`;
     
     try {
+      // 构建请求配置
+      const requestConfig: any = {
+        url,
+        method,
+        headers: {
+          ...headers,
+          host: undefined, // 移除host header避免冲突
+        },
+        params: query,
+      };
+
+      // 只有在非 GET/DELETE 请求时才添加 body
+      if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
+        requestConfig.data = body;
+      }
+
       const response = await firstValueFrom(
-        this.httpService.request({
-          url,
-          method,
-          headers: {
-            ...headers,
-            host: undefined, // 移除host header避免冲突
-          },
-          data: body,
-          params: query,
-        }),
+        this.httpService.request(requestConfig),
       );
       
       return response.data;

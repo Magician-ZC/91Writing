@@ -49,15 +49,22 @@ export class AdminService {
     this.logger.log(`代理请求: ${method} ${targetUrl} (原始URL: ${url})`);
 
     try {
+      // 构建请求配置
+      const requestConfig: any = {
+        method: method as any,
+        url: targetUrl,
+        headers: cleanHeaders,
+        timeout: 30000, // 30秒超时
+        validateStatus: () => true, // 接受所有状态码
+      };
+
+      // 只有在非 GET/DELETE 请求时才添加 body
+      if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
+        requestConfig.data = body;
+      }
+
       const response = await firstValueFrom(
-        this.httpService.request({
-          method: method as any,
-          url: targetUrl,
-          headers: cleanHeaders,
-          data: body,
-          timeout: 30000, // 30秒超时
-          validateStatus: () => true, // 接受所有状态码
-        }),
+        this.httpService.request(requestConfig),
       );
 
       return response;
