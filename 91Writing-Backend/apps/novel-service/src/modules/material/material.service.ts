@@ -35,38 +35,51 @@ export class MaterialService {
   }
 
   async getMaterials(userId: string, query: QueryMaterialsDto) {
-    const where: Prisma.MaterialWhereInput = { userId };
-    
-    if (query.type) where.type = query.type;
-    if (query.category) where.category = query.category;
-    if (query.keyword) {
-      where.OR = [
-        { name: { contains: query.keyword } },
-        { description: { contains: query.keyword } },
-      ];
+    try {
+      const where: Prisma.MaterialWhereInput = { userId };
+      
+      if (query.type) where.type = query.type;
+      if (query.category) where.category = query.category;
+      if (query.keyword) {
+        where.OR = [
+          { name: { contains: query.keyword } },
+          { description: { contains: query.keyword } },
+        ];
+      }
+      // 注意：tags查询暂不支持，因为Prisma的JSON数组查询复杂
+      // if (query.tags) {
+      //   const tagArray = query.tags.split(',').map(t => t.trim());
+      //   // JSON数组查询需要特殊处理
+      // }
+
+      const page = query.page || 1;
+      const pageSize = query.pageSize || 20;
+      const skip = (page - 1) * pageSize;
+
+      const [materials, total] = await Promise.all([
+        this.prisma.material.findMany({
+          where,
+          skip,
+          take: pageSize,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.material.count({ where }),
+      ]);
+
+      return {
+        success: true,
+        data: {
+          items: materials,
+          pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+        },
+      };
+    } catch (error) {
+      console.error('获取素材列表失败:', error);
+      throw new HttpException(
+        `获取素材列表失败: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-
-    const page = query.page || 1;
-    const pageSize = query.pageSize || 20;
-    const skip = (page - 1) * pageSize;
-
-    const [materials, total] = await Promise.all([
-      this.prisma.material.findMany({
-        where,
-        skip,
-        take: pageSize,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.material.count({ where }),
-    ]);
-
-    return {
-      success: true,
-      data: {
-        items: materials,
-        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
-      },
-    };
   }
 
   async getMaterial(userId: string, materialId: string) {
@@ -124,30 +137,108 @@ export class MaterialService {
   }
 
   async getMaterialStats(userId: string) {
-    const [total, byType, totalSize] = await Promise.all([
-      this.prisma.material.count({ where: { userId } }),
-      this.prisma.material.groupBy({
-        by: ['type'],
-        where: { userId },
-        _count: true,
-      }),
-      this.prisma.material.aggregate({
-        where: { userId },
-        _sum: { fileSize: true },
-      }),
-    ]);
+    try {
+      const [total, byType, totalSize] = await Promise.all([
+        this.prisma.material.count({ where: { userId } }),
+        this.prisma.material.groupBy({
+          by: ['type'],
+          where: { userId },
+          _count: true,
+        }),
+        this.prisma.material.aggregate({
+          where: { userId },
+          _sum: { fileSize: true },
+        }),
+      ]);
 
-    return {
-      success: true,
-      data: {
-        total,
-        byType: byType.reduce((acc, item) => {
-          acc[item.type] = item._count;
-          return acc;
-        }, {}),
-        totalSize: totalSize._sum.fileSize || 0,
-      },
-    };
+      return {
+        success: true,
+        data: {
+          total,
+          byType: byType.map(item => ({
+            type: item.type,
+            count: item._count,
+          })),
+          totalSize: totalSize._sum.fileSize || 0,
+        },
+      };
+    } catch (error) {
+      console.error('获取素材统计失败:', error);
+      return {
+        success: true,
+        data: {
+          total: 0,
+          byType: [],
+          totalSize: 0,
+        },
+      };
+    }
+  }
+
+  /**
+   * 获取素材分类列表
+   */
+  async getMaterialCategories(userId: string) {
+    try {
+      const materials = await this.prisma.material.findMany({
+        where: { userId },
+        select: { category: true },
+        distinct: ['category'],
+      });
+
+      const categories = materials
+        .map(m => m.category)
+        .filter(c => c && c.trim() !== '')
+        .sort();
+
+      return {
+        success: true,
+        data: categories,
+      };
+    } catch (error) {
+      console.error('获取素材分类失败:', error);
+      return {
+        success: true,
+        data: [],
+      };
+    }
+  }
+
+  /**
+   * 获取素材标签列表
+   */
+  async getMaterialTags(userId: string) {
+    try {
+      const materials = await this.prisma.material.findMany({
+        where: { userId },
+        select: { tags: true },
+      });
+
+      const tagsSet = new Set<string>();
+      materials.forEach(m => {
+        if (m.tags) {
+          const tagArray = Array.isArray(m.tags) ? m.tags : [];
+          tagArray.forEach((tag: any) => {
+            if (tag && typeof tag === 'string' && tag.trim() !== '') {
+              tagsSet.add(tag);
+            }
+          });
+        }
+      });
+
+      const tags = Array.from(tagsSet).sort();
+
+      return {
+        success: true,
+        data: tags,
+      };
+    } catch (error) {
+      console.error('获取素材标签失败:', error);
+      return {
+        success: true,
+        data: [],
+      };
+    }
   }
 
   // ===== 批量操作 =====

@@ -91,7 +91,6 @@ export class AICallerService {
         // 5. 记录使用日志
         await this.logAIUsage(
           request.userId,
-          config.provider,
           config.model,
           response.inputTokens,
           response.outputTokens,
@@ -137,7 +136,6 @@ export class AICallerService {
     // 所有尝试都失败，记录日志并抛出异常
     await this.logAIUsage(
       request.userId,
-      'UNKNOWN',
       'unknown',
       0,
       0,
@@ -191,7 +189,6 @@ export class AICallerService {
         // 记录降级使用日志
         await this.logAIUsage(
           userId,
-          config.provider,
           config.model,
           response.inputTokens,
           response.outputTokens,
@@ -241,12 +238,12 @@ export class AICallerService {
     try {
       const systemConfigRecord = await this.prisma.systemConfig.findFirst({
         where: {
-          key: 'ai_models',
+          configKey: 'ai_models',
         },
       });
 
       if (systemConfigRecord) {
-        const models = systemConfigRecord.value as any[];
+        const models = systemConfigRecord.configValue as any[];
         for (const model of models) {
           if (model.enabled) {
             configs.push({
@@ -322,7 +319,6 @@ export class AICallerService {
       // 记录日志（流式调用无法获取准确的token数量）
       await this.logAIUsage(
         request.userId,
-        config.provider,
         config.model,
         0,
         0,
@@ -472,7 +468,7 @@ export class AICallerService {
     // 从系统配置表读取
     const systemConfigRecord = await this.prisma.systemConfig.findFirst({
       where: {
-        key: 'ai_models',
+        configKey: 'ai_models',
       },
     });
 
@@ -487,7 +483,7 @@ export class AICallerService {
       );
     }
 
-    const models = systemConfigRecord.value as any[];
+    const models = systemConfigRecord.configValue as any[];
     const config = models.find(m => m.id === configId && m.enabled);
 
     if (!config) {
@@ -516,7 +512,7 @@ export class AICallerService {
   private async getSystemDefaultConfig(): Promise<any | null> {
     const systemConfigRecord = await this.prisma.systemConfig.findFirst({
       where: {
-        key: 'ai_models',
+        configKey: 'ai_models',
       },
     });
 
@@ -524,7 +520,7 @@ export class AICallerService {
       return null;
     }
 
-    const models = systemConfigRecord.value as any[];
+    const models = systemConfigRecord.configValue as any[];
     const defaultConfig = models.find(m => m.enabled && m.isDefault);
 
     if (!defaultConfig) {
@@ -545,7 +541,6 @@ export class AICallerService {
    */
   private async logAIUsage(
     userId: string,
-    provider: AIProvider,
     model: string,
     inputTokens: number,
     outputTokens: number,
@@ -557,14 +552,12 @@ export class AICallerService {
       await this.prisma.aIUsageLog.create({
         data: {
           userId,
-          provider: provider,
           model,
           functionType: 'content_generation',
           inputTokens,
           outputTokens,
           success,
           responseTime,
-          errorMessage,
         },
       });
     } catch (error) {

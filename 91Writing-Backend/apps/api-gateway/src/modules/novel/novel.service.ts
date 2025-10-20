@@ -28,8 +28,13 @@ export class NovelService {
         headers: {
           ...headers,
           host: undefined, // 移除host header避免冲突
+          // 移除缓存相关的头，防止304响应
+          'if-none-match': undefined,
+          'if-modified-since': undefined,
         },
         params: query,
+        // 配置axios接受所有状态码，包括304
+        validateStatus: (status) => status >= 200 && status < 500,
       };
 
       // 只有在非 GET/DELETE 请求时才添加 body
@@ -41,8 +46,26 @@ export class NovelService {
         this.httpService.request(requestConfig),
       );
       
+      // 处理304响应 - 返回空数据但标记成功
+      if (response.status === 304) {
+        return {
+          success: true,
+          data: null,
+          message: 'Not Modified',
+          cached: true,
+        };
+      }
+      
       return response.data;
     } catch (error) {
+      console.error('Novel service request failed:', {
+        url,
+        method,
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      
       if (error.response) {
         throw error.response.data;
       }

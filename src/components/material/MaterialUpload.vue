@@ -12,7 +12,7 @@
     >
       <el-icon class="upload-icon"><upload-filled /></el-icon>
       <div class="upload-text">点击或拖拽文件到此区域上传</div>
-      <div class="upload-hint">支持图片、文档、音视频等格式</div>
+      <div class="upload-hint">支持图片、文档、音视频等格式，单个文件不超过 {{ (props.maxSize / (1024 * 1024)).toFixed(0) }}MB</div>
     </el-upload>
 
     <div v-if="uploadQueue.length > 0" class="upload-queue">
@@ -49,6 +49,10 @@ const props = defineProps({
   category: {
     type: String,
     default: ''
+  },
+  maxSize: {
+    type: Number,
+    default: 50 * 1024 * 1024 // 默认50MB，支持大型小说文件
   }
 })
 
@@ -64,6 +68,15 @@ const acceptTypes = ref(props.accept)
  * 处理文件变化
  */
 const handleFileChange = (file) => {
+  const fileObj = file.raw || file
+  
+  // 检查文件大小
+  if (fileObj.size > props.maxSize) {
+    const maxSizeMB = (props.maxSize / (1024 * 1024)).toFixed(2)
+    ElMessage.error(`文件 "${file.name}" 超过大小限制 (${maxSizeMB}MB)`)
+    return
+  }
+  
   const isDuplicate = uploadQueue.value.some(item => 
     item.file.name === file.name && item.file.size === file.size
   )
@@ -74,7 +87,7 @@ const handleFileChange = (file) => {
   }
 
   uploadQueue.value.push({
-    file: file.raw || file,
+    file: fileObj,
     name: file.name,
     category: props.category,
     tags: []

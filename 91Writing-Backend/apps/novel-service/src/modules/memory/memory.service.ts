@@ -84,13 +84,13 @@ export class MemoryService {
       where.OR = [
         {
           content: {
-            path: ['title'],
+            path: 'title',
             string_contains: query.keyword,
           },
         },
         {
           content: {
-            path: ['description'],
+            path: 'description',
             string_contains: query.keyword,
           },
         },

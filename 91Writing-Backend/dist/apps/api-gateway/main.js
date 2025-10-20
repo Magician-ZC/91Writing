@@ -1099,7 +1099,12 @@ let NovelController = class NovelController {
         }
         catch (error) {
             const status = error.statusCode || error.status || 500;
-            const message = error.message || 'Internal Server Error';
+            console.error('Novel service proxy error:', {
+                path: req.path,
+                method: req.method,
+                status,
+                error: error.message || error,
+            });
             return res.status(status).json(error);
         }
     }
@@ -1212,16 +1217,34 @@ let NovelService = class NovelService {
                 headers: {
                     ...headers,
                     host: undefined,
+                    'if-none-match': undefined,
+                    'if-modified-since': undefined,
                 },
                 params: query,
+                validateStatus: (status) => status >= 200 && status < 500,
             };
             if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
                 requestConfig.data = body;
             }
             const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request(requestConfig));
+            if (response.status === 304) {
+                return {
+                    success: true,
+                    data: null,
+                    message: 'Not Modified',
+                    cached: true,
+                };
+            }
             return response.data;
         }
         catch (error) {
+            console.error('Novel service request failed:', {
+                url,
+                method,
+                error: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+            });
             if (error.response) {
                 throw error.response.data;
             }

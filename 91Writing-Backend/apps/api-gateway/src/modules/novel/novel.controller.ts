@@ -71,8 +71,14 @@ export class NovelController {
       
       return res.status(200).json(result);
     } catch (error) {
+      // 提取正确的状态码
       const status = error.statusCode || error.status || 500;
-      const message = error.message || 'Internal Server Error';
+      console.error('Novel service proxy error:', {
+        path: req.path,
+        method: req.method,
+        status,
+        error: error.message || error,
+      });
       return res.status(status).json(error);
     }
   }

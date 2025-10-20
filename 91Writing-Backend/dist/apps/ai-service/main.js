@@ -33,12 +33,13 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AppModule = void 0;
 const common_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(5);
-const assistant_module_1 = __webpack_require__(10);
-const generation_module_1 = __webpack_require__(19);
-const suggestion_module_1 = __webpack_require__(22);
-const wizard_module_1 = __webpack_require__(26);
-const health_module_1 = __webpack_require__(27);
+const microservices_1 = __webpack_require__(5);
+const database_1 = __webpack_require__(6);
+const assistant_module_1 = __webpack_require__(11);
+const generation_module_1 = __webpack_require__(20);
+const suggestion_module_1 = __webpack_require__(33);
+const wizard_module_1 = __webpack_require__(37);
+const health_module_1 = __webpack_require__(38);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -46,18 +47,35 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             database_1.DatabaseModule,
+            microservices_1.ClientsModule.register([
+                {
+                    name: 'USER_SERVICE',
+                    transport: microservices_1.Transport.TCP,
+                    options: {
+                        host: process.env.USER_SERVICE_HOST || 'localhost',
+                        port: parseInt(process.env.USER_SERVICE_PORT) || 3004,
+                    },
+                },
+            ]),
             assistant_module_1.AssistantModule,
             generation_module_1.GenerationModule,
             suggestion_module_1.SuggestionModule,
             wizard_module_1.WizardModule,
             health_module_1.HealthModule,
         ],
+        exports: [microservices_1.ClientsModule],
     })
 ], AppModule);
 
 
 /***/ }),
 /* 5 */
+/***/ ((module) => {
+
+module.exports = require("@nestjs/microservices");
+
+/***/ }),
+/* 6 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -76,12 +94,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(6), exports);
-__exportStar(__webpack_require__(8), exports);
+__exportStar(__webpack_require__(7), exports);
+__exportStar(__webpack_require__(9), exports);
 
 
 /***/ }),
-/* 6 */
+/* 7 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -94,8 +112,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(2);
-const config_1 = __webpack_require__(7);
-const prisma_service_1 = __webpack_require__(8);
+const config_1 = __webpack_require__(8);
+const prisma_service_1 = __webpack_require__(9);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -110,13 +128,13 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/config");
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -134,8 +152,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(2);
-const config_1 = __webpack_require__(7);
-const client_1 = __webpack_require__(9);
+const config_1 = __webpack_require__(8);
+const client_1 = __webpack_require__(10);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -262,13 +280,13 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -281,8 +299,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssistantModule = void 0;
 const common_1 = __webpack_require__(2);
-const assistant_service_1 = __webpack_require__(11);
-const assistant_controller_1 = __webpack_require__(14);
+const assistant_service_1 = __webpack_require__(12);
+const assistant_controller_1 = __webpack_require__(15);
 let AssistantModule = class AssistantModule {
 };
 exports.AssistantModule = AssistantModule;
@@ -296,7 +314,7 @@ exports.AssistantModule = AssistantModule = __decorate([
 
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -313,8 +331,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssistantService = void 0;
 const common_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(5);
-const conversation_dto_1 = __webpack_require__(12);
+const database_1 = __webpack_require__(6);
+const conversation_dto_1 = __webpack_require__(13);
 let AssistantService = class AssistantService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -819,7 +837,7 @@ exports.AssistantService = AssistantService = __decorate([
 
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -834,7 +852,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenerateContentDto = exports.ConversationDto = exports.InitializeSessionDto = exports.ConversationIntent = void 0;
-const class_validator_1 = __webpack_require__(13);
+const class_validator_1 = __webpack_require__(14);
+const swagger_1 = __webpack_require__(3);
 var ConversationIntent;
 (function (ConversationIntent) {
     ConversationIntent["WRITING_REQUEST"] = "writing_request";
@@ -900,45 +919,84 @@ class GenerateContentDto {
 }
 exports.GenerateContentDto = GenerateContentDto;
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'cm1234567890'
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], GenerateContentDto.prototype, "novelId", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '生成内容的提示词/要求',
+        example: '请续写一段主角和反派的对决场景'
+    }),
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], GenerateContentDto.prototype, "prompt", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '内容类型',
+        enum: ['continuation', 'scene', 'dialogue', 'description', 'opening', 'ending'],
+        default: 'continuation',
+        example: 'continuation'
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(['continuation', 'scene', 'dialogue', 'description', 'opening', 'ending']),
     __metadata("design:type", String)
 ], GenerateContentDto.prototype, "contentType", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '内容长度',
+        enum: ['short', 'medium', 'long'],
+        default: 'medium',
+        example: 'medium'
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsEnum)(['short', 'medium', 'long']),
     __metadata("design:type", String)
 ], GenerateContentDto.prototype, "length", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '写作风格',
+        enum: ['current', 'formal', 'casual', 'poetic'],
+        default: 'current',
+        example: 'current'
+    }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEnum)(['current', 'formal', 'casual', 'dramatic', 'humorous']),
+    (0, class_validator_1.IsEnum)(['current', 'formal', 'casual', 'poetic']),
     __metadata("design:type", String)
 ], GenerateContentDto.prototype, "style", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'AI配置ID（格式：system:id 或 user:id，不提供则使用默认配置）',
+        example: 'user:cm1234567890'
+    }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsObject)(),
-    __metadata("design:type", Object)
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], GenerateContentDto.prototype, "aiConfigId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '上下文信息（如当前章节内容、前文等）',
+        type: 'string'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
 ], GenerateContentDto.prototype, "context", void 0);
 
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ ((module) => {
 
 module.exports = require("class-validator");
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -958,9 +1016,9 @@ var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssistantController = void 0;
 const common_1 = __webpack_require__(2);
-const guards_1 = __webpack_require__(15);
-const assistant_service_1 = __webpack_require__(11);
-const conversation_dto_1 = __webpack_require__(12);
+const guards_1 = __webpack_require__(16);
+const assistant_service_1 = __webpack_require__(12);
+const conversation_dto_1 = __webpack_require__(13);
 let AssistantController = class AssistantController {
     constructor(assistantService) {
         this.assistantService = assistantService;
@@ -1018,7 +1076,7 @@ exports.AssistantController = AssistantController = __decorate([
 
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1037,12 +1095,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(16), exports);
-__exportStar(__webpack_require__(18), exports);
+__exportStar(__webpack_require__(17), exports);
+__exportStar(__webpack_require__(19), exports);
 
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1055,7 +1113,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.JwtAuthGuard = void 0;
 const common_1 = __webpack_require__(2);
-const passport_1 = __webpack_require__(17);
+const passport_1 = __webpack_require__(18);
 let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
     handleRequest(err, user, info) {
         if (err || !user) {
@@ -1071,13 +1129,13 @@ exports.JwtAuthGuard = JwtAuthGuard = __decorate([
 
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ ((module) => {
 
 module.exports = require("@nestjs/passport");
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1108,7 +1166,7 @@ exports.TenantGuard = TenantGuard = __decorate([
 
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1121,22 +1179,1308 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenerationModule = void 0;
 const common_1 = __webpack_require__(2);
-const generation_service_1 = __webpack_require__(20);
-const generation_controller_1 = __webpack_require__(21);
+const microservices_1 = __webpack_require__(5);
+const generation_service_1 = __webpack_require__(21);
+const generation_controller_1 = __webpack_require__(32);
+const ai_caller_service_1 = __webpack_require__(22);
+const context_manager_service_1 = __webpack_require__(31);
 let GenerationModule = class GenerationModule {
 };
 exports.GenerationModule = GenerationModule;
 exports.GenerationModule = GenerationModule = __decorate([
     (0, common_1.Module)({
+        imports: [
+            microservices_1.ClientsModule.register([
+                {
+                    name: 'USER_SERVICE',
+                    transport: microservices_1.Transport.TCP,
+                    options: {
+                        host: process.env.USER_SERVICE_HOST || 'localhost',
+                        port: parseInt(process.env.USER_SERVICE_PORT) || 3004,
+                    },
+                },
+            ]),
+        ],
         controllers: [generation_controller_1.GenerationController],
-        providers: [generation_service_1.GenerationService],
+        providers: [generation_service_1.GenerationService, ai_caller_service_1.AICallerService, context_manager_service_1.ContextManagerService],
         exports: [generation_service_1.GenerationService],
     })
 ], GenerationModule);
 
 
 /***/ }),
-/* 20 */
+/* 21 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GenerationService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(6);
+const ai_caller_service_1 = __webpack_require__(22);
+const context_manager_service_1 = __webpack_require__(31);
+let GenerationService = class GenerationService {
+    constructor(prisma, aiCallerService, contextManager) {
+        this.prisma = prisma;
+        this.aiCallerService = aiCallerService;
+        this.contextManager = contextManager;
+    }
+    async generateContent(userId, dto) {
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: dto.novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '小说不存在或无权访问',
+                error: 'NOVEL_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        const messages = await this.buildPrompt(userId, dto, novel);
+        const response = await this.aiCallerService.callAI({
+            userId,
+            messages,
+            configId: dto.aiConfigId,
+            parameters: {
+                temperature: this.getTemperatureByStyle(dto.style),
+                maxTokens: this.getMaxTokensByLength(dto.length),
+            },
+        });
+        return {
+            content: response.content,
+            metadata: {
+                type: dto.contentType,
+                length: dto.length,
+                style: dto.style,
+                wordCount: this.calculateWordCount(response.content),
+                model: response.model,
+                provider: response.provider,
+                tokensUsed: response.totalTokens,
+            },
+        };
+    }
+    async *generateContentStream(userId, dto) {
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: dto.novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '小说不存在或无权访问',
+                error: 'NOVEL_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        const messages = await this.buildPrompt(userId, dto, novel);
+        for await (const chunk of this.aiCallerService.callAIStream({
+            userId,
+            messages,
+            configId: dto.aiConfigId,
+            parameters: {
+                temperature: this.getTemperatureByStyle(dto.style),
+                maxTokens: this.getMaxTokensByLength(dto.length),
+            },
+            stream: true,
+        })) {
+            yield chunk;
+        }
+    }
+    async buildPrompt(userId, dto, novel) {
+        const messages = [];
+        let systemPrompt = '你是一位专业的小说创作助手。';
+        if (dto.style === 'formal') {
+            systemPrompt += '请使用正式、严谨的文学风格进行创作。';
+        }
+        else if (dto.style === 'casual') {
+            systemPrompt += '请使用轻松、活泼的叙事风格进行创作。';
+        }
+        else if (dto.style === 'poetic') {
+            systemPrompt += '请使用富有诗意、优美的文学风格进行创作。';
+        }
+        messages.push({
+            role: 'system',
+            content: systemPrompt,
+        });
+        let contextText = '';
+        if (dto.context) {
+            contextText = dto.context;
+        }
+        else {
+            try {
+                const keywords = this.extractKeywords(dto.prompt);
+                const smartContext = await this.contextManager.getSmartContext({
+                    userId,
+                    novelId: dto.novelId,
+                    keywords,
+                    maxMemories: 5,
+                    maxChapters: 2,
+                    includeOutline: true,
+                    includeCharacters: true,
+                });
+                contextText = this.contextManager.formatContextForAI(smartContext);
+            }
+            catch (error) {
+                console.error('获取智能上下文失败:', error);
+                contextText = `【小说信息】\n`;
+                contextText += `标题：${novel.title}\n`;
+                if (novel.description) {
+                    contextText += `简介：${novel.description}\n`;
+                }
+                if (novel.outline?.content) {
+                    contextText += `\n【故事大纲】\n${novel.outline.content}\n`;
+                }
+            }
+        }
+        messages.push({
+            role: 'user',
+            content: contextText,
+        });
+        let taskPrompt = '';
+        switch (dto.contentType) {
+            case 'continuation':
+                taskPrompt = `请基于以上信息，续写${this.getLengthDescription(dto.length)}的内容。`;
+                break;
+            case 'scene':
+                taskPrompt = `请基于以上信息，创作${this.getLengthDescription(dto.length)}的场景描写。`;
+                break;
+            case 'dialogue':
+                taskPrompt = `请基于以上信息，创作${this.getLengthDescription(dto.length)}的对话内容。`;
+                break;
+            case 'description':
+                taskPrompt = `请基于以上信息，创作${this.getLengthDescription(dto.length)}的环境/人物描写。`;
+                break;
+            case 'opening':
+                taskPrompt = `请基于以上信息，创作${this.getLengthDescription(dto.length)}的开头内容。`;
+                break;
+            case 'ending':
+                taskPrompt = `请基于以上信息，创作${this.getLengthDescription(dto.length)}的结尾内容。`;
+                break;
+            default:
+                taskPrompt = `请基于以上信息，续写${this.getLengthDescription(dto.length)}的内容。`;
+        }
+        if (dto.prompt) {
+            taskPrompt += `\n\n用户要求：${dto.prompt}`;
+        }
+        messages.push({
+            role: 'user',
+            content: taskPrompt,
+        });
+        return messages;
+    }
+    extractKeywords(text) {
+        const cleanText = text.replace(/[，。！？；：""''（）【】《》、]/g, ' ');
+        const words = cleanText.split(/\s+/).filter(w => w.length > 1);
+        return words.slice(0, 5);
+    }
+    getTemperatureByStyle(style) {
+        switch (style) {
+            case 'formal':
+                return 0.5;
+            case 'casual':
+                return 0.8;
+            case 'poetic':
+                return 0.9;
+            default:
+                return 0.7;
+        }
+    }
+    getMaxTokensByLength(length) {
+        switch (length) {
+            case 'short':
+                return 500;
+            case 'medium':
+                return 1000;
+            case 'long':
+                return 2000;
+            default:
+                return 1000;
+        }
+    }
+    getLengthDescription(length) {
+        switch (length) {
+            case 'short':
+                return '200-300字';
+            case 'medium':
+                return '400-600字';
+            case 'long':
+                return '800-1200字';
+            default:
+                return '400-600字';
+        }
+    }
+    calculateWordCount(content) {
+        const chineseChars = (content.match(/[\u4e00-\u9fff]/g) || []).length;
+        const englishWords = (content.match(/[a-zA-Z]+/g) || []).length;
+        return chineseChars + englishWords;
+    }
+};
+exports.GenerationService = GenerationService;
+exports.GenerationService = GenerationService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof ai_caller_service_1.AICallerService !== "undefined" && ai_caller_service_1.AICallerService) === "function" ? _b : Object, typeof (_c = typeof context_manager_service_1.ContextManagerService !== "undefined" && context_manager_service_1.ContextManagerService) === "function" ? _c : Object])
+], GenerationService);
+
+
+/***/ }),
+/* 22 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AICallerService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(6);
+const microservices_1 = __webpack_require__(5);
+const common_2 = __webpack_require__(2);
+const provider_factory_1 = __webpack_require__(23);
+const crypto = __webpack_require__(30);
+let AICallerService = class AICallerService {
+    constructor(prisma, userServiceClient) {
+        this.prisma = prisma;
+        this.userServiceClient = userServiceClient;
+        this.algorithm = 'aes-256-cbc';
+        this.encryptionKey =
+            process.env.ENCRYPTION_KEY || '91writing-ai-config-encryption-key-32';
+        if (Buffer.from(this.encryptionKey).length !== 32) {
+            console.warn('⚠️  ENCRYPTION_KEY长度不是32字节，将进行填充/截断');
+            this.encryptionKey = this.encryptionKey.padEnd(32, '0').slice(0, 32);
+        }
+    }
+    async callAI(request) {
+        const maxRetries = 3;
+        const baseDelay = 1000;
+        let lastError;
+        let attempt = 0;
+        while (attempt < maxRetries) {
+            try {
+                attempt++;
+                const config = await this.getAIConfig(request.userId, request.configId);
+                const finalParameters = {
+                    ...config.parameters,
+                    ...request.parameters,
+                    stream: request.stream || false,
+                };
+                const callConfig = {
+                    provider: config.provider,
+                    model: config.model,
+                    apiUrl: config.apiUrl,
+                    apiKey: config.apiKey,
+                    parameters: finalParameters,
+                };
+                const provider = provider_factory_1.AIProviderFactory.getProvider(config.provider);
+                const startTime = Date.now();
+                const response = await provider.chat(request.messages, callConfig);
+                await this.logAIUsage(request.userId, config.model, response.inputTokens, response.outputTokens, true, Date.now() - startTime);
+                return response;
+            }
+            catch (error) {
+                lastError = error;
+                console.error(`[AI调用] 第${attempt}次尝试失败:`, error.message);
+                if (attempt < maxRetries) {
+                    const delay = baseDelay * Math.pow(2, attempt - 1);
+                    console.log(`[AI调用] 等待${delay}ms后重试...`);
+                    await this.sleep(delay);
+                    continue;
+                }
+                if (attempt >= maxRetries) {
+                    console.log('[AI调用] 重试次数用完，尝试降级策略...');
+                    try {
+                        const fallbackResponse = await this.tryFallbackStrategy(request.userId, request.messages);
+                        if (fallbackResponse) {
+                            return fallbackResponse;
+                        }
+                    }
+                    catch (fallbackError) {
+                        console.error('[AI调用] 降级策略也失败:', fallbackError.message);
+                    }
+                }
+            }
+        }
+        await this.logAIUsage(request.userId, 'unknown', 0, 0, false, 0, lastError?.message || '未知错误');
+        throw new common_1.HttpException({
+            statusCode: common_1.HttpStatus.SERVICE_UNAVAILABLE,
+            message: `AI调用失败，已重试${maxRetries}次: ${lastError?.message || '未知错误'}`,
+            error: 'AI_SERVICE_UNAVAILABLE',
+        }, common_1.HttpStatus.SERVICE_UNAVAILABLE);
+    }
+    async tryFallbackStrategy(userId, messages) {
+        const availableConfigs = await this.getAllAvailableConfigs(userId);
+        if (availableConfigs.length === 0) {
+            return null;
+        }
+        for (const config of availableConfigs) {
+            try {
+                console.log(`[降级策略] 尝试使用备用配置: ${config.provider}/${config.model}`);
+                const callConfig = {
+                    provider: config.provider,
+                    model: config.model,
+                    apiUrl: config.apiUrl,
+                    apiKey: config.apiKey,
+                    parameters: config.parameters,
+                };
+                const provider = provider_factory_1.AIProviderFactory.getProvider(config.provider);
+                const startTime = Date.now();
+                const response = await provider.chat(messages, callConfig);
+                await this.logAIUsage(userId, config.model, response.inputTokens, response.outputTokens, true, Date.now() - startTime);
+                console.log(`[降级策略] 成功使用备用配置: ${config.provider}/${config.model}`);
+                return response;
+            }
+            catch (error) {
+                console.error(`[降级策略] 备用配置失败: ${error.message}`);
+                continue;
+            }
+        }
+        return null;
+    }
+    async getAllAvailableConfigs(userId) {
+        const configs = [];
+        const userConfigs = await this.prisma.userAIConfig.findMany({
+            where: {
+                userId,
+                enabled: true,
+            },
+            orderBy: {
+                isDefault: 'desc',
+            },
+        });
+        for (const config of userConfigs) {
+            configs.push({
+                provider: config.provider,
+                model: config.model,
+                apiUrl: config.apiUrl,
+                apiKey: this.decrypt(config.apiKey),
+                parameters: config.parameters,
+            });
+        }
+        try {
+            const systemConfigRecord = await this.prisma.systemConfig.findFirst({
+                where: {
+                    configKey: 'ai_models',
+                },
+            });
+            if (systemConfigRecord) {
+                const models = systemConfigRecord.configValue;
+                for (const model of models) {
+                    if (model.enabled) {
+                        configs.push({
+                            provider: model.provider,
+                            model: model.model,
+                            apiUrl: model.apiUrl,
+                            apiKey: model.apiKey,
+                            parameters: model.parameters || {},
+                        });
+                    }
+                }
+            }
+        }
+        catch (error) {
+            console.error('获取系统配置失败:', error);
+        }
+        return configs;
+    }
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    async *callAIStream(request) {
+        const config = await this.getAIConfig(request.userId, request.configId);
+        const finalParameters = {
+            ...config.parameters,
+            ...request.parameters,
+            stream: true,
+        };
+        const callConfig = {
+            provider: config.provider,
+            model: config.model,
+            apiUrl: config.apiUrl,
+            apiKey: config.apiKey,
+            parameters: finalParameters,
+        };
+        const provider = provider_factory_1.AIProviderFactory.getProvider(config.provider);
+        const startTime = Date.now();
+        let success = true;
+        let errorMessage;
+        try {
+            for await (const chunk of provider.chatStream(request.messages, callConfig)) {
+                yield chunk;
+            }
+        }
+        catch (error) {
+            success = false;
+            errorMessage = error.message;
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.BAD_REQUEST,
+                message: `AI流式调用失败: ${error.message}`,
+                error: 'AI_STREAM_CALL_FAILED',
+            }, common_1.HttpStatus.BAD_REQUEST);
+        }
+        finally {
+            await this.logAIUsage(request.userId, config.model, 0, 0, success, Date.now() - startTime, errorMessage);
+        }
+    }
+    async testAIConfig(provider, model, apiUrl, apiKey, parameters) {
+        const config = {
+            provider,
+            model,
+            apiUrl,
+            apiKey,
+            parameters,
+        };
+        const providerInstance = provider_factory_1.AIProviderFactory.getProvider(provider);
+        return providerInstance.testConnection(config);
+    }
+    async getAIConfig(userId, configId) {
+        if (!configId) {
+            return this.getDefaultConfig(userId);
+        }
+        const [type, id] = configId.split(':');
+        if (type === 'user') {
+            return this.getUserConfig(userId, id);
+        }
+        else if (type === 'system') {
+            return this.getSystemConfig(id);
+        }
+        else {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.BAD_REQUEST,
+                message: '无效的配置ID格式',
+                error: 'INVALID_CONFIG_ID',
+            }, common_1.HttpStatus.BAD_REQUEST);
+        }
+    }
+    async getDefaultConfig(userId) {
+        const userConfig = await this.prisma.userAIConfig.findFirst({
+            where: {
+                userId,
+                enabled: true,
+                isDefault: true,
+            },
+        });
+        if (userConfig) {
+            return {
+                provider: userConfig.provider,
+                model: userConfig.model,
+                apiUrl: userConfig.apiUrl,
+                apiKey: this.decrypt(userConfig.apiKey),
+                parameters: userConfig.parameters,
+            };
+        }
+        const systemConfig = await this.getSystemDefaultConfig();
+        if (systemConfig) {
+            return systemConfig;
+        }
+        throw new common_1.HttpException({
+            statusCode: common_1.HttpStatus.NOT_FOUND,
+            message: '未找到可用的AI配置，请先配置AI服务',
+            error: 'NO_AI_CONFIG_AVAILABLE',
+        }, common_1.HttpStatus.NOT_FOUND);
+    }
+    async getUserConfig(userId, configId) {
+        const config = await this.prisma.userAIConfig.findFirst({
+            where: {
+                id: configId,
+                userId,
+                enabled: true,
+            },
+        });
+        if (!config) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '未找到指定的AI配置或配置已禁用',
+                error: 'CONFIG_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        return {
+            provider: config.provider,
+            model: config.model,
+            apiUrl: config.apiUrl,
+            apiKey: this.decrypt(config.apiKey),
+            parameters: config.parameters,
+        };
+    }
+    async getSystemConfig(configId) {
+        const systemConfigRecord = await this.prisma.systemConfig.findFirst({
+            where: {
+                configKey: 'ai_models',
+            },
+        });
+        if (!systemConfigRecord) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '系统AI配置不存在',
+                error: 'SYSTEM_CONFIG_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        const models = systemConfigRecord.configValue;
+        const config = models.find(m => m.id === configId && m.enabled);
+        if (!config) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '未找到指定的系统AI配置或配置已禁用',
+                error: 'SYSTEM_CONFIG_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        return {
+            provider: config.provider,
+            model: config.model,
+            apiUrl: config.apiUrl,
+            apiKey: config.apiKey,
+            parameters: config.parameters || {},
+        };
+    }
+    async getSystemDefaultConfig() {
+        const systemConfigRecord = await this.prisma.systemConfig.findFirst({
+            where: {
+                configKey: 'ai_models',
+            },
+        });
+        if (!systemConfigRecord) {
+            return null;
+        }
+        const models = systemConfigRecord.configValue;
+        const defaultConfig = models.find(m => m.enabled && m.isDefault);
+        if (!defaultConfig) {
+            return null;
+        }
+        return {
+            provider: defaultConfig.provider,
+            model: defaultConfig.model,
+            apiUrl: defaultConfig.apiUrl,
+            apiKey: defaultConfig.apiKey,
+            parameters: defaultConfig.parameters || {},
+        };
+    }
+    async logAIUsage(userId, model, inputTokens, outputTokens, success, responseTime, errorMessage) {
+        try {
+            await this.prisma.aIUsageLog.create({
+                data: {
+                    userId,
+                    model,
+                    functionType: 'content_generation',
+                    inputTokens,
+                    outputTokens,
+                    success,
+                    responseTime,
+                },
+            });
+        }
+        catch (error) {
+            console.error('记录AI使用日志失败:', error);
+        }
+    }
+    decrypt(encryptedText) {
+        try {
+            const [ivHex, encryptedHex] = encryptedText.split(':');
+            const iv = Buffer.from(ivHex, 'hex');
+            const encrypted = Buffer.from(encryptedHex, 'hex');
+            const decipher = crypto.createDecipheriv(this.algorithm, Buffer.from(this.encryptionKey), iv);
+            let decrypted = decipher.update(encrypted);
+            decrypted = Buffer.concat([decrypted, decipher.final()]);
+            return decrypted.toString();
+        }
+        catch (error) {
+            console.error('解密API密钥失败:', error);
+            throw new Error('API密钥解密失败');
+        }
+    }
+};
+exports.AICallerService = AICallerService;
+exports.AICallerService = AICallerService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(1, (0, common_2.Inject)('USER_SERVICE')),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof microservices_1.ClientProxy !== "undefined" && microservices_1.ClientProxy) === "function" ? _b : Object])
+], AICallerService);
+
+
+/***/ }),
+/* 23 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AIProviderFactory = void 0;
+const client_1 = __webpack_require__(10);
+const openai_provider_1 = __webpack_require__(24);
+const claude_provider_1 = __webpack_require__(27);
+const deepseek_provider_1 = __webpack_require__(28);
+const generic_provider_1 = __webpack_require__(29);
+class AIProviderFactory {
+    static getProvider(provider) {
+        if (!this.providerInstances.has(provider)) {
+            let instance;
+            switch (provider) {
+                case client_1.AIProvider.OPENAI:
+                    instance = new openai_provider_1.OpenAIProvider();
+                    break;
+                case client_1.AIProvider.CLAUDE:
+                    instance = new claude_provider_1.ClaudeProvider();
+                    break;
+                case client_1.AIProvider.DEEPSEEK:
+                    instance = new deepseek_provider_1.DeepSeekProvider();
+                    break;
+                case client_1.AIProvider.WENXIN:
+                case client_1.AIProvider.QWEN:
+                case client_1.AIProvider.ZHIPU:
+                case client_1.AIProvider.CUSTOM:
+                    instance = new generic_provider_1.GenericProvider(provider);
+                    break;
+                default:
+                    throw new Error(`不支持的AI提供商: ${provider}`);
+            }
+            this.providerInstances.set(provider, instance);
+        }
+        return this.providerInstances.get(provider);
+    }
+    static clearCache() {
+        this.providerInstances.clear();
+    }
+}
+exports.AIProviderFactory = AIProviderFactory;
+AIProviderFactory.providerInstances = new Map();
+
+
+/***/ }),
+/* 24 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OpenAIProvider = void 0;
+const axios_1 = __webpack_require__(25);
+const client_1 = __webpack_require__(10);
+const base_provider_1 = __webpack_require__(26);
+class OpenAIProvider extends base_provider_1.BaseAIProvider {
+    constructor() {
+        super();
+        this.provider = client_1.AIProvider.OPENAI;
+        this.httpClient = axios_1.default.create({
+            timeout: 60000,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    }
+    async chat(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const requestBody = {
+                model: config.model,
+                messages: messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                })),
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                frequency_penalty: parameters.frequencyPenalty,
+                presence_penalty: parameters.presencePenalty,
+                max_tokens: parameters.maxTokens,
+                stream: false,
+            };
+            const response = await this.httpClient.post(`${config.apiUrl}/chat/completions`, requestBody, {
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`,
+                },
+                timeout: (parameters.timeout || 30) * 1000,
+            });
+            const data = response.data;
+            const choice = data.choices[0];
+            const usage = data.usage || {};
+            return {
+                content: choice.message.content,
+                model: data.model,
+                provider: this.provider,
+                inputTokens: usage.prompt_tokens || 0,
+                outputTokens: usage.completion_tokens || 0,
+                totalTokens: usage.total_tokens || 0,
+                finishReason: choice.finish_reason || 'stop',
+            };
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async *chatStream(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const requestBody = {
+                model: config.model,
+                messages: messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                })),
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                frequency_penalty: parameters.frequencyPenalty,
+                presence_penalty: parameters.presencePenalty,
+                max_tokens: parameters.maxTokens,
+                stream: true,
+            };
+            const response = await this.httpClient.post(`${config.apiUrl}/chat/completions`, requestBody, {
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`,
+                },
+                timeout: (parameters.timeout || 30) * 1000,
+                responseType: 'stream',
+            });
+            for await (const chunk of response.data) {
+                const lines = chunk.toString().split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6).trim();
+                        if (data === '[DONE]') {
+                            return;
+                        }
+                        try {
+                            const parsed = JSON.parse(data);
+                            const content = parsed.choices[0]?.delta?.content;
+                            if (content) {
+                                yield content;
+                            }
+                        }
+                        catch (e) {
+                        }
+                    }
+                }
+            }
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async testConnection(config) {
+        try {
+            const testMessages = [
+                { role: 'user', content: 'Hello' },
+            ];
+            await this.chat(testMessages, {
+                ...config,
+                parameters: {
+                    ...config.parameters,
+                    maxTokens: 10,
+                },
+            });
+            return true;
+        }
+        catch (error) {
+            console.error('[OpenAI] Connection test failed:', error);
+            return false;
+        }
+    }
+}
+exports.OpenAIProvider = OpenAIProvider;
+
+
+/***/ }),
+/* 25 */
+/***/ ((module) => {
+
+module.exports = require("axios");
+
+/***/ }),
+/* 26 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BaseAIProvider = void 0;
+class BaseAIProvider {
+    getDefaultParameters() {
+        return {
+            temperature: 0.7,
+            topP: 1.0,
+            frequencyPenalty: 0,
+            presencePenalty: 0,
+            maxTokens: 2000,
+            timeout: 30,
+            stream: false,
+        };
+    }
+    mergeParameters(userParams) {
+        return {
+            ...this.getDefaultParameters(),
+            ...userParams,
+        };
+    }
+    handleAPIError(error, provider) {
+        console.error(`[${provider}] API Error:`, error);
+        if (error.response) {
+            const status = error.response.status;
+            const data = error.response.data;
+            if (status === 401) {
+                throw new Error(`[${provider}] API密钥无效或已过期`);
+            }
+            else if (status === 429) {
+                throw new Error(`[${provider}] 请求频率超限，请稍后重试`);
+            }
+            else if (status === 500) {
+                throw new Error(`[${provider}] 服务器内部错误`);
+            }
+            else if (status === 503) {
+                throw new Error(`[${provider}] 服务暂时不可用`);
+            }
+            else {
+                throw new Error(`[${provider}] API调用失败: ${data?.error?.message || data?.message || '未知错误'}`);
+            }
+        }
+        else if (error.request) {
+            throw new Error(`[${provider}] 网络请求失败，请检查API地址和网络连接`);
+        }
+        else {
+            throw new Error(`[${provider}] 请求配置错误: ${error.message}`);
+        }
+    }
+}
+exports.BaseAIProvider = BaseAIProvider;
+
+
+/***/ }),
+/* 27 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ClaudeProvider = void 0;
+const axios_1 = __webpack_require__(25);
+const client_1 = __webpack_require__(10);
+const base_provider_1 = __webpack_require__(26);
+class ClaudeProvider extends base_provider_1.BaseAIProvider {
+    constructor() {
+        super();
+        this.provider = client_1.AIProvider.CLAUDE;
+        this.httpClient = axios_1.default.create({
+            timeout: 60000,
+            headers: {
+                'Content-Type': 'application/json',
+                'anthropic-version': '2023-06-01',
+            },
+        });
+    }
+    convertMessages(messages) {
+        const systemMessage = messages.find(msg => msg.role === 'system');
+        const userMessages = messages.filter(msg => msg.role !== 'system');
+        return {
+            system: systemMessage?.content,
+            messages: userMessages.map(msg => ({
+                role: msg.role === 'assistant' ? 'assistant' : 'user',
+                content: msg.content,
+            })),
+        };
+    }
+    async chat(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const { system, messages: claudeMessages } = this.convertMessages(messages);
+            const requestBody = {
+                model: config.model,
+                messages: claudeMessages,
+                max_tokens: parameters.maxTokens || 2000,
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                stream: false,
+            };
+            if (system) {
+                requestBody.system = system;
+            }
+            const response = await this.httpClient.post(`${config.apiUrl}/messages`, requestBody, {
+                headers: {
+                    'x-api-key': config.apiKey,
+                },
+                timeout: (parameters.timeout || 30) * 1000,
+            });
+            const data = response.data;
+            const usage = data.usage || {};
+            return {
+                content: data.content[0]?.text || '',
+                model: data.model,
+                provider: this.provider,
+                inputTokens: usage.input_tokens || 0,
+                outputTokens: usage.output_tokens || 0,
+                totalTokens: (usage.input_tokens || 0) + (usage.output_tokens || 0),
+                finishReason: data.stop_reason || 'end_turn',
+            };
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async *chatStream(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const { system, messages: claudeMessages } = this.convertMessages(messages);
+            const requestBody = {
+                model: config.model,
+                messages: claudeMessages,
+                max_tokens: parameters.maxTokens || 2000,
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                stream: true,
+            };
+            if (system) {
+                requestBody.system = system;
+            }
+            const response = await this.httpClient.post(`${config.apiUrl}/messages`, requestBody, {
+                headers: {
+                    'x-api-key': config.apiKey,
+                },
+                timeout: (parameters.timeout || 30) * 1000,
+                responseType: 'stream',
+            });
+            for await (const chunk of response.data) {
+                const lines = chunk.toString().split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6).trim();
+                        try {
+                            const parsed = JSON.parse(data);
+                            if (parsed.type === 'content_block_delta') {
+                                const content = parsed.delta?.text;
+                                if (content) {
+                                    yield content;
+                                }
+                            }
+                        }
+                        catch (e) {
+                        }
+                    }
+                }
+            }
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async testConnection(config) {
+        try {
+            const testMessages = [
+                { role: 'user', content: 'Hello' },
+            ];
+            await this.chat(testMessages, {
+                ...config,
+                parameters: {
+                    ...config.parameters,
+                    maxTokens: 10,
+                },
+            });
+            return true;
+        }
+        catch (error) {
+            console.error('[Claude] Connection test failed:', error);
+            return false;
+        }
+    }
+}
+exports.ClaudeProvider = ClaudeProvider;
+
+
+/***/ }),
+/* 28 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeepSeekProvider = void 0;
+const axios_1 = __webpack_require__(25);
+const client_1 = __webpack_require__(10);
+const base_provider_1 = __webpack_require__(26);
+class DeepSeekProvider extends base_provider_1.BaseAIProvider {
+    constructor() {
+        super();
+        this.provider = client_1.AIProvider.DEEPSEEK;
+        this.httpClient = axios_1.default.create({
+            timeout: 60000,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    }
+    async chat(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const requestBody = {
+                model: config.model,
+                messages: messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                })),
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                frequency_penalty: parameters.frequencyPenalty,
+                presence_penalty: parameters.presencePenalty,
+                max_tokens: parameters.maxTokens,
+                stream: false,
+            };
+            const response = await this.httpClient.post(`${config.apiUrl}/chat/completions`, requestBody, {
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`,
+                },
+                timeout: (parameters.timeout || 30) * 1000,
+            });
+            const data = response.data;
+            const choice = data.choices[0];
+            const usage = data.usage || {};
+            return {
+                content: choice.message.content,
+                model: data.model,
+                provider: this.provider,
+                inputTokens: usage.prompt_tokens || 0,
+                outputTokens: usage.completion_tokens || 0,
+                totalTokens: usage.total_tokens || 0,
+                finishReason: choice.finish_reason || 'stop',
+            };
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async *chatStream(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const requestBody = {
+                model: config.model,
+                messages: messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                })),
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                frequency_penalty: parameters.frequencyPenalty,
+                presence_penalty: parameters.presencePenalty,
+                max_tokens: parameters.maxTokens,
+                stream: true,
+            };
+            const response = await this.httpClient.post(`${config.apiUrl}/chat/completions`, requestBody, {
+                headers: {
+                    'Authorization': `Bearer ${config.apiKey}`,
+                },
+                timeout: (parameters.timeout || 30) * 1000,
+                responseType: 'stream',
+            });
+            for await (const chunk of response.data) {
+                const lines = chunk.toString().split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6).trim();
+                        if (data === '[DONE]') {
+                            return;
+                        }
+                        try {
+                            const parsed = JSON.parse(data);
+                            const content = parsed.choices[0]?.delta?.content;
+                            if (content) {
+                                yield content;
+                            }
+                        }
+                        catch (e) {
+                        }
+                    }
+                }
+            }
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async testConnection(config) {
+        try {
+            const testMessages = [
+                { role: 'user', content: 'Hello' },
+            ];
+            await this.chat(testMessages, {
+                ...config,
+                parameters: {
+                    ...config.parameters,
+                    maxTokens: 10,
+                },
+            });
+            return true;
+        }
+        catch (error) {
+            console.error('[DeepSeek] Connection test failed:', error);
+            return false;
+        }
+    }
+}
+exports.DeepSeekProvider = DeepSeekProvider;
+
+
+/***/ }),
+/* 29 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GenericProvider = void 0;
+const axios_1 = __webpack_require__(25);
+const client_1 = __webpack_require__(10);
+const base_provider_1 = __webpack_require__(26);
+class GenericProvider extends base_provider_1.BaseAIProvider {
+    constructor(provider) {
+        super();
+        this.provider = provider;
+        this.httpClient = axios_1.default.create({
+            timeout: 60000,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    }
+    async chat(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const requestBody = {
+                model: config.model,
+                messages: messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                })),
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                max_tokens: parameters.maxTokens,
+                stream: false,
+            };
+            const headers = {};
+            if (this.provider === client_1.AIProvider.WENXIN) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            else if (this.provider === client_1.AIProvider.QWEN) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            else if (this.provider === client_1.AIProvider.ZHIPU) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            else {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            const response = await this.httpClient.post(`${config.apiUrl}/chat/completions`, requestBody, {
+                headers,
+                timeout: (parameters.timeout || 30) * 1000,
+            });
+            const data = response.data;
+            const choice = data.choices[0];
+            const usage = data.usage || {};
+            return {
+                content: choice.message?.content || choice.text || '',
+                model: data.model || config.model,
+                provider: this.provider,
+                inputTokens: usage.prompt_tokens || 0,
+                outputTokens: usage.completion_tokens || 0,
+                totalTokens: usage.total_tokens || 0,
+                finishReason: choice.finish_reason || 'stop',
+            };
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async *chatStream(messages, config) {
+        try {
+            const parameters = this.mergeParameters(config.parameters);
+            const requestBody = {
+                model: config.model,
+                messages: messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                })),
+                temperature: parameters.temperature,
+                top_p: parameters.topP,
+                max_tokens: parameters.maxTokens,
+                stream: true,
+            };
+            const headers = {};
+            if (this.provider === client_1.AIProvider.WENXIN) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            else if (this.provider === client_1.AIProvider.QWEN) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            else if (this.provider === client_1.AIProvider.ZHIPU) {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            else {
+                headers['Authorization'] = `Bearer ${config.apiKey}`;
+            }
+            const response = await this.httpClient.post(`${config.apiUrl}/chat/completions`, requestBody, {
+                headers,
+                timeout: (parameters.timeout || 30) * 1000,
+                responseType: 'stream',
+            });
+            for await (const chunk of response.data) {
+                const lines = chunk.toString().split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6).trim();
+                        if (data === '[DONE]') {
+                            return;
+                        }
+                        try {
+                            const parsed = JSON.parse(data);
+                            const content = parsed.choices[0]?.delta?.content || parsed.choices[0]?.text;
+                            if (content) {
+                                yield content;
+                            }
+                        }
+                        catch (e) {
+                        }
+                    }
+                }
+            }
+        }
+        catch (error) {
+            this.handleAPIError(error, this.provider);
+        }
+    }
+    async testConnection(config) {
+        try {
+            const testMessages = [
+                { role: 'user', content: 'Hello' },
+            ];
+            await this.chat(testMessages, {
+                ...config,
+                parameters: {
+                    ...config.parameters,
+                    maxTokens: 10,
+                },
+            });
+            return true;
+        }
+        catch (error) {
+            console.error(`[${this.provider}] Connection test failed:`, error);
+            return false;
+        }
+    }
+}
+exports.GenericProvider = GenericProvider;
+
+
+/***/ }),
+/* 30 */
+/***/ ((module) => {
+
+module.exports = require("crypto");
+
+/***/ }),
+/* 31 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1151,75 +2495,247 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GenerationService = void 0;
+exports.ContextManagerService = void 0;
 const common_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(5);
-let GenerationService = class GenerationService {
+const database_1 = __webpack_require__(6);
+let ContextManagerService = class ContextManagerService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async generateContent(userId, dto) {
+    async getSmartContext(request) {
         const novel = await this.prisma.novel.findFirst({
-            where: { id: dto.novelId, userId },
+            where: {
+                id: request.novelId,
+                userId: request.userId,
+            },
         });
         if (!novel) {
-            throw new Error('小说不存在或无权访问');
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '小说不存在或无权访问',
+                error: 'NOVEL_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
         }
-        const mockContent = this.generateMockContent(dto);
-        await this.logContentGeneration(userId, dto.prompt.length, mockContent.length);
-        return {
-            content: mockContent,
-            metadata: {
-                type: dto.contentType,
-                length: dto.length,
-                style: dto.style,
-                wordCount: this.calculateWordCount(mockContent),
-            }
+        const context = {
+            novel: {
+                title: novel.title,
+                description: novel.description || undefined,
+                genre: novel.genre || undefined,
+            },
         };
+        if (request.includeCharacters) {
+            context.characters = await this.getRelevantCharacters(request.novelId, request.keywords);
+        }
+        if (request.maxMemories && request.maxMemories > 0) {
+            context.memories = await this.getRelevantMemories(request.novelId, request.keywords, request.maxMemories);
+        }
+        if (request.maxChapters && request.maxChapters > 0) {
+            context.chapters = await this.getRelevantChapters(request.novelId, request.chapterId, request.keywords, request.maxChapters);
+        }
+        if (request.chapterId) {
+            context.currentChapter = await this.getCurrentChapter(request.chapterId, request.userId);
+        }
+        return context;
     }
-    generateMockContent(dto) {
-        const templates = {
-            continuation: '故事继续发展，主角面临了新的挑战...',
-            scene: '场景描写：阳光透过窗棂洒在房间里...',
-            dialogue: '"这真的是你想要的结果吗？"她轻声问道。',
-            description: '环境描写：古老的城堡在月光下显得格外神秘...',
-            opening: '开头：那是一个改变一切的夜晚...',
-            ending: '结尾：当一切尘埃落定，他们终于明白了真相...',
-        };
-        return templates[dto.contentType] || templates.continuation;
+    async getRelevantCharacters(novelId, keywords) {
+        const characters = await this.prisma.character.findMany({
+            where: {
+                novelId,
+            },
+            select: {
+                name: true,
+                background: true,
+                personality: true,
+            },
+            orderBy: {
+                createdAt: 'asc',
+            },
+            take: 10,
+        });
+        if (keywords && keywords.length > 0) {
+            return characters
+                .map(char => ({
+                ...char,
+                relevance: this.calculateRelevance(char.name + ' ' + (char.background || '') + ' ' + (char.personality || ''), keywords),
+            }))
+                .filter(char => char.relevance > 0)
+                .sort((a, b) => b.relevance - a.relevance)
+                .map(({ relevance, ...char }) => char);
+        }
+        return characters;
     }
-    calculateWordCount(content) {
-        const chineseChars = (content.match(/[\u4e00-\u9fff]/g) || []).length;
-        const englishWords = (content.match(/[a-zA-Z]+/g) || []).length;
-        return chineseChars + englishWords;
+    async getRelevantMemories(novelId, keywords, maxCount = 5) {
+        const memories = await this.prisma.novelMemory.findMany({
+            where: {
+                novelId,
+            },
+            select: {
+                content: true,
+                memoryType: true,
+            },
+            orderBy: {
+                importance: 'desc',
+            },
+            take: maxCount * 3,
+        });
+        const memoriesWithRelevance = memories.map(memory => {
+            const contentStr = typeof memory.content === 'string'
+                ? memory.content
+                : JSON.stringify(memory.content);
+            return {
+                title: memory.memoryType || '记忆',
+                content: contentStr,
+                relevance: keywords && keywords.length > 0
+                    ? this.calculateRelevance(contentStr, keywords)
+                    : 1,
+            };
+        });
+        return memoriesWithRelevance
+            .sort((a, b) => b.relevance - a.relevance)
+            .slice(0, maxCount);
     }
-    async logContentGeneration(userId, inputLength, outputLength) {
-        try {
-            await this.prisma.aIUsageLog.create({
-                data: {
-                    userId,
-                    model: 'content-generator',
-                    functionType: 'content_generation',
-                    inputTokens: Math.ceil(inputLength / 4),
-                    outputTokens: Math.ceil(outputLength / 4),
-                    success: true,
-                },
+    async getRelevantChapters(novelId, currentChapterId, keywords, maxCount = 3) {
+        if (currentChapterId) {
+            const currentChapter = await this.prisma.chapter.findUnique({
+                where: { id: currentChapterId },
+                select: { chapterNumber: true },
             });
+            if (currentChapter) {
+                const previousChapters = await this.prisma.chapter.findMany({
+                    where: {
+                        novelId,
+                        chapterNumber: {
+                            lt: currentChapter.chapterNumber,
+                        },
+                    },
+                    select: {
+                        title: true,
+                        content: true,
+                    },
+                    orderBy: {
+                        chapterNumber: 'desc',
+                    },
+                    take: maxCount,
+                });
+                return previousChapters.reverse();
+            }
         }
-        catch (error) {
-            console.error('Log content generation error:', error);
+        const recentChapters = await this.prisma.chapter.findMany({
+            where: {
+                novelId,
+            },
+            select: {
+                title: true,
+                content: true,
+            },
+            orderBy: {
+                chapterNumber: 'desc',
+            },
+            take: maxCount,
+        });
+        return recentChapters.reverse();
+    }
+    async getCurrentChapter(chapterId, userId) {
+        const chapter = await this.prisma.chapter.findFirst({
+            where: {
+                id: chapterId,
+                novel: {
+                    userId,
+                },
+                isDeleted: false,
+            },
+            select: {
+                title: true,
+                content: true,
+            },
+        });
+        if (!chapter) {
+            return undefined;
         }
+        return {
+            title: chapter.title,
+            content: chapter.content || '',
+        };
+    }
+    calculateRelevance(text, keywords) {
+        if (!text || !keywords || keywords.length === 0) {
+            return 0;
+        }
+        const lowerText = text.toLowerCase();
+        let score = 0;
+        for (const keyword of keywords) {
+            const lowerKeyword = keyword.toLowerCase();
+            const occurrences = (lowerText.match(new RegExp(lowerKeyword, 'g')) || []).length;
+            score += occurrences;
+        }
+        return score;
+    }
+    formatContextForAI(context) {
+        let text = '';
+        text += `【小说信息】\n`;
+        text += `标题：${context.novel.title}\n`;
+        if (context.novel.description) {
+            text += `简介：${context.novel.description}\n`;
+        }
+        if (context.novel.genre) {
+            text += `类型：${context.novel.genre}\n`;
+        }
+        text += '\n';
+        if (context.outline) {
+            text += `【故事大纲】\n${context.outline.content}\n\n`;
+        }
+        if (context.characters && context.characters.length > 0) {
+            text += `【主要角色】\n`;
+            for (const char of context.characters) {
+                text += `- ${char.name}`;
+                if (char.description) {
+                    text += `：${char.description}`;
+                }
+                if (char.personality) {
+                    text += `（性格：${char.personality}）`;
+                }
+                text += '\n';
+            }
+            text += '\n';
+        }
+        if (context.memories && context.memories.length > 0) {
+            text += `【相关设定】\n`;
+            for (const memory of context.memories) {
+                text += `- ${memory.title}：${memory.content}\n`;
+            }
+            text += '\n';
+        }
+        if (context.chapters && context.chapters.length > 0) {
+            text += `【前文内容】\n`;
+            for (const chapter of context.chapters) {
+                text += `《${chapter.title}》\n`;
+                if (chapter.summary) {
+                    text += `概要：${chapter.summary}\n`;
+                }
+                else {
+                    const preview = chapter.content.slice(0, 200);
+                    text += `${preview}${chapter.content.length > 200 ? '...' : ''}\n`;
+                }
+                text += '\n';
+            }
+        }
+        if (context.currentChapter) {
+            text += `【当前章节】\n`;
+            text += `《${context.currentChapter.title}》\n`;
+            text += `${context.currentChapter.content}\n`;
+        }
+        return text;
     }
 };
-exports.GenerationService = GenerationService;
-exports.GenerationService = GenerationService = __decorate([
+exports.ContextManagerService = ContextManagerService;
+exports.ContextManagerService = ContextManagerService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
-], GenerationService);
+], ContextManagerService);
 
 
 /***/ }),
-/* 21 */
+/* 32 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1239,9 +2755,10 @@ var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenerationController = void 0;
 const common_1 = __webpack_require__(2);
-const guards_1 = __webpack_require__(15);
-const generation_service_1 = __webpack_require__(20);
-const conversation_dto_1 = __webpack_require__(12);
+const swagger_1 = __webpack_require__(3);
+const guards_1 = __webpack_require__(16);
+const generation_service_1 = __webpack_require__(21);
+const conversation_dto_1 = __webpack_require__(13);
 let GenerationController = class GenerationController {
     constructor(generationService) {
         this.generationService = generationService;
@@ -1252,7 +2769,49 @@ let GenerationController = class GenerationController {
 };
 exports.GenerationController = GenerationController;
 __decorate([
-    (0, common_1.Post)('content'),
+    (0, common_1.Post)('generation/content'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'AI内容生成',
+        description: '使用AI生成小说内容，支持续写、场景、对话、描写、开头、结尾等多种内容类型'
+    }),
+    (0, swagger_1.ApiBody)({
+        type: conversation_dto_1.GenerateContentDto,
+        description: '生成参数'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'AI生成成功',
+        schema: {
+            type: 'object',
+            properties: {
+                content: { type: 'string', example: '主角终于走到了宫殿的大门前...' },
+                metadata: {
+                    type: 'object',
+                    properties: {
+                        type: { type: 'string', example: 'continuation' },
+                        length: { type: 'string', example: 'medium' },
+                        style: { type: 'string', example: 'current' },
+                        wordCount: { type: 'number', example: 520 },
+                        model: { type: 'string', example: 'gpt-4' },
+                        provider: { type: 'string', example: 'OPENAI' },
+                        tokensUsed: { type: 'number', example: 1250 }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: '参数错误或AI服务异常',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 401,
+        description: '未授权访问',
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 404,
+        description: '小说不存在或无权访问',
+    }),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
@@ -1260,14 +2819,16 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], GenerationController.prototype, "generateContent", null);
 exports.GenerationController = GenerationController = __decorate([
-    (0, common_1.Controller)('generation'),
+    (0, swagger_1.ApiTags)('AI内容生成'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
     __metadata("design:paramtypes", [typeof (_a = typeof generation_service_1.GenerationService !== "undefined" && generation_service_1.GenerationService) === "function" ? _a : Object])
 ], GenerationController);
 
 
 /***/ }),
-/* 22 */
+/* 33 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1280,8 +2841,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionModule = void 0;
 const common_1 = __webpack_require__(2);
-const suggestion_service_1 = __webpack_require__(23);
-const suggestion_controller_1 = __webpack_require__(25);
+const suggestion_service_1 = __webpack_require__(34);
+const suggestion_controller_1 = __webpack_require__(36);
 let SuggestionModule = class SuggestionModule {
 };
 exports.SuggestionModule = SuggestionModule;
@@ -1295,7 +2856,7 @@ exports.SuggestionModule = SuggestionModule = __decorate([
 
 
 /***/ }),
-/* 23 */
+/* 34 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1312,8 +2873,8 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionService = void 0;
 const common_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(5);
-const suggestion_dto_1 = __webpack_require__(24);
+const database_1 = __webpack_require__(6);
+const suggestion_dto_1 = __webpack_require__(35);
 let SuggestionService = class SuggestionService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -1703,7 +3264,7 @@ exports.SuggestionService = SuggestionService = __decorate([
 
 
 /***/ }),
-/* 24 */
+/* 35 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1718,7 +3279,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplySuggestionDto = exports.AnalyzeTextDto = exports.GenerateSuggestionsDto = exports.SuggestionPriority = exports.SuggestionType = void 0;
-const class_validator_1 = __webpack_require__(13);
+const class_validator_1 = __webpack_require__(14);
 var SuggestionType;
 (function (SuggestionType) {
     SuggestionType["BASIC"] = "basic";
@@ -1816,7 +3377,7 @@ __decorate([
 
 
 /***/ }),
-/* 25 */
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1836,9 +3397,9 @@ var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionController = void 0;
 const common_1 = __webpack_require__(2);
-const guards_1 = __webpack_require__(15);
-const suggestion_service_1 = __webpack_require__(23);
-const suggestion_dto_1 = __webpack_require__(24);
+const guards_1 = __webpack_require__(16);
+const suggestion_service_1 = __webpack_require__(34);
+const suggestion_dto_1 = __webpack_require__(35);
 let SuggestionController = class SuggestionController {
     constructor(suggestionService) {
         this.suggestionService = suggestionService;
@@ -1896,7 +3457,7 @@ exports.SuggestionController = SuggestionController = __decorate([
 
 
 /***/ }),
-/* 26 */
+/* 37 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1918,7 +3479,7 @@ exports.WizardModule = WizardModule = __decorate([
 
 
 /***/ }),
-/* 27 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1931,8 +3492,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(2);
-const health_controller_1 = __webpack_require__(28);
-const health_service_1 = __webpack_require__(29);
+const health_controller_1 = __webpack_require__(39);
+const health_service_1 = __webpack_require__(40);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -1945,7 +3506,7 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 28 */
+/* 39 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1962,7 +3523,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(2);
-const health_service_1 = __webpack_require__(29);
+const health_service_1 = __webpack_require__(40);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -1985,7 +3546,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 29 */
+/* 40 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 

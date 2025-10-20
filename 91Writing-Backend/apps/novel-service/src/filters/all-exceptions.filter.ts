@@ -42,6 +42,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       error,
       message,
       stack: exception instanceof Error ? exception.stack : undefined,
+      fullException: exception,
     });
 
     response.status(status).json({

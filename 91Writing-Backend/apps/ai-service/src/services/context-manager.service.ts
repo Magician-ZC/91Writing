@@ -66,9 +66,6 @@ export class ContextManagerService {
         id: request.novelId,
         userId: request.userId,
       },
-      include: {
-        outline: true,
-      },
     });
 
     if (!novel) {
@@ -89,13 +86,6 @@ export class ContextManagerService {
         genre: novel.genre || undefined,
       },
     };
-
-    // 2. 获取大纲（如果需要）
-    if (request.includeOutline && novel.outline) {
-      context.outline = {
-        content: novel.outline.content,
-      };
-    }
 
     // 3. 获取角色信息（如果需要）
     if (request.includeCharacters) {
@@ -145,11 +135,10 @@ export class ContextManagerService {
     const characters = await this.prisma.character.findMany({
       where: {
         novelId,
-        isDeleted: false,
       },
       select: {
         name: true,
-        description: true,
+        background: true,
         personality: true,
       },
       orderBy: {
@@ -164,7 +153,7 @@ export class ContextManagerService {
         .map(char => ({
           ...char,
           relevance: this.calculateRelevance(
-            char.name + ' ' + (char.description || ''),
+            char.name + ' ' + (char.background || '') + ' ' + (char.personality || ''),
             keywords,
           ),
         }))
@@ -184,27 +173,34 @@ export class ContextManagerService {
     keywords?: string[],
     maxCount: number = 5,
   ): Promise<Array<{ title: string; content: string; relevance: number }>> {
-    const memories = await this.prisma.memory.findMany({
+    const memories = await this.prisma.novelMemory.findMany({
       where: {
         novelId,
       },
       select: {
-        title: true,
         content: true,
+        memoryType: true,
       },
       orderBy: {
-        updatedAt: 'desc',
+        importance: 'desc',
       },
       take: maxCount * 3, // 获取更多，然后过滤
     });
 
     // 计算相关性
-    const memoriesWithRelevance = memories.map(memory => ({
-      ...memory,
-      relevance: keywords && keywords.length > 0
-        ? this.calculateRelevance(memory.title + ' ' + memory.content, keywords)
-        : 1, // 如果没有关键词，使用最新的记忆
-    }));
+    const memoriesWithRelevance = memories.map(memory => {
+      const contentStr = typeof memory.content === 'string' 
+        ? memory.content 
+        : JSON.stringify(memory.content);
+      
+      return {
+        title: memory.memoryType || '记忆',
+        content: contentStr,
+        relevance: keywords && keywords.length > 0
+          ? this.calculateRelevance(contentStr, keywords)
+          : 1, // 如果没有关键词，使用最新的记忆
+      };
+    });
 
     // 排序并返回最相关的记忆
     return memoriesWithRelevance
@@ -225,25 +221,23 @@ export class ContextManagerService {
     if (currentChapterId) {
       const currentChapter = await this.prisma.chapter.findUnique({
         where: { id: currentChapterId },
-        select: { orderNum: true },
+        select: { chapterNumber: true },
       });
 
       if (currentChapter) {
         const previousChapters = await this.prisma.chapter.findMany({
           where: {
             novelId,
-            orderNum: {
-              lt: currentChapter.orderNum,
+            chapterNumber: {
+              lt: currentChapter.chapterNumber,
             },
-            isDeleted: false,
           },
           select: {
             title: true,
             content: true,
-            summary: true,
           },
           orderBy: {
-            orderNum: 'desc',
+            chapterNumber: 'desc',
           },
           take: maxCount,
         });
@@ -254,19 +248,17 @@ export class ContextManagerService {
 
     // 如果没有指定当前章节，获取最新的几章
     const recentChapters = await this.prisma.chapter.findMany({
-      where: {
-        novelId,
-        isDeleted: false,
-      },
-      select: {
-        title: true,
-        content: true,
-        summary: true,
-      },
-      orderBy: {
-        orderNum: 'desc',
-      },
-      take: maxCount,
+          where: {
+            novelId,
+          },
+          select: {
+            title: true,
+            content: true,
+          },
+          orderBy: {
+            chapterNumber: 'desc',
+          },
+          take: maxCount,
     });
 
     return recentChapters.reverse();

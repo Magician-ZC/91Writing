@@ -2581,13 +2581,13 @@ let MemoryService = class MemoryService {
             where.OR = [
                 {
                     content: {
-                        path: ['title'],
+                        path: 'title',
                         string_contains: query.keyword,
                     },
                 },
                 {
                     content: {
-                        path: ['description'],
+                        path: 'description',
                         string_contains: query.keyword,
                     },
                 },
@@ -5688,11 +5688,48 @@ let MaterialController = class MaterialController {
     constructor(materialService) {
         this.materialService = materialService;
     }
+    async getMaterials(req, query) {
+        console.log('getMaterials called, user:', req.user, 'query:', query);
+        if (!req.user || !req.user.id) {
+            throw new common_1.HttpException('用户未认证', common_1.HttpStatus.UNAUTHORIZED);
+        }
+        return this.materialService.getMaterials(req.user.id, query);
+    }
+    async getMaterialStats(req) {
+        console.log('getMaterialStats called, user:', req.user);
+        if (!req.user || !req.user.id) {
+            throw new common_1.HttpException('用户未认证', common_1.HttpStatus.UNAUTHORIZED);
+        }
+        return this.materialService.getMaterialStats(req.user.id);
+    }
+    async getMaterialCategories(req) {
+        console.log('getMaterialCategories called, user:', req.user);
+        if (!req.user || !req.user.id) {
+            throw new common_1.HttpException('用户未认证', common_1.HttpStatus.UNAUTHORIZED);
+        }
+        return this.materialService.getMaterialCategories(req.user.id);
+    }
+    async getMaterialTags(req) {
+        console.log('getMaterialTags called, user:', req.user);
+        if (!req.user || !req.user.id) {
+            throw new common_1.HttpException('用户未认证', common_1.HttpStatus.UNAUTHORIZED);
+        }
+        return this.materialService.getMaterialTags(req.user.id);
+    }
+    async getStorageQuota(req) {
+        return this.materialService.getStorageQuota(req.user.id);
+    }
     async createMaterial(req, dto) {
         return this.materialService.createMaterial(req.user.id, dto);
     }
-    async getMaterials(req, query) {
-        return this.materialService.getMaterials(req.user.id, query);
+    async batchDeleteMaterials(req, dto) {
+        return this.materialService.batchDeleteMaterials(req.user.id, dto);
+    }
+    async batchUpdateCategory(req, dto) {
+        return this.materialService.batchUpdateCategory(req.user.id, dto);
+    }
+    async deleteMaterialReference(req, referenceId) {
+        return this.materialService.deleteMaterialReference(req.user.id, referenceId);
     }
     async getMaterial(req, id) {
         return this.materialService.getMaterial(req.user.id, id);
@@ -5703,29 +5740,60 @@ let MaterialController = class MaterialController {
     async deleteMaterial(req, id) {
         return this.materialService.deleteMaterial(req.user.id, id);
     }
-    async getMaterialStats(req) {
-        return this.materialService.getMaterialStats(req.user.id);
-    }
-    async batchDeleteMaterials(req, dto) {
-        return this.materialService.batchDeleteMaterials(req.user.id, dto);
-    }
-    async batchUpdateCategory(req, dto) {
-        return this.materialService.batchUpdateCategory(req.user.id, dto);
-    }
     async addMaterialReference(req, id, dto) {
         return this.materialService.addMaterialReference(req.user.id, id, dto);
     }
     async getMaterialReferences(req, id) {
         return this.materialService.getMaterialReferences(req.user.id, id);
     }
-    async deleteMaterialReference(req, referenceId) {
-        return this.materialService.deleteMaterialReference(req.user.id, referenceId);
-    }
-    async getStorageQuota(req) {
-        return this.materialService.getStorageQuota(req.user.id);
-    }
 };
 exports.MaterialController = MaterialController;
+__decorate([
+    (0, common_1.Get)('materials'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材列表' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof material_dto_1.QueryMaterialsDto !== "undefined" && material_dto_1.QueryMaterialsDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getMaterials", null);
+__decorate([
+    (0, common_1.Get)('materials/stats'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材统计' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getMaterialStats", null);
+__decorate([
+    (0, common_1.Get)('materials/categories'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材分类列表' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getMaterialCategories", null);
+__decorate([
+    (0, common_1.Get)('materials/tags'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材标签列表' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getMaterialTags", null);
+__decorate([
+    (0, common_1.Get)('materials/storage/quota'),
+    (0, swagger_1.ApiOperation)({ summary: '获取存储配额信息' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getStorageQuota", null);
 __decorate([
     (0, common_1.Post)('materials'),
     (0, swagger_1.ApiOperation)({ summary: '创建素材' }),
@@ -5734,19 +5802,45 @@ __decorate([
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_b = typeof material_dto_1.CreateMaterialDto !== "undefined" && material_dto_1.CreateMaterialDto) === "function" ? _b : Object]),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof material_dto_1.CreateMaterialDto !== "undefined" && material_dto_1.CreateMaterialDto) === "function" ? _c : Object]),
     __metadata("design:returntype", Promise)
 ], MaterialController.prototype, "createMaterial", null);
 __decorate([
-    (0, common_1.Get)('materials'),
-    (0, swagger_1.ApiOperation)({ summary: '获取素材列表' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    (0, common_1.Post)('materials/batch-delete'),
+    (0, swagger_1.ApiOperation)({ summary: '批量删除素材' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.BatchDeleteMaterialsDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '批量删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Query)(common_1.ValidationPipe)),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_c = typeof material_dto_1.QueryMaterialsDto !== "undefined" && material_dto_1.QueryMaterialsDto) === "function" ? _c : Object]),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof material_dto_1.BatchDeleteMaterialsDto !== "undefined" && material_dto_1.BatchDeleteMaterialsDto) === "function" ? _d : Object]),
     __metadata("design:returntype", Promise)
-], MaterialController.prototype, "getMaterials", null);
+], MaterialController.prototype, "batchDeleteMaterials", null);
+__decorate([
+    (0, common_1.Post)('materials/batch-update-category'),
+    (0, swagger_1.ApiOperation)({ summary: '批量更新素材分类' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.BatchUpdateCategoryDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '批量更新成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_e = typeof material_dto_1.BatchUpdateCategoryDto !== "undefined" && material_dto_1.BatchUpdateCategoryDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "batchUpdateCategory", null);
+__decorate([
+    (0, common_1.Delete)('materials/references/:referenceId'),
+    (0, swagger_1.ApiOperation)({ summary: '删除素材引用记录' }),
+    (0, swagger_1.ApiParam)({ name: 'referenceId', description: '引用记录ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('referenceId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "deleteMaterialReference", null);
 __decorate([
     (0, common_1.Get)('materials/:id'),
     (0, swagger_1.ApiOperation)({ summary: '获取素材详情' }),
@@ -5769,7 +5863,7 @@ __decorate([
     __param(1, (0, common_1.Param)('id')),
     __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, typeof (_d = typeof material_dto_1.UpdateMaterialDto !== "undefined" && material_dto_1.UpdateMaterialDto) === "function" ? _d : Object]),
+    __metadata("design:paramtypes", [Object, String, typeof (_f = typeof material_dto_1.UpdateMaterialDto !== "undefined" && material_dto_1.UpdateMaterialDto) === "function" ? _f : Object]),
     __metadata("design:returntype", Promise)
 ], MaterialController.prototype, "updateMaterial", null);
 __decorate([
@@ -5784,39 +5878,6 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], MaterialController.prototype, "deleteMaterial", null);
-__decorate([
-    (0, common_1.Get)('materials/stats/summary'),
-    (0, swagger_1.ApiOperation)({ summary: '获取素材统计' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
-    __param(0, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "getMaterialStats", null);
-__decorate([
-    (0, common_1.Post)('materials/batch-delete'),
-    (0, swagger_1.ApiOperation)({ summary: '批量删除素材' }),
-    (0, swagger_1.ApiBody)({ type: material_dto_1.BatchDeleteMaterialsDto }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '批量删除成功' }),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_e = typeof material_dto_1.BatchDeleteMaterialsDto !== "undefined" && material_dto_1.BatchDeleteMaterialsDto) === "function" ? _e : Object]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "batchDeleteMaterials", null);
-__decorate([
-    (0, common_1.Post)('materials/batch-update-category'),
-    (0, swagger_1.ApiOperation)({ summary: '批量更新素材分类' }),
-    (0, swagger_1.ApiBody)({ type: material_dto_1.BatchUpdateCategoryDto }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '批量更新成功' }),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_f = typeof material_dto_1.BatchUpdateCategoryDto !== "undefined" && material_dto_1.BatchUpdateCategoryDto) === "function" ? _f : Object]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "batchUpdateCategory", null);
 __decorate([
     (0, common_1.Post)('materials/:id/references'),
     (0, swagger_1.ApiOperation)({ summary: '添加素材引用记录' }),
@@ -5841,27 +5902,6 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], MaterialController.prototype, "getMaterialReferences", null);
-__decorate([
-    (0, common_1.Delete)('materials/references/:referenceId'),
-    (0, swagger_1.ApiOperation)({ summary: '删除素材引用记录' }),
-    (0, swagger_1.ApiParam)({ name: 'referenceId', description: '引用记录ID' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Param)('referenceId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "deleteMaterialReference", null);
-__decorate([
-    (0, common_1.Get)('materials/storage/quota'),
-    (0, swagger_1.ApiOperation)({ summary: '获取存储配额信息' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
-    __param(0, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "getStorageQuota", null);
 exports.MaterialController = MaterialController = __decorate([
     (0, swagger_1.ApiTags)('素材管理'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -5911,36 +5951,42 @@ let MaterialService = class MaterialService {
         return { success: true, data: material };
     }
     async getMaterials(userId, query) {
-        const where = { userId };
-        if (query.type)
-            where.type = query.type;
-        if (query.category)
-            where.category = query.category;
-        if (query.keyword) {
-            where.OR = [
-                { name: { contains: query.keyword } },
-                { description: { contains: query.keyword } },
-            ];
+        try {
+            const where = { userId };
+            if (query.type)
+                where.type = query.type;
+            if (query.category)
+                where.category = query.category;
+            if (query.keyword) {
+                where.OR = [
+                    { name: { contains: query.keyword } },
+                    { description: { contains: query.keyword } },
+                ];
+            }
+            const page = query.page || 1;
+            const pageSize = query.pageSize || 20;
+            const skip = (page - 1) * pageSize;
+            const [materials, total] = await Promise.all([
+                this.prisma.material.findMany({
+                    where,
+                    skip,
+                    take: pageSize,
+                    orderBy: { createdAt: 'desc' },
+                }),
+                this.prisma.material.count({ where }),
+            ]);
+            return {
+                success: true,
+                data: {
+                    items: materials,
+                    pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+                },
+            };
         }
-        const page = query.page || 1;
-        const pageSize = query.pageSize || 20;
-        const skip = (page - 1) * pageSize;
-        const [materials, total] = await Promise.all([
-            this.prisma.material.findMany({
-                where,
-                skip,
-                take: pageSize,
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.material.count({ where }),
-        ]);
-        return {
-            success: true,
-            data: {
-                items: materials,
-                pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
-            },
-        };
+        catch (error) {
+            console.error('获取素材列表失败:', error);
+            throw new common_1.HttpException(`获取素材列表失败: ${error.message}`, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     async getMaterial(userId, materialId) {
         const material = await this.prisma.material.findUnique({
@@ -5984,29 +6030,97 @@ let MaterialService = class MaterialService {
         return { success: true, message: '素材已删除' };
     }
     async getMaterialStats(userId) {
-        const [total, byType, totalSize] = await Promise.all([
-            this.prisma.material.count({ where: { userId } }),
-            this.prisma.material.groupBy({
-                by: ['type'],
+        try {
+            const [total, byType, totalSize] = await Promise.all([
+                this.prisma.material.count({ where: { userId } }),
+                this.prisma.material.groupBy({
+                    by: ['type'],
+                    where: { userId },
+                    _count: true,
+                }),
+                this.prisma.material.aggregate({
+                    where: { userId },
+                    _sum: { fileSize: true },
+                }),
+            ]);
+            return {
+                success: true,
+                data: {
+                    total,
+                    byType: byType.map(item => ({
+                        type: item.type,
+                        count: item._count,
+                    })),
+                    totalSize: totalSize._sum.fileSize || 0,
+                },
+            };
+        }
+        catch (error) {
+            console.error('获取素材统计失败:', error);
+            return {
+                success: true,
+                data: {
+                    total: 0,
+                    byType: [],
+                    totalSize: 0,
+                },
+            };
+        }
+    }
+    async getMaterialCategories(userId) {
+        try {
+            const materials = await this.prisma.material.findMany({
                 where: { userId },
-                _count: true,
-            }),
-            this.prisma.material.aggregate({
+                select: { category: true },
+                distinct: ['category'],
+            });
+            const categories = materials
+                .map(m => m.category)
+                .filter(c => c && c.trim() !== '')
+                .sort();
+            return {
+                success: true,
+                data: categories,
+            };
+        }
+        catch (error) {
+            console.error('获取素材分类失败:', error);
+            return {
+                success: true,
+                data: [],
+            };
+        }
+    }
+    async getMaterialTags(userId) {
+        try {
+            const materials = await this.prisma.material.findMany({
                 where: { userId },
-                _sum: { fileSize: true },
-            }),
-        ]);
-        return {
-            success: true,
-            data: {
-                total,
-                byType: byType.reduce((acc, item) => {
-                    acc[item.type] = item._count;
-                    return acc;
-                }, {}),
-                totalSize: totalSize._sum.fileSize || 0,
-            },
-        };
+                select: { tags: true },
+            });
+            const tagsSet = new Set();
+            materials.forEach(m => {
+                if (m.tags) {
+                    const tagArray = Array.isArray(m.tags) ? m.tags : [];
+                    tagArray.forEach((tag) => {
+                        if (tag && typeof tag === 'string' && tag.trim() !== '') {
+                            tagsSet.add(tag);
+                        }
+                    });
+                }
+            });
+            const tags = Array.from(tagsSet).sort();
+            return {
+                success: true,
+                data: tags,
+            };
+        }
+        catch (error) {
+            console.error('获取素材标签失败:', error);
+            return {
+                success: true,
+                data: [],
+            };
+        }
     }
     async batchDeleteMaterials(userId, dto) {
         const materials = await this.prisma.material.findMany({
@@ -6136,7 +6250,7 @@ let MaterialService = class MaterialService {
             _sum: { fileSize: true },
             _count: true,
         });
-        const actualUsedSpace = stats._sum.fileSize || 0;
+        const actualUsedSpace = BigInt(stats._sum.fileSize || 0);
         const actualMaterialCount = stats._count;
         if (quota.usedSpace !== actualUsedSpace || quota.materialCount !== actualMaterialCount) {
             quota = await this.prisma.userStorageQuota.update({
@@ -9706,36 +9820,45 @@ let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(pas
         this.prisma = prisma;
     }
     async validate(payload) {
-        const { sub, email, role } = payload;
-        const user = await this.prisma.user.findUnique({
-            where: { id: sub },
-            include: {
-                profile: true,
-                subscription: {
-                    include: {
-                        package: true,
+        try {
+            const { sub, email, role } = payload;
+            const user = await this.prisma.user.findUnique({
+                where: { id: sub },
+                include: {
+                    profile: true,
+                    subscription: {
+                        include: {
+                            package: true,
+                        },
                     },
                 },
-            },
-        });
-        if (!user) {
-            throw new common_1.UnauthorizedException('用户不存在');
+            });
+            if (!user) {
+                throw new common_1.UnauthorizedException('用户不存在');
+            }
+            if (user.status !== 'ACTIVE') {
+                throw new common_1.UnauthorizedException('用户账号已被禁用');
+            }
+            return {
+                id: user.id,
+                email: user.email,
+                nickname: user.nickname,
+                role: user.role,
+                status: user.status,
+                isActive: user.isActive,
+                tenantId: user.tenantId,
+                profile: user.profile,
+                subscription: user.subscription,
+                lastLoginAt: user.lastLoginAt,
+            };
         }
-        if (user.status !== 'ACTIVE') {
-            throw new common_1.UnauthorizedException('用户账号已被禁用');
+        catch (error) {
+            console.error('JWT validation error:', error);
+            if (error instanceof common_1.UnauthorizedException) {
+                throw error;
+            }
+            throw new common_1.UnauthorizedException('Token验证失败');
         }
-        return {
-            id: user.id,
-            email: user.email,
-            nickname: user.nickname,
-            role: user.role,
-            status: user.status,
-            isActive: user.isActive,
-            tenantId: user.tenantId,
-            profile: user.profile,
-            subscription: user.subscription,
-            lastLoginAt: user.lastLoginAt,
-        };
     }
 };
 exports.JwtStrategy = JwtStrategy;
@@ -9797,6 +9920,7 @@ let AllExceptionsFilter = class AllExceptionsFilter {
             error,
             message,
             stack: exception instanceof Error ? exception.stack : undefined,
+            fullException: exception,
         });
         response.status(status).json({
             success: false,

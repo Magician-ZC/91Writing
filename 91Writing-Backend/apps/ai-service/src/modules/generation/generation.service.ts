@@ -20,9 +20,6 @@ export class GenerationService {
     // 1. 验证小说权限
     const novel = await this.prisma.novel.findFirst({
       where: { id: dto.novelId, userId },
-      include: {
-        outline: true,
-      },
     });
 
     if (!novel) {
@@ -75,9 +72,6 @@ export class GenerationService {
     // 1. 验证小说权限
     const novel = await this.prisma.novel.findFirst({
       where: { id: dto.novelId, userId },
-      include: {
-        outline: true,
-      },
     });
 
     if (!novel) {
