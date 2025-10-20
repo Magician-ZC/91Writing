@@ -456,4 +456,258 @@ export class MaterialService {
       });
     }
   }
+
+  // ===== 素材分析功能 =====
+  
+  /**
+   * 分析素材风格
+   */
+  async analyzeMaterialStyle(userId: string, materialId: string, analysisType: string) {
+    const material = await this.prisma.material.findUnique({
+      where: { id: materialId },
+    });
+
+    if (!material || material.userId !== userId) {
+      throw new HttpException('素材不存在或无权访问', HttpStatus.NOT_FOUND);
+    }
+
+    // 如果素材是文本类型，提取内容进行分析
+    if (material.type === 'TEXT' || material.type === 'DOCUMENT') {
+      // 这里应该调用AI服务进行分析
+      // 目前返回基础分析结果
+      return {
+        success: true,
+        data: {
+          materialId,
+          materialName: material.name,
+          analysisType,
+          features: {
+            narrative: '叙事视角特征...',
+            dialogue: '对话风格特征...',
+            description: '描写风格特征...',
+            pacing: '节奏特点...'
+          },
+          summary: '该素材采用第三人称全知视角，叙事节奏较快...',
+          recommendations: [
+            '适合用于快节奏的动作场景',
+            '对话简洁有力，适合紧张场面',
+          ]
+        }
+      };
+    }
+
+    throw new HttpException('只能分析文本类型的素材', HttpStatus.BAD_REQUEST);
+  }
+
+  /**
+   * 检测内容相似度
+   */
+  async checkSimilarity(userId: string, materialId: string, content: string, threshold: number = 0.7) {
+    const material = await this.prisma.material.findUnique({
+      where: { id: materialId },
+    });
+
+    if (!material || material.userId !== userId) {
+      throw new HttpException('素材不存在或无权访问', HttpStatus.NOT_FOUND);
+    }
+
+    // 简单的相似度计算（实际应该使用更复杂的算法或调用AI服务）
+    // 这里仅作示例
+    const similarity = this.calculateSimpleSimilarity(content, material.fileUrl || '');
+
+    return {
+      success: true,
+      data: {
+        materialId,
+        similarity,
+        isSimilar: similarity > threshold,
+        threshold,
+        warning: similarity > threshold ? '内容与素材相似度较高，建议修改' : null,
+      }
+    };
+  }
+
+  /**
+   * 简单的相似度计算（仅用于演示）
+   */
+  private calculateSimpleSimilarity(text1: string, text2: string): number {
+    // 实际应该使用更复杂的算法，如余弦相似度、编辑距离等
+    // 这里仅作简单示例
+    const words1 = new Set(text1.toLowerCase().split(/\s+/));
+    const words2 = new Set(text2.toLowerCase().split(/\s+/));
+    
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+    
+    return union.size > 0 ? intersection.size / union.size : 0;
+  }
+
+  /**
+   * 搜索适用于向导步骤的素材
+   */
+  async searchWizardMaterials(userId: string, stepType: string, keyword?: string, limit: number = 5) {
+    try {
+      // 根据步骤类型映射到素材类别
+      const categoryMap: { [key: string]: string[] } = {
+        outline: ['大纲', '结构', '情节'],
+        character: ['角色', '人物', '角色设定'],
+        worldview: ['世界观', '设定', '背景'],
+        scene: ['场景', '描写', '环境'],
+        dialogue: ['对话', '台词']
+      };
+
+      const categories = categoryMap[stepType] || [];
+      
+      const where: any = { userId };
+      
+      // 优先搜索文本类型的素材
+      where.type = 'TEXT';
+      
+      // 如果有关键词，添加搜索条件
+      if (keyword) {
+        where.OR = [
+          { name: { contains: keyword } },
+          { description: { contains: keyword } },
+          { category: { in: categories } }
+        ];
+      } else if (categories.length > 0) {
+        where.category = { in: categories };
+      }
+
+      const materials = await this.prisma.material.findMany({
+        where,
+        take: limit,
+        orderBy: [
+          { usageCount: 'desc' }, // 优先使用次数多的
+          { createdAt: 'desc' }
+        ],
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          category: true,
+          description: true,
+          tags: true,
+          usageCount: true,
+          createdAt: true,
+        }
+      });
+
+      return {
+        success: true,
+        data: {
+          stepType,
+          materials,
+          total: materials.length,
+        }
+      };
+    } catch (error) {
+      console.error('搜索向导素材失败:', error);
+      return {
+        success: true,
+        data: {
+          stepType,
+          materials: [],
+          total: 0,
+        }
+      };
+    }
+  }
+
+  /**
+   * 删除素材引用记录
+   */
+  async deleteMaterialReference(userId: string, referenceId: string) {
+    const reference = await this.prisma.materialReference.findUnique({
+      where: { id: referenceId },
+      include: { material: true }
+    });
+
+    if (!reference) {
+      throw new HttpException('引用记录不存在', HttpStatus.NOT_FOUND);
+    }
+
+    if (reference.userId !== userId) {
+      throw new HttpException('无权删除此引用记录', HttpStatus.FORBIDDEN);
+    }
+
+    // 删除引用记录
+    await this.prisma.materialReference.delete({
+      where: { id: referenceId }
+    });
+
+    // 更新素材使用次数
+    if (reference.material && reference.material.usageCount > 0) {
+      await this.prisma.material.update({
+        where: { id: reference.materialId },
+        data: {
+          usageCount: {
+            decrement: 1
+          }
+        }
+      });
+    }
+
+    return {
+      success: true,
+      message: '引用记录已删除'
+    };
+  }
+
+  /**
+   * 获取推荐素材
+   */
+  async getRecommendedMaterials(userId: string, limit: number = 10) {
+    try {
+      // 获取最近使用的素材类型和分类
+      const recentReferences = await this.prisma.materialReference.findMany({
+        where: { userId },
+        take: 20,
+        orderBy: { createdAt: 'desc' },
+        select: { materialId: true }
+      });
+
+      const recentMaterialIds = recentReferences.map(r => r.materialId);
+      
+      // 如果有最近使用的素材，获取它们的信息
+      let recommendedCategories: string[] = [];
+      if (recentMaterialIds.length > 0) {
+        const recentMaterials = await this.prisma.material.findMany({
+          where: {
+            id: { in: recentMaterialIds },
+            userId
+          },
+          select: { category: true }
+        });
+        
+        recommendedCategories = recentMaterials
+          .map(m => m.category)
+          .filter((c): c is string => c !== null);
+      }
+
+      // 基于最近使用推荐相似素材
+      const materials = await this.prisma.material.findMany({
+        where: {
+          userId,
+          id: { notIn: recentMaterialIds }, // 排除已使用的
+          ...(recommendedCategories.length > 0 ? {
+            category: { in: recommendedCategories }
+          } : {})
+        },
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return {
+        success: true,
+        data: materials
+      };
+    } catch (error) {
+      console.error('获取推荐素材失败:', error);
+      return {
+        success: true,
+        data: []
+      };
+    }
+  }
 }

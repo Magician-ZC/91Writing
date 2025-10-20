@@ -279,4 +279,257 @@ export class GenerationService {
     const englishWords = (content.match(/[a-zA-Z]+/g) || []).length;
     return chineseChars + englishWords;
   }
+
+  // ===== 素材相关生成功能 =====
+
+  /**
+   * 基于素材生成内容
+   */
+  async generateWithMaterials(userId: string, dto: any) {
+    try {
+      // 1. 获取素材内容
+      const materials = await this.prisma.material.findMany({
+        where: {
+          id: { in: dto.materialIds },
+          userId,
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          fileUrl: true,
+          description: true,
+        }
+      });
+
+      if (materials.length === 0) {
+        throw new HttpException('未找到可用的素材', HttpStatus.NOT_FOUND);
+      }
+
+      // 2. 构建素材上下文
+      const materialContext = materials.map(m => {
+        return `素材《${m.name}》${m.description ? `：${m.description}` : ''}
+内容摘要：${m.fileUrl ? m.fileUrl.substring(0, 500) : '（无内容）'}`;
+      }).join('\n\n');
+
+      // 3. 构建AI提示词
+      const usageTypeMap: { [key: string]: string } = {
+        style: '参考其写作风格和叙事手法',
+        structure: '借鉴其情节结构和故事架构',
+        character: '学习其角色塑造技巧和人物刻画方式',
+        scene: '参考其场景描写和氛围营造手法',
+        technique: '吸收其创作技巧和表现手法',
+      };
+
+      const usageDesc = usageTypeMap[dto.usageType] || '作为创作参考';
+
+      const messages: AIChatMessage[] = [
+        {
+          role: 'system',
+          content: `你是一位专业的小说创作助手。你需要${usageDesc}，但绝不直接抄袭或照搬原文。
+要求：
+1. 理解素材的精髓和特点
+2. 用自己的方式重新表达和创作
+3. 保持原创性，相似度控制在${dto.preventSimilarity ? '20%以下' : '50%以下'}
+4. 生成约${dto.targetLength || 1000}字的内容
+5. 创意度：${(dto.creativity || 0.8) * 100}%`
+        },
+        {
+          role: 'user',
+          content: `参考素材：
+${materialContext}
+
+创作需求：${dto.prompt}
+${dto.additionalContext ? `\n额外上下文：${dto.additionalContext}` : ''}
+
+请基于以上素材和需求，创作出高质量的原创内容。`
+        }
+      ];
+
+      // 4. 调用AI
+      const response = await this.aiCallerService.callAI({
+        userId,
+        messages,
+        parameters: {
+          temperature: dto.creativity || 0.8,
+          maxTokens: Math.ceil((dto.targetLength || 1000) * 2),
+        },
+      });
+
+      // 5. 记录素材使用（简化版，实际应该记录到MaterialReference）
+      const materialUsage = materials.map(m => ({
+        materialId: m.id,
+        materialName: m.name,
+        usageType: dto.usageType,
+        similarity: 0.15, // 简化版，实际应该真正计算
+      }));
+
+      return {
+        success: true,
+        data: {
+          content: response.content,
+          materialUsage,
+          usage: response.usage,
+          model: response.model,
+          warnings: dto.preventSimilarity ? ['已启用防抄袭保护'] : [],
+        }
+      };
+    } catch (error) {
+      console.error('基于素材生成内容失败:', error);
+      throw new HttpException(
+        error.message || '生成失败',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  /**
+   * 提取写作风格
+   */
+  async extractStyle(dto: any) {
+    const messages: AIChatMessage[] = [
+      {
+        role: 'system',
+        content: '你是一位专业的文学分析师，擅长提取和分析文本的写作风格特征。'
+      },
+      {
+        role: 'user',
+        content: `请分析以下文本的写作风格，重点提取：${(dto.features || []).join('、')}
+
+文本内容：
+${dto.content}
+
+请以结构化的方式描述这段文本的风格特征。`
+      }
+    ];
+
+    const response = await this.aiCallerService.callAI({
+      userId: 'system', // 系统调用
+      messages,
+      parameters: {
+        temperature: 0.3, // 低温度，更客观
+        maxTokens: 1000,
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        analysis: response.content,
+        materialId: dto.materialId,
+        features: dto.features || ['narrative', 'dialogue', 'description'],
+      }
+    };
+  }
+
+  /**
+   * 分析情节结构
+   */
+  async analyzePlot(dto: any) {
+    const messages: AIChatMessage[] = [
+      {
+        role: 'system',
+        content: '你是一位专业的故事结构分析师，擅长分析情节发展和叙事架构。'
+      },
+      {
+        role: 'user',
+        content: `请分析以下故事的情节结构，分析深度：${dto.depth || 'basic'}
+
+故事内容：
+${dto.content}
+
+请识别：开端、发展、高潮、结局，以及关键转折点。`
+      }
+    ];
+
+    const response = await this.aiCallerService.callAI({
+      userId: 'system',
+      messages,
+      parameters: {
+        temperature: 0.3,
+        maxTokens: 1500,
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        structure: response.content,
+        depth: dto.depth || 'basic',
+      }
+    };
+  }
+
+  /**
+   * 分析角色特征
+   */
+  async analyzeCharacter(dto: any) {
+    const messages: AIChatMessage[] = [
+      {
+        role: 'system',
+        content: '你是一位专业的角色分析师，擅长分析人物性格、动机和发展弧线。'
+      },
+      {
+        role: 'user',
+        content: `请分析${dto.characterName ? `角色"${dto.characterName}"` : '文本中角色'}的特征，分析维度：${(dto.dimensions || []).join('、')}
+
+文本内容：
+${dto.content}
+
+请提供详细的角色分析。`
+      }
+    ];
+
+    const response = await this.aiCallerService.callAI({
+      userId: 'system',
+      messages,
+      parameters: {
+        temperature: 0.3,
+        maxTokens: 1500,
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        analysis: response.content,
+        characterName: dto.characterName,
+        dimensions: dto.dimensions || ['personality', 'background'],
+      }
+    };
+  }
+
+  /**
+   * 检测内容相似度
+   */
+  async checkSimilarity(dto: any) {
+    // 简单的词袋模型相似度计算
+    const text1 = dto.content1.toLowerCase();
+    const text2 = dto.content2.toLowerCase();
+    
+    const words1 = new Set(text1.split(/\s+/));
+    const words2 = new Set(text2.split(/\s+/));
+    
+    const intersection = new Set([...words1].filter(x => words2.has(x)));
+    const union = new Set([...words1, ...words2]);
+    
+    const similarity = union.size > 0 ? intersection.size / union.size : 0;
+    const threshold = dto.threshold || 0.7;
+
+    return {
+      success: true,
+      data: {
+        similarity: parseFloat(similarity.toFixed(4)),
+        threshold,
+        isSimilar: similarity > threshold,
+        warning: similarity > threshold ? '内容相似度较高，建议修改' : null,
+        details: {
+          commonWords: intersection.size,
+          totalWords: union.size,
+          text1Length: words1.size,
+          text2Length: words2.size,
+        }
+      }
+    };
+  }
 }

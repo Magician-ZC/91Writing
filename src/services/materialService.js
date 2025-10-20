@@ -196,6 +196,152 @@ class MaterialService {
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
   }
+
+  // ===== 素材引用功能 =====
+
+  /**
+   * 添加素材引用记录
+   */
+  async addMaterialReference(materialId, referenceData) {
+    try {
+      const response = await apiManager.request({
+        method: 'POST',
+        url: `/materials/${materialId}/references`,
+        data: referenceData
+      })
+      if (response.success) {
+        ElMessage.success('引用记录添加成功')
+        return response.data
+      }
+      throw new Error(response.message || '添加引用记录失败')
+    } catch (error) {
+      ElMessage.error(error.message || '添加引用记录失败')
+      throw error
+    }
+  }
+
+  /**
+   * 获取素材引用列表
+   */
+  async getMaterialReferences(materialId) {
+    try {
+      const response = await apiManager.request({
+        method: 'GET',
+        url: `/materials/${materialId}/references`
+      })
+      if (response.success) {
+        return response.data || []
+      }
+      throw new Error(response.message || '获取引用列表失败')
+    } catch (error) {
+      console.error('获取引用列表失败:', error)
+      return []
+    }
+  }
+
+  /**
+   * 删除引用记录
+   */
+  async deleteMaterialReference(referenceId) {
+    try {
+      const response = await apiManager.request({
+        method: 'DELETE',
+        url: `/materials/references/${referenceId}`
+      })
+      if (response.success) {
+        ElMessage.success('引用记录删除成功')
+        return true
+      }
+      throw new Error(response.message || '删除引用记录失败')
+    } catch (error) {
+      ElMessage.error(error.message || '删除引用记录失败')
+      throw error
+    }
+  }
+
+  // ===== 素材分析功能 =====
+
+  /**
+   * 分析素材风格
+   */
+  async analyzeMaterialStyle(materialId, analysisType = 'style') {
+    try {
+      const response = await apiManager.request({
+        method: 'POST',
+        url: `/materials/${materialId}/analyze/style`,
+        data: { analysisType }
+      })
+      if (response.success) {
+        return response.data
+      }
+      throw new Error(response.message || '分析失败')
+    } catch (error) {
+      ElMessage.error(error.message || '分析失败')
+      throw error
+    }
+  }
+
+  /**
+   * 检测内容相似度
+   */
+  async checkSimilarity(materialId, content, threshold = 0.7) {
+    try {
+      const response = await apiManager.request({
+        method: 'POST',
+        url: `/materials/${materialId}/check-similarity`,
+        data: { content, threshold }
+      })
+      if (response.success) {
+        return response.data
+      }
+      throw new Error(response.message || '相似度检测失败')
+    } catch (error) {
+      ElMessage.error(error.message || '相似度检测失败')
+      throw error
+    }
+  }
+
+  // ===== 素材推荐和搜索 =====
+
+  /**
+   * 获取推荐素材
+   */
+  async getRecommendedMaterials(limit = 10) {
+    try {
+      const response = await apiManager.request({
+        method: 'GET',
+        url: '/materials/recommendations',
+        params: { limit }
+      })
+      if (response.success) {
+        return response.data || []
+      }
+      throw new Error(response.message || '获取推荐失败')
+    } catch (error) {
+      console.error('获取推荐素材失败:', error)
+      return []
+    }
+  }
+
+  /**
+   * 搜索适用于向导的素材
+   */
+  async searchWizardMaterials(stepType, keyword, limit = 5) {
+    try {
+      const response = await apiManager.request({
+        method: 'GET',
+        url: '/materials/search-for-wizard',
+        params: { stepType, keyword, limit }
+      })
+      if (response.success) {
+        return response.data
+      }
+      throw new Error(response.message || '搜索失败')
+    } catch (error) {
+      console.error('搜索向导素材失败:', error)
+      return { materials: [], total: 0 }
+    }
+  }
 }
 
 export default new MaterialService()

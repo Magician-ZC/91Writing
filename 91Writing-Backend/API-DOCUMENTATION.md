@@ -120,15 +120,82 @@ http://localhost:3000/api/docs
 - `maxTokens`: 上下文最大token数
 - `includeTypes`: 包含的记忆类型
 
+#### 3.4 素材管理 (Materials)
+
+| 接口 | 方法 | 路径 | 描述 |
+|------|------|------|------|
+| 创建素材 | POST | `/materials` | 上传新素材 |
+| 获取素材列表 | GET | `/materials` | 分页获取素材 |
+| 获取素材详情 | GET | `/materials/:id` | 素材详细信息 |
+| 更新素材 | PUT | `/materials/:id` | 更新素材信息 |
+| 删除素材 | DELETE | `/materials/:id` | 删除素材 |
+| 获取素材统计 | GET | `/materials/stats` | 统计信息 |
+| 获取分类列表 | GET | `/materials/categories` | 所有分类 |
+| 获取标签列表 | GET | `/materials/tags` | 所有标签 |
+| 获取存储配额 | GET | `/materials/storage/quota` | 存储空间信息 |
+| 批量删除素材 | POST | `/materials/batch-delete` | 批量删除 |
+| 批量更新分类 | POST | `/materials/batch-update-category` | 批量分类 |
+
+**素材类型**: IMAGE, VIDEO, AUDIO, DOCUMENT, TEXT
+
+**查询参数**:
+- `type`: 素材类型过滤
+- `category`: 分类过滤
+- `keyword`: 关键词搜索（名称/描述）
+- `tags`: 标签过滤（逗号分隔）
+- `page`, `pageSize`: 分页参数
+
+#### 3.5 素材引用与分析 (Material References & Analysis)
+
+| 接口 | 方法 | 路径 | 描述 |
+|------|------|------|------|
+| 添加素材引用 | POST | `/materials/:id/references` | 记录素材使用 |
+| 获取素材引用 | GET | `/materials/:id/references` | 引用历史 |
+| 删除引用记录 | DELETE | `/materials/references/:referenceId` | 删除引用 |
+| 提取写作风格 | POST | `/materials/:id/analyze/style` | 分析写作风格 |
+| 提取情节结构 | POST | `/materials/:id/analyze/structure` | 分析故事结构 |
+| 提取角色特征 | POST | `/materials/:id/analyze/characters` | 分析角色塑造 |
+| 检测相似度 | POST | `/materials/:id/check-similarity` | 内容相似度检测 |
+| 获取推荐素材 | GET | `/materials/recommendations` | 基于使用推荐 |
+| 搜索适用素材 | GET | `/materials/search-for-wizard` | 向导步骤素材搜索 |
+
+**分析参数示例**:
+```json
+{
+  "materialId": "素材ID",
+  "analysisType": "style|structure|characters",
+  "extractLength": 500,
+  "targetUse": "reference|inspiration|template"
+}
+```
+
+**引用记录示例**:
+```json
+{
+  "materialId": "素材ID",
+  "chapterId": "章节ID",
+  "novelId": "小说ID",
+  "context": "引用上下文",
+  "position": 100,
+  "usageType": "style|plot|character|scene"
+}
+```
+
 ---
 
 ### 4. AI 服务 (AI Service)
 **端口**: 3004  
 **标签**: `ai-generation`
 
+#### 4.1 基础生成接口
+
 | 接口 | 方法 | 路径 | 描述 |
 |------|------|------|------|
 | AI内容生成 | POST | `/generation/content` | 生成小说内容 |
+| 基于素材生成 | POST | `/generation/with-materials` | 使用素材上下文生成 |
+| 续写内容 | POST | `/generation/continue` | 续写章节 |
+| 改写内容 | POST | `/generation/rewrite` | 改写优化 |
+| 扩展内容 | POST | `/generation/expand` | 扩充细节 |
 
 **生成参数**:
 ```json
@@ -142,12 +209,31 @@ http://localhost:3000/api/docs
 }
 ```
 
+**基于素材生成参数**:
+```json
+{
+  "prompt": "用户创作需求",
+  "materialIds": ["素材ID1", "素材ID2"],
+  "usageType": "style|structure|character|scene",
+  "targetLength": 1000,
+  "creativity": 0.8,
+  "preventSimilarity": true
+}
+```
+
 **响应示例**:
 ```json
 {
   "success": true,
   "data": {
     "content": "生成的内容...",
+    "materialUsage": [
+      {
+        "materialId": "xxx",
+        "usageType": "style",
+        "similarity": 0.12
+      }
+    ],
     "usage": {
       "promptTokens": 150,
       "completionTokens": 800,
@@ -155,6 +241,33 @@ http://localhost:3000/api/docs
     },
     "model": "gpt-4"
   }
+}
+```
+
+#### 4.2 素材分析接口
+
+| 接口 | 方法 | 路径 | 描述 |
+|------|------|------|------|
+| 提取写作风格 | POST | `/analysis/extract-style` | 提取素材风格特征 |
+| 分析情节结构 | POST | `/analysis/plot-structure` | 分析故事结构 |
+| 角色特征分析 | POST | `/analysis/character-traits` | 提取角色塑造技巧 |
+| 相似度检测 | POST | `/analysis/similarity` | 检测内容相似度 |
+
+**风格提取参数**:
+```json
+{
+  "content": "文本内容",
+  "materialId": "素材ID（可选）",
+  "features": ["narrative", "dialogue", "description", "pacing"]
+}
+```
+
+**相似度检测参数**:
+```json
+{
+  "content1": "待检测文本",
+  "content2": "参考文本",
+  "threshold": 0.7
 }
 ```
 

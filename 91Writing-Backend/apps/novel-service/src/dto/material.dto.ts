@@ -234,3 +234,93 @@ export class AddMaterialReferenceDto {
   @Type(() => Number)
   position?: number;
 }
+
+/**
+ * 素材分析DTO
+ */
+export class AnalyzeMaterialDto {
+  @ApiProperty({
+    description: '分析类型',
+    enum: ['style', 'structure', 'characters', 'themes'],
+    example: 'style'
+  })
+  @IsEnum(['style', 'structure', 'characters', 'themes'], { message: '分析类型无效' })
+  analysisType: 'style' | 'structure' | 'characters' | 'themes';
+
+  @ApiPropertyOptional({
+    description: '提取文本长度',
+    example: 500,
+    default: 500
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(100)
+  @Type(() => Number)
+  extractLength?: number;
+
+  @ApiPropertyOptional({
+    description: '目标用途',
+    enum: ['reference', 'inspiration', 'template'],
+    example: 'reference'
+  })
+  @IsOptional()
+  @IsEnum(['reference', 'inspiration', 'template'])
+  targetUse?: string;
+}
+
+/**
+ * 相似度检测DTO
+ */
+export class CheckSimilarityDto {
+  @ApiProperty({
+    description: '待检测内容',
+    example: '这是一段需要检测的文本...'
+  })
+  @IsString({ message: '内容必须是字符串' })
+  @IsNotEmpty({ message: '内容不能为空' })
+  content: string;
+
+  @ApiPropertyOptional({
+    description: '相似度阈值',
+    example: 0.7,
+    minimum: 0,
+    maximum: 1
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  threshold?: number;
+}
+
+/**
+ * 搜索向导适用素材DTO
+ */
+export class SearchWizardMaterialsDto {
+  @ApiProperty({
+    description: '向导步骤类型',
+    enum: ['outline', 'character', 'worldview', 'scene', 'dialogue'],
+    example: 'character'
+  })
+  @IsEnum(['outline', 'character', 'worldview', 'scene', 'dialogue'], { message: '步骤类型无效' })
+  stepType: string;
+
+  @ApiPropertyOptional({
+    description: '用户输入的关键词',
+    example: '主角 性格'
+  })
+  @IsOptional()
+  @IsString()
+  keyword?: string;
+
+  @ApiPropertyOptional({
+    description: '返回数量限制',
+    example: 5,
+    default: 5
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  limit?: number;
+}

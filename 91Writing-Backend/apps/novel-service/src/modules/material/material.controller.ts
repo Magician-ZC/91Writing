@@ -31,6 +31,9 @@ import {
   BatchDeleteMaterialsDto,
   BatchUpdateCategoryDto,
   AddMaterialReferenceDto,
+  AnalyzeMaterialDto,
+  CheckSimilarityDto,
+  SearchWizardMaterialsDto,
 } from '../../dto/material.dto';
 
 @ApiTags('素材管理')
@@ -182,5 +185,98 @@ export class MaterialController {
   @ApiResponse({ status: 200, description: '获取成功' })
   async getMaterialReferences(@Request() req, @Param('id') id: string) {
     return this.materialService.getMaterialReferences(req.user.id, id);
+  }
+
+  @Delete('materials/references/:referenceId')
+  @ApiOperation({ summary: '删除素材引用记录' })
+  @ApiParam({ name: 'referenceId', description: '引用记录ID' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  @HttpCode(HttpStatus.OK)
+  async deleteMaterialReference(@Request() req, @Param('referenceId') referenceId: string) {
+    return this.materialService.deleteMaterialReference(req.user.id, referenceId);
+  }
+
+  // ===== 素材分析功能 =====
+  @Post('materials/:id/analyze/style')
+  @ApiOperation({ summary: '分析素材写作风格' })
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiBody({ type: AnalyzeMaterialDto })
+  @ApiResponse({ status: 200, description: '分析成功' })
+  async analyzeMaterialStyle(
+    @Request() req,
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: AnalyzeMaterialDto,
+  ) {
+    return this.materialService.analyzeMaterialStyle(req.user.id, id, dto.analysisType);
+  }
+
+  @Post('materials/:id/analyze/structure')
+  @ApiOperation({ summary: '分析素材情节结构' })
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiBody({ type: AnalyzeMaterialDto })
+  @ApiResponse({ status: 200, description: '分析成功' })
+  async analyzeMaterialStructure(
+    @Request() req,
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: AnalyzeMaterialDto,
+  ) {
+    return this.materialService.analyzeMaterialStyle(req.user.id, id, 'structure');
+  }
+
+  @Post('materials/:id/analyze/characters')
+  @ApiOperation({ summary: '分析素材角色特征' })
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiBody({ type: AnalyzeMaterialDto })
+  @ApiResponse({ status: 200, description: '分析成功' })
+  async analyzeMaterialCharacters(
+    @Request() req,
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: AnalyzeMaterialDto,
+  ) {
+    return this.materialService.analyzeMaterialStyle(req.user.id, id, 'characters');
+  }
+
+  @Post('materials/:id/check-similarity')
+  @ApiOperation({ summary: '检测内容相似度' })
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiBody({ type: CheckSimilarityDto })
+  @ApiResponse({ status: 200, description: '检测成功' })
+  async checkSimilarity(
+    @Request() req,
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: CheckSimilarityDto,
+  ) {
+    return this.materialService.checkSimilarity(
+      req.user.id,
+      id,
+      dto.content,
+      dto.threshold || 0.7,
+    );
+  }
+
+  // ===== 素材推荐和搜索 =====
+  @Get('materials/recommendations')
+  @ApiOperation({ summary: '获取推荐素材' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getRecommendedMaterials(
+    @Request() req,
+    @Query('limit') limit?: number,
+  ) {
+    return this.materialService.getRecommendedMaterials(req.user.id, limit || 10);
+  }
+
+  @Get('materials/search-for-wizard')
+  @ApiOperation({ summary: '搜索适用于向导的素材' })
+  @ApiResponse({ status: 200, description: '搜索成功' })
+  async searchWizardMaterials(
+    @Request() req,
+    @Query(ValidationPipe) query: SearchWizardMaterialsDto,
+  ) {
+    return this.materialService.searchWizardMaterials(
+      req.user.id,
+      query.stepType,
+      query.keyword,
+      query.limit || 5,
+    );
   }
 }
