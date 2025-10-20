@@ -16,6 +16,7 @@ import { CollaborationModule } from './modules/collaboration/collaboration.modul
 import { VersionModule } from './modules/version/version.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { HealthModule } from './modules/health/health.module';
+import { ConsistencyModule } from './modules/consistency/consistency.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -58,6 +59,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     VersionModule,
     CommentModule,
     HealthModule,
+    ConsistencyModule,
   ],
   providers: [
     JwtStrategy,

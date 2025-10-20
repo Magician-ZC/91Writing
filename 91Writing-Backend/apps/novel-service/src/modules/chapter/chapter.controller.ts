@@ -371,4 +371,54 @@ export class ChapterController {
   ) {
     return this.chapterService.reorder(novelId, req.user.id, body.chapterOrders);
   }
+
+  @Get(':id/video-status')
+  @ApiOperation({ 
+    summary: '获取章节视频生成状态',
+    description: '查询指定章节的视频生成进度和状态'
+  })
+  @ApiParam({ name: 'novelId', description: '小说ID' })
+  @ApiParam({ name: 'id', description: '章节ID' })
+  @ApiResponse({
+    status: 200,
+    description: '返回视频生成状态',
+    schema: {
+      type: 'object',
+      properties: {
+        chapterId: { type: 'string' },
+        status: { type: 'string', enum: ['PENDING', 'GENERATING', 'COMPLETED', 'FAILED', 'CANCELLED'] },
+        stage: { type: 'string', enum: ['SCRIPT', 'IMAGE', 'VIDEO', 'MERGE', 'UPLOAD', 'COMPLETED'] },
+        progress: { type: 'number', minimum: 0, maximum: 100 },
+        videoUrl: { type: 'string', nullable: true },
+        errorMessage: { type: 'string', nullable: true }
+      }
+    }
+  })
+  async getVideoStatus(
+    @Param('novelId') novelId: string,
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    return this.chapterService.getVideoStatus(novelId, id, req.user.id);
+  }
+
+  @Delete(':id/video')
+  @ApiOperation({ 
+    summary: '删除章节视频',
+    description: '删除已生成的视频，允许重新生成'
+  })
+  @ApiParam({ name: 'novelId', description: '小说ID' })
+  @ApiParam({ name: 'id', description: '章节ID' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiResponse({
+    status: 204,
+    description: '视频删除成功',
+  })
+  async deleteVideo(
+    @Param('novelId') novelId: string,
+    @Param('id') id: string,
+    @Request() req,
+  ) {
+    return this.chapterService.deleteVideo(novelId, id, req.user.id);
+  }
 }

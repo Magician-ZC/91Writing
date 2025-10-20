@@ -9,6 +9,7 @@ import { GenerationModule } from './modules/generation/generation.module';
 import { SuggestionModule } from './modules/suggestion/suggestion.module';
 import { WizardModule } from './modules/wizard/wizard.module';
 import { HealthModule } from './modules/health/health.module';
+import { VideoGenerationModule } from './modules/video-generation/video-generation.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -49,6 +50,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     SuggestionModule,
     WizardModule,
     HealthModule,
+    VideoGenerationModule,
   ],
   providers: [JwtStrategy],
   exports: [ClientsModule, JwtStrategy, PassportModule],

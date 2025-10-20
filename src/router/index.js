@@ -112,6 +112,12 @@ const routes = [
         name: 'AdminSettings',
         component: () => import('../views/admin/settings/SystemSettings.vue'),
         meta: { title: '系统设置 - 91Writing' }
+      },
+      {
+        path: 'agent-config',
+        name: 'AgentConfig',
+        component: () => import('../views/admin/settings/AgentPromptConfig.vue'),
+        meta: { title: 'Agent配置管理 - 91Writing' }
       }
     ]
   },
@@ -277,6 +283,12 @@ const routes = [
         name: 'InviteCenter',
         component: () => import('../views/InviteCenter.vue'),
         meta: { title: '邀请中心 - 91Writing' }
+      },
+      {
+        path: 'consistency/:novelId',
+        name: 'ConsistencySettings',
+        component: () => import('../views/NovelConsistencySettings.vue'),
+        meta: { title: '视觉一致性配置 - 91Writing' }
       }
     ]
   },

@@ -185,6 +185,7 @@ model Novel {
   characterRelationships CharacterRelationship[]
   characterAppearances   CharacterAppearance[]
   worldSettings          WorldSetting[]
+  consistencyProfile     ConsistencyProfile? // 视频一致性配置
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -208,13 +209,22 @@ model Chapter {
   isDeleted     Boolean       @default(false) @map("is_deleted") // 软删除标记
   orderNum      Int           @default(0) @map("order_num") // 章节排序号
 
+  // 视频生成相关字段
+  videoStatus        VideoStatus? @map("video_status") // 视频生成状态
+  videoUrl           String?      @map("video_url") @db.VarChar(500) // 生成的视频URL
+  storyboardScript   Json?        @map("storyboard_script") // 分镜头脚本
+  generatedImages    Json?        @map("generated_images") // 生成的图片URL数组
+  videoMetadata      Json?        @map("video_metadata") // 视频元数据(时长、分辨率等)
+  videoGenerationLog String?      @map("video_generation_log") @db.Text // 生成日志摘要
+
   // 关联
-  novel       Novel               @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  novel       Novel                @relation(fields: [novelId], references: [id], onDelete: Cascade)
   lock        ChapterLock?
   editEvents  ChapterEditEvent[]
   versions    ChapterVersion[]
   comments    ChapterComment[]
   suggestions WritingSuggestion[]
+  videoLogs   VideoGenerationLog[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -224,6 +234,7 @@ model Chapter {
   @@index([novelId, status])
   @@index([novelId, isDeleted])
   @@index([novelId, orderNum])
+  @@index([videoStatus])
   @@map("chapters")
 }
 
@@ -1030,4 +1041,119 @@ enum MigrationStatus {
   COMPLETED // 已完成
   FAILED // 失败
   ROLLED_BACK // 已回滚
+}
+
+// ===== 视频生成系统 =====
+// 一致性配置表
+model ConsistencyProfile {
+  id           String @id @default(cuid())
+  novelId      String @unique @map("novel_id")
+  characters   Json // 角色特征描述 {name: {baseAppearance, dynamicState, keywords, referenceImageUrl}}
+  environments Json? // 环境/场景描述 {name: {description, visualStyle, keywords}}
+  objects      Json? // 重要物品描述 {name: {description, appearance, keywords}}
+  visualStyle  Json?  @map("visual_style") // 整体视觉风格配置 {overall, colorTone, artStyle, lighting}
+  version      Int    @default(1) // 配置版本号
+
+  // 关联
+  novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([novelId])
+  @@map("consistency_profiles")
+}
+
+// 视频生成日志表
+model VideoGenerationLog {
+  id           String            @id @default(cuid())
+  chapterId    String            @map("chapter_id")
+  stage        VideoGenStage     @default(SCRIPT) // 当前阶段
+  status       VideoGenLogStatus @default(PROCESSING) // 日志状态
+  details      Json? // 详细日志 {timestamp, action, result, metadata}
+  errorMessage String?           @map("error_message") @db.Text
+  retryCount   Int               @default(0) @map("retry_count") // 重试次数
+  progress     Int               @default(0) // 进度百分比 0-100
+
+  // 性能统计
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  duration    Int?      @default(0) // 耗时(秒)
+
+  // 关联
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([chapterId, stage])
+  @@index([chapterId, status])
+  @@index([status])
+  @@map("video_generation_logs")
+}
+
+// Agent提示词配置表
+model AgentPromptConfig {
+  id             String    @id @default(cuid())
+  agentType      AgentType @map("agent_type") // Agent类型
+  name           String    @db.VarChar(200) // 配置名称
+  systemPrompt   String    @map("system_prompt") @db.Text // 系统提示词
+  templatePrompt String    @map("template_prompt") @db.Text // 模板提示词
+  parameters     Json? // 附加参数配置
+  version        Int       @default(1) // 版本号
+  isActive       Boolean   @default(true) @map("is_active") // 是否启用
+  description    String?   @db.Text // 配置描述
+
+  // 统计信息
+  usageCount   Int @default(0) @map("usage_count") // 使用次数
+  successCount Int @default(0) @map("success_count") // 成功次数
+  failureCount Int @default(0) @map("failure_count") // 失败次数
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([agentType, version])
+  @@index([agentType, isActive])
+  @@index([isActive])
+  @@map("agent_prompt_configs")
+}
+
+// ===== 视频生成系统枚举 =====
+// 视频生成状态
+enum VideoStatus {
+  PENDING // 待生成
+  GENERATING // 生成中
+  COMPLETED // 已完成
+  FAILED // 失败
+  CANCELLED // 已取消
+}
+
+// 视频生成阶段
+enum VideoGenStage {
+  SCRIPT // 分镜脚本生成
+  IMAGE // 图片生成
+  VIDEO // 视频生成
+  MERGE // 视频合成
+  UPLOAD // 上传
+  COMPLETED // 完成
+}
+
+// 视频生成日志状态
+enum VideoGenLogStatus {
+  PENDING // 待处理
+  PROCESSING // 处理中
+  COMPLETED // 已完成
+  FAILED // 失败
+  SKIPPED // 跳过
+}
+
+// Agent类型
+enum AgentType {
+  SCRIPT_GENERATOR // 分镜脚本生成
+  IMAGE_OPTIMIZER // 文生图优化
+  VIDEO_OPTIMIZER // 图生视频优化
+  CONSISTENCY_KEEPER // 一致性管理
 }

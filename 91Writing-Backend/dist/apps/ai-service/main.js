@@ -1,5 +1,4 @@
 /******/ (() => { // webpackBootstrap
-/******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
 /***/ "./apps/ai-service/src/app.module.ts":
@@ -8,6 +7,7 @@
   \*******************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -28,6 +28,7 @@ const generation_module_1 = __webpack_require__(/*! ./modules/generation/generat
 const suggestion_module_1 = __webpack_require__(/*! ./modules/suggestion/suggestion.module */ "./apps/ai-service/src/modules/suggestion/suggestion.module.ts");
 const wizard_module_1 = __webpack_require__(/*! ./modules/wizard/wizard.module */ "./apps/ai-service/src/modules/wizard/wizard.module.ts");
 const health_module_1 = __webpack_require__(/*! ./modules/health/health.module */ "./apps/ai-service/src/modules/health/health.module.ts");
+const video_generation_module_1 = __webpack_require__(/*! ./modules/video-generation/video-generation.module */ "./apps/ai-service/src/modules/video-generation/video-generation.module.ts");
 const jwt_strategy_1 = __webpack_require__(/*! ./strategies/jwt.strategy */ "./apps/ai-service/src/strategies/jwt.strategy.ts");
 let AppModule = class AppModule {
 };
@@ -66,6 +67,7 @@ exports.AppModule = AppModule = __decorate([
             suggestion_module_1.SuggestionModule,
             wizard_module_1.WizardModule,
             health_module_1.HealthModule,
+            video_generation_module_1.VideoGenerationModule,
         ],
         providers: [jwt_strategy_1.JwtStrategy],
         exports: [microservices_1.ClientsModule, jwt_strategy_1.JwtStrategy, passport_1.PassportModule],
@@ -81,6 +83,7 @@ exports.AppModule = AppModule = __decorate([
   \*****************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -248,6 +251,7 @@ __decorate([
   \************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -469,6 +473,7 @@ __decorate([
   \***************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -580,12 +585,291 @@ __decorate([
 
 /***/ }),
 
+/***/ "./apps/ai-service/src/dto/video-generation.dto.ts":
+/*!*********************************************************!*\
+  !*** ./apps/ai-service/src/dto/video-generation.dto.ts ***!
+  \*********************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoGenerationResultDto = exports.VideoGenerationStatusDto = exports.VideoPromptDto = exports.ImagePromptDto = exports.StoryboardScriptDto = exports.StoryboardSceneDto = exports.GenerateVideoDto = void 0;
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
+const class_transformer_1 = __webpack_require__(/*! class-transformer */ "class-transformer");
+class GenerateVideoDto {
+}
+exports.GenerateVideoDto = GenerateVideoDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '章节ID' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], GenerateVideoDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '是否强制重新生成', default: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], GenerateVideoDto.prototype, "forceRegenerate", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '分镜数量', minimum: 3, maximum: 10, default: 5 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(3),
+    (0, class_validator_1.Max)(10),
+    __metadata("design:type", Number)
+], GenerateVideoDto.prototype, "sceneCount", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视频时长(秒)', minimum: 5, maximum: 30, default: 15 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(5),
+    (0, class_validator_1.Max)(30),
+    __metadata("design:type", Number)
+], GenerateVideoDto.prototype, "videoDuration", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视觉风格', enum: ['realistic', 'anime', 'fantasy', 'scifi'] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], GenerateVideoDto.prototype, "visualStyle", void 0);
+class StoryboardSceneDto {
+}
+exports.StoryboardSceneDto = StoryboardSceneDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '场景编号' }),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], StoryboardSceneDto.prototype, "sceneNumber", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '场景描述' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], StoryboardSceneDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '出现的角色', type: [String] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], StoryboardSceneDto.prototype, "characters", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '环境/场景' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], StoryboardSceneDto.prototype, "environment", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '预计时长(秒)' }),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], StoryboardSceneDto.prototype, "duration", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '关键情节点' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], StoryboardSceneDto.prototype, "keyMoment", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '镜头角度建议' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], StoryboardSceneDto.prototype, "cameraAngle", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '特殊效果' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], StoryboardSceneDto.prototype, "specialEffects", void 0);
+class StoryboardScriptDto {
+}
+exports.StoryboardScriptDto = StoryboardScriptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分镜场景列表', type: [StoryboardSceneDto] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => StoryboardSceneDto),
+    __metadata("design:type", Array)
+], StoryboardScriptDto.prototype, "scenes", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '总时长(秒)' }),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], StoryboardScriptDto.prototype, "totalDuration", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '主要角色列表', type: [String] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], StoryboardScriptDto.prototype, "mainCharacters", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '场景总结' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], StoryboardScriptDto.prototype, "summary", void 0);
+class ImagePromptDto {
+}
+exports.ImagePromptDto = ImagePromptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '场景编号' }),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], ImagePromptDto.prototype, "sceneNumber", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '正向提示词' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ImagePromptDto.prototype, "positivePrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '负向提示词' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ImagePromptDto.prototype, "negativePrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '图片尺寸', example: '1024x576' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ImagePromptDto.prototype, "size", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '种子值' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], ImagePromptDto.prototype, "seed", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '一致性参考图URL' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ImagePromptDto.prototype, "referenceImageUrl", void 0);
+class VideoPromptDto {
+}
+exports.VideoPromptDto = VideoPromptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '场景编号' }),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], VideoPromptDto.prototype, "sceneNumber", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '运动提示词' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VideoPromptDto.prototype, "motionPrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '视频时长(秒)' }),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], VideoPromptDto.prototype, "duration", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '运动幅度', enum: ['low', 'medium', 'high'], default: 'medium' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VideoPromptDto.prototype, "motionIntensity", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '人物一致性ID' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VideoPromptDto.prototype, "characterConsistencyId", void 0);
+class VideoGenerationStatusDto {
+}
+exports.VideoGenerationStatusDto = VideoGenerationStatusDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '章节ID' }),
+    __metadata("design:type", String)
+], VideoGenerationStatusDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '当前状态', enum: ['PENDING', 'GENERATING', 'COMPLETED', 'FAILED', 'CANCELLED'] }),
+    __metadata("design:type", String)
+], VideoGenerationStatusDto.prototype, "status", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '当前阶段', enum: ['SCRIPT', 'IMAGE', 'VIDEO', 'MERGE', 'UPLOAD', 'COMPLETED'] }),
+    __metadata("design:type", String)
+], VideoGenerationStatusDto.prototype, "stage", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '进度百分比', minimum: 0, maximum: 100 }),
+    __metadata("design:type", Number)
+], VideoGenerationStatusDto.prototype, "progress", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视频URL' }),
+    __metadata("design:type", String)
+], VideoGenerationStatusDto.prototype, "videoUrl", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '错误信息' }),
+    __metadata("design:type", String)
+], VideoGenerationStatusDto.prototype, "errorMessage", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '预计剩余时间(秒)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], VideoGenerationStatusDto.prototype, "estimatedTimeRemaining", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '已生成的图片URL列表', type: [String] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], VideoGenerationStatusDto.prototype, "generatedImages", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '开始时间' }),
+    __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
+], VideoGenerationStatusDto.prototype, "startedAt", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '完成时间' }),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], VideoGenerationStatusDto.prototype, "completedAt", void 0);
+class VideoGenerationResultDto {
+}
+exports.VideoGenerationResultDto = VideoGenerationResultDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '章节ID' }),
+    __metadata("design:type", String)
+], VideoGenerationResultDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '视频URL' }),
+    __metadata("design:type", String)
+], VideoGenerationResultDto.prototype, "videoUrl", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '视频元数据' }),
+    __metadata("design:type", Object)
+], VideoGenerationResultDto.prototype, "metadata", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '生成的图片URL列表', type: [String] }),
+    __metadata("design:type", Array)
+], VideoGenerationResultDto.prototype, "generatedImages", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '分镜脚本' }),
+    __metadata("design:type", StoryboardScriptDto)
+], VideoGenerationResultDto.prototype, "storyboardScript", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '总耗时(秒)' }),
+    __metadata("design:type", Number)
+], VideoGenerationResultDto.prototype, "totalDuration", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '完成时间' }),
+    __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
+], VideoGenerationResultDto.prototype, "completedAt", void 0);
+
+
+/***/ }),
+
 /***/ "./apps/ai-service/src/modules/assistant/assistant.controller.ts":
 /*!***********************************************************************!*\
   !*** ./apps/ai-service/src/modules/assistant/assistant.controller.ts ***!
   \***********************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -734,6 +1018,7 @@ exports.AssistantController = AssistantController = __decorate([
   \*******************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -793,6 +1078,7 @@ exports.AssistantModule = AssistantModule = __decorate([
   \********************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1373,6 +1659,7 @@ exports.AssistantService = AssistantService = __decorate([
   \******************************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1426,6 +1713,7 @@ __decorate([
   \***********************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1480,6 +1768,7 @@ __decorate([
   \*************************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1693,6 +1982,7 @@ exports.GenerationController = GenerationController = __decorate([
   \*********************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -1740,6 +2030,7 @@ exports.GenerationModule = GenerationModule = __decorate([
   \**********************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2171,6 +2462,7 @@ exports.GenerationService = GenerationService = __decorate([
   \*****************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2215,6 +2507,7 @@ exports.HealthController = HealthController = __decorate([
   \*************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2246,6 +2539,7 @@ exports.HealthModule = HealthModule = __decorate([
   \**************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2281,6 +2575,7 @@ exports.HealthService = HealthService = __decorate([
   \*************************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2365,6 +2660,7 @@ exports.SuggestionController = SuggestionController = __decorate([
   \*********************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2397,6 +2693,7 @@ exports.SuggestionModule = SuggestionModule = __decorate([
   \**********************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2803,12 +3100,516 @@ exports.SuggestionService = SuggestionService = __decorate([
 
 /***/ }),
 
+/***/ "./apps/ai-service/src/modules/video-generation/video-generation.controller.ts":
+/*!*************************************************************************************!*\
+  !*** ./apps/ai-service/src/modules/video-generation/video-generation.controller.ts ***!
+  \*************************************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoGenerationController = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const swagger_1 = __webpack_require__(/*! @nestjs/swagger */ "@nestjs/swagger");
+const auth_1 = __webpack_require__(/*! @app/auth */ "./libs/auth/src/index.ts");
+const video_generation_service_1 = __webpack_require__(/*! ./video-generation.service */ "./apps/ai-service/src/modules/video-generation/video-generation.service.ts");
+const video_generation_dto_1 = __webpack_require__(/*! ../../dto/video-generation.dto */ "./apps/ai-service/src/dto/video-generation.dto.ts");
+let VideoGenerationController = class VideoGenerationController {
+    constructor(videoGenerationService) {
+        this.videoGenerationService = videoGenerationService;
+    }
+    async generateVideo(req, dto) {
+        const userId = req.user.userId;
+        return this.videoGenerationService.generateChapterVideo(userId, dto);
+    }
+    async getStatus(chapterId) {
+        return this.videoGenerationService.getVideoGenerationStatus(chapterId);
+    }
+};
+exports.VideoGenerationController = VideoGenerationController;
+__decorate([
+    (0, common_1.Post)('generate'),
+    (0, swagger_1.ApiOperation)({ summary: '生成章节视频' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '视频生成任务已提交', type: video_generation_dto_1.VideoGenerationStatusDto }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof video_generation_dto_1.GenerateVideoDto !== "undefined" && video_generation_dto_1.GenerateVideoDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], VideoGenerationController.prototype, "generateVideo", null);
+__decorate([
+    (0, common_1.Get)('status/:chapterId'),
+    (0, swagger_1.ApiOperation)({ summary: '查询视频生成状态' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回生成状态', type: video_generation_dto_1.VideoGenerationStatusDto }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
+    __param(0, (0, common_1.Param)('chapterId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], VideoGenerationController.prototype, "getStatus", null);
+exports.VideoGenerationController = VideoGenerationController = __decorate([
+    (0, swagger_1.ApiTags)('视频生成'),
+    (0, common_1.Controller)('video-generation'),
+    (0, common_1.UseGuards)(auth_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof video_generation_service_1.VideoGenerationService !== "undefined" && video_generation_service_1.VideoGenerationService) === "function" ? _a : Object])
+], VideoGenerationController);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/modules/video-generation/video-generation.module.ts":
+/*!*********************************************************************************!*\
+  !*** ./apps/ai-service/src/modules/video-generation/video-generation.module.ts ***!
+  \*********************************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoGenerationModule = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const bull_1 = __webpack_require__(/*! @nestjs/bull */ "@nestjs/bull");
+const database_1 = __webpack_require__(/*! @app/database */ "./libs/database/src/index.ts");
+const auth_1 = __webpack_require__(/*! @app/auth */ "./libs/auth/src/index.ts");
+const video_generation_controller_1 = __webpack_require__(/*! ./video-generation.controller */ "./apps/ai-service/src/modules/video-generation/video-generation.controller.ts");
+const video_generation_service_1 = __webpack_require__(/*! ./video-generation.service */ "./apps/ai-service/src/modules/video-generation/video-generation.service.ts");
+const storyboard_agent_service_1 = __webpack_require__(/*! ../../services/storyboard-agent.service */ "./apps/ai-service/src/services/storyboard-agent.service.ts");
+const image_generation_agent_service_1 = __webpack_require__(/*! ../../services/image-generation-agent.service */ "./apps/ai-service/src/services/image-generation-agent.service.ts");
+const video_generation_agent_service_1 = __webpack_require__(/*! ../../services/video-generation-agent.service */ "./apps/ai-service/src/services/video-generation-agent.service.ts");
+const volcengine_visual_provider_1 = __webpack_require__(/*! ../../providers/volcengine-visual.provider */ "./apps/ai-service/src/providers/volcengine-visual.provider.ts");
+const jimeng_video_provider_1 = __webpack_require__(/*! ../../providers/jimeng-video.provider */ "./apps/ai-service/src/providers/jimeng-video.provider.ts");
+const kling_video_provider_1 = __webpack_require__(/*! ../../providers/kling-video.provider */ "./apps/ai-service/src/providers/kling-video.provider.ts");
+const ffmpeg_service_1 = __webpack_require__(/*! ../../services/ffmpeg.service */ "./apps/ai-service/src/services/ffmpeg.service.ts");
+const ai_caller_service_1 = __webpack_require__(/*! ../../services/ai-caller.service */ "./apps/ai-service/src/services/ai-caller.service.ts");
+const video_generation_queue_1 = __webpack_require__(/*! ../../queues/video-generation.queue */ "./apps/ai-service/src/queues/video-generation.queue.ts");
+const video_generation_processor_1 = __webpack_require__(/*! ../../queues/video-generation.processor */ "./apps/ai-service/src/queues/video-generation.processor.ts");
+const microservices_1 = __webpack_require__(/*! @nestjs/microservices */ "@nestjs/microservices");
+let VideoGenerationModule = class VideoGenerationModule {
+};
+exports.VideoGenerationModule = VideoGenerationModule;
+exports.VideoGenerationModule = VideoGenerationModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            database_1.DatabaseModule,
+            auth_1.AuthModule,
+            bull_1.BullModule.registerQueue({
+                name: 'video-generation',
+                redis: {
+                    host: process.env.REDIS_HOST || 'localhost',
+                    port: parseInt(process.env.REDIS_PORT || '6379'),
+                    password: process.env.REDIS_PASSWORD || undefined,
+                },
+                defaultJobOptions: {
+                    removeOnComplete: 100,
+                    removeOnFail: 50,
+                },
+            }),
+            microservices_1.ClientsModule.register([
+                {
+                    name: 'USER_SERVICE',
+                    transport: microservices_1.Transport.TCP,
+                    options: {
+                        host: process.env.USER_SERVICE_HOST || 'localhost',
+                        port: parseInt(process.env.USER_SERVICE_PORT || '3001'),
+                    },
+                },
+            ]),
+        ],
+        controllers: [video_generation_controller_1.VideoGenerationController],
+        providers: [
+            video_generation_service_1.VideoGenerationService,
+            video_generation_queue_1.VideoGenerationQueue,
+            video_generation_processor_1.VideoGenerationProcessor,
+            storyboard_agent_service_1.StoryboardAgentService,
+            image_generation_agent_service_1.ImageGenerationAgentService,
+            video_generation_agent_service_1.VideoGenerationAgentService,
+            volcengine_visual_provider_1.VolcengineVisualProvider,
+            jimeng_video_provider_1.JimengVideoProvider,
+            kling_video_provider_1.KlingVideoProvider,
+            ffmpeg_service_1.FFmpegService,
+            ai_caller_service_1.AICallerService,
+        ],
+        exports: [video_generation_service_1.VideoGenerationService, video_generation_queue_1.VideoGenerationQueue],
+    })
+], VideoGenerationModule);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/modules/video-generation/video-generation.service.ts":
+/*!**********************************************************************************!*\
+  !*** ./apps/ai-service/src/modules/video-generation/video-generation.service.ts ***!
+  \**********************************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var VideoGenerationService_1;
+var _a, _b, _c, _d, _e, _f, _g, _h;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoGenerationService = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const database_1 = __webpack_require__(/*! @app/database */ "./libs/database/src/index.ts");
+const storyboard_agent_service_1 = __webpack_require__(/*! ../../services/storyboard-agent.service */ "./apps/ai-service/src/services/storyboard-agent.service.ts");
+const image_generation_agent_service_1 = __webpack_require__(/*! ../../services/image-generation-agent.service */ "./apps/ai-service/src/services/image-generation-agent.service.ts");
+const video_generation_agent_service_1 = __webpack_require__(/*! ../../services/video-generation-agent.service */ "./apps/ai-service/src/services/video-generation-agent.service.ts");
+const volcengine_visual_provider_1 = __webpack_require__(/*! ../../providers/volcengine-visual.provider */ "./apps/ai-service/src/providers/volcengine-visual.provider.ts");
+const jimeng_video_provider_1 = __webpack_require__(/*! ../../providers/jimeng-video.provider */ "./apps/ai-service/src/providers/jimeng-video.provider.ts");
+const kling_video_provider_1 = __webpack_require__(/*! ../../providers/kling-video.provider */ "./apps/ai-service/src/providers/kling-video.provider.ts");
+const ffmpeg_service_1 = __webpack_require__(/*! ../../services/ffmpeg.service */ "./apps/ai-service/src/services/ffmpeg.service.ts");
+const path = __webpack_require__(/*! path */ "path");
+const fs = __webpack_require__(/*! fs */ "fs");
+let VideoGenerationService = VideoGenerationService_1 = class VideoGenerationService {
+    constructor(prisma, storyboardAgent, imageAgent, videoAgent, volcengineProvider, jimengProvider, klingProvider, ffmpegService) {
+        this.prisma = prisma;
+        this.storyboardAgent = storyboardAgent;
+        this.imageAgent = imageAgent;
+        this.videoAgent = videoAgent;
+        this.volcengineProvider = volcengineProvider;
+        this.jimengProvider = jimengProvider;
+        this.klingProvider = klingProvider;
+        this.ffmpegService = ffmpegService;
+        this.logger = new common_1.Logger(VideoGenerationService_1.name);
+        this.videoStoragePath = process.env.VIDEO_STORAGE_PATH || '/data/videos';
+        this.videoProvider = process.env.VIDEO_PROVIDER || 'jimeng';
+        if (!fs.existsSync(this.videoStoragePath)) {
+            fs.mkdirSync(this.videoStoragePath, { recursive: true });
+        }
+    }
+    async generateChapterVideo(userId, dto) {
+        this.logger.log(`开始生成章节视频，章节ID: ${dto.chapterId}`);
+        const chapter = await this.prisma.chapter.findFirst({
+            where: { id: dto.chapterId },
+            include: {
+                novel: {
+                    select: {
+                        id: true,
+                        userId: true,
+                        title: true,
+                    },
+                },
+            },
+        });
+        if (!chapter) {
+            throw new common_1.NotFoundException('章节不存在');
+        }
+        if (chapter.novel.userId !== userId) {
+            throw new common_1.NotFoundException('无权访问该章节');
+        }
+        if (!dto.forceRegenerate && chapter.videoStatus === 'COMPLETED' && chapter.videoUrl) {
+            return {
+                chapterId: dto.chapterId,
+                status: 'COMPLETED',
+                stage: 'COMPLETED',
+                progress: 100,
+                videoUrl: chapter.videoUrl,
+            };
+        }
+        await this.prisma.chapter.update({
+            where: { id: dto.chapterId },
+            data: {
+                videoStatus: 'GENERATING',
+                storyboardScript: null,
+                generatedImages: null,
+                videoUrl: null,
+            },
+        });
+        const log = await this.prisma.videoGenerationLog.create({
+            data: {
+                chapterId: dto.chapterId,
+                stage: 'SCRIPT',
+                status: 'PROCESSING',
+                startedAt: new Date(),
+                progress: 0,
+            },
+        });
+        this.executeGenerationPipeline(chapter, dto, log.id).catch(error => {
+            this.logger.error(`视频生成失败: ${error.message}`, error.stack);
+        });
+        return {
+            chapterId: dto.chapterId,
+            status: 'GENERATING',
+            stage: 'SCRIPT',
+            progress: 0,
+            startedAt: new Date(),
+        };
+    }
+    async executeGenerationPipeline(chapter, dto, logId) {
+        const startTime = Date.now();
+        try {
+            this.logger.log(`[阶段1] 开始生成分镜脚本`);
+            await this.updateLog(logId, 'SCRIPT', 'PROCESSING', 10);
+            const consistencyProfile = await this.getConsistencyProfile(chapter.novel.id);
+            const storyboard = await this.storyboardAgent.generateStoryboard(chapter.id, consistencyProfile, {
+                sceneCount: dto.sceneCount || 5,
+                totalDuration: dto.videoDuration || 15,
+            });
+            await this.prisma.chapter.update({
+                where: { id: chapter.id },
+                data: { storyboardScript: storyboard },
+            });
+            await this.updateLog(logId, 'SCRIPT', 'COMPLETED', 20, {
+                sceneCount: storyboard.scenes.length,
+            });
+            this.logger.log(`[阶段2] 开始生成图片`);
+            await this.updateLog(logId, 'IMAGE', 'PROCESSING', 30);
+            const imagePrompts = await this.imageAgent.generateImagePromptBatch(storyboard.scenes, consistencyProfile, chapter.chapterNumber);
+            const imageUrls = [];
+            for (let i = 0; i < imagePrompts.length; i++) {
+                const prompt = imagePrompts[i];
+                const result = await this.volcengineProvider.generateImage({
+                    prompt: prompt.positivePrompt,
+                    negativePrompt: prompt.negativePrompt,
+                    width: 1024,
+                    height: 576,
+                    seed: prompt.seed,
+                    referenceImage: prompt.referenceImageUrl,
+                });
+                if (result.success && result.images.length > 0) {
+                    const imagePath = path.join(this.videoStoragePath, `${chapter.id}-scene-${i + 1}.png`);
+                    await this.volcengineProvider.downloadImage(result.images[0], imagePath);
+                    imageUrls.push(imagePath);
+                }
+                else {
+                    throw new Error(`场景${i + 1}图片生成失败: ${result.error}`);
+                }
+                const progress = 30 + Math.floor((i + 1) / imagePrompts.length * 30);
+                await this.updateLog(logId, 'IMAGE', 'PROCESSING', progress);
+            }
+            await this.prisma.chapter.update({
+                where: { id: chapter.id },
+                data: { generatedImages: imageUrls },
+            });
+            await this.updateLog(logId, 'IMAGE', 'COMPLETED', 60, {
+                imageCount: imageUrls.length,
+            });
+            this.logger.log(`[阶段3] 开始生成视频`);
+            await this.updateLog(logId, 'VIDEO', 'PROCESSING', 65);
+            const videoPrompts = await this.videoAgent.generateVideoPromptBatch(storyboard.scenes, imageUrls, consistencyProfile);
+            const videoUrls = [];
+            const videoProvider = this.videoProvider === 'jimeng'
+                ? this.jimengProvider
+                : this.klingProvider;
+            for (let i = 0; i < videoPrompts.length; i++) {
+                const prompt = videoPrompts[i];
+                const submitResult = await videoProvider.submitVideoTask({
+                    imageUrl: imageUrls[i],
+                    motionPrompt: prompt.motionPrompt,
+                    duration: prompt.duration,
+                    motionIntensity: prompt.motionIntensity,
+                    fps: 24,
+                    characterId: prompt.characterConsistencyId,
+                });
+                if (!submitResult.success || !submitResult.taskId) {
+                    throw new Error(`场景${i + 1}视频任务提交失败`);
+                }
+                const videoResult = await videoProvider.waitForTaskCompletion(submitResult.taskId, 600000);
+                if (!videoResult.success || !videoResult.videoUrl) {
+                    throw new Error(`场景${i + 1}视频生成失败`);
+                }
+                const videoPath = path.join(this.videoStoragePath, `${chapter.id}-scene-${i + 1}.mp4`);
+                await videoProvider.downloadVideo(videoResult.videoUrl, videoPath);
+                videoUrls.push(videoPath);
+                const progress = 65 + Math.floor((i + 1) / videoPrompts.length * 20);
+                await this.updateLog(logId, 'VIDEO', 'PROCESSING', progress);
+            }
+            await this.updateLog(logId, 'VIDEO', 'COMPLETED', 85, {
+                videoCount: videoUrls.length,
+            });
+            this.logger.log(`[阶段4] 开始合成视频`);
+            await this.updateLog(logId, 'MERGE', 'PROCESSING', 90);
+            const finalVideoPath = path.join(this.videoStoragePath, `${chapter.id}-final.mp4`);
+            await this.ffmpegService.mergeVideosWithTransitions(videoUrls, finalVideoPath, 0.3);
+            const withTitlePath = path.join(this.videoStoragePath, `${chapter.id}-with-title.mp4`);
+            await this.ffmpegService.addTitleFrame(finalVideoPath, `第${chapter.chapterNumber}章 ${chapter.title}`, 2, withTitlePath);
+            const compressedPath = path.join(this.videoStoragePath, `${chapter.id}-compressed.mp4`);
+            await this.ffmpegService.compressVideo(withTitlePath, compressedPath, 'medium');
+            const metadata = await this.ffmpegService.getVideoMetadata(compressedPath);
+            await this.updateLog(logId, 'MERGE', 'COMPLETED', 95);
+            this.logger.log(`[阶段5] 上传视频`);
+            await this.updateLog(logId, 'UPLOAD', 'PROCESSING', 97);
+            const videoUrl = this.getVideoUrl(compressedPath);
+            await this.prisma.chapter.update({
+                where: { id: chapter.id },
+                data: {
+                    videoStatus: 'COMPLETED',
+                    videoUrl: videoUrl,
+                    videoMetadata: metadata,
+                },
+            });
+            const duration = (Date.now() - startTime) / 1000;
+            await this.updateLog(logId, 'COMPLETED', 'COMPLETED', 100, {
+                finalVideoUrl: videoUrl,
+                totalDuration: duration,
+            });
+            this.logger.log(`视频生成完成，总耗时: ${duration}秒`);
+            this.cleanupTempFiles([...imageUrls, ...videoUrls, finalVideoPath, withTitlePath]);
+        }
+        catch (error) {
+            this.logger.error(`视频生成失败: ${error.message}`, error.stack);
+            await this.prisma.chapter.update({
+                where: { id: chapter.id },
+                data: {
+                    videoStatus: 'FAILED',
+                    videoGenerationLog: error.message,
+                },
+            });
+            await this.updateLog(logId, 'COMPLETED', 'FAILED', 0, null, error.message);
+        }
+    }
+    async getVideoGenerationStatus(chapterId) {
+        const chapter = await this.prisma.chapter.findUnique({
+            where: { id: chapterId },
+        });
+        if (!chapter) {
+            throw new common_1.NotFoundException('章节不存在');
+        }
+        const log = await this.prisma.videoGenerationLog.findFirst({
+            where: { chapterId },
+            orderBy: { createdAt: 'desc' },
+        });
+        return {
+            chapterId,
+            status: chapter.videoStatus || 'PENDING',
+            stage: log?.stage || 'SCRIPT',
+            progress: log?.progress || 0,
+            videoUrl: chapter.videoUrl || undefined,
+            errorMessage: log?.errorMessage || undefined,
+            startedAt: log?.startedAt || undefined,
+            completedAt: log?.completedAt || undefined,
+            generatedImages: chapter.generatedImages || undefined,
+        };
+    }
+    async getConsistencyProfile(novelId) {
+        const profile = await this.prisma.consistencyProfile.findUnique({
+            where: { novelId },
+        });
+        if (!profile) {
+            return await this.createDefaultConsistencyProfile(novelId);
+        }
+        return {
+            characters: profile.characters,
+            environments: profile.environments,
+            objects: profile.objects,
+            visualStyle: profile.visualStyle,
+        };
+    }
+    async createDefaultConsistencyProfile(novelId) {
+        const defaultProfile = {
+            characters: {},
+            environments: {},
+            objects: {},
+            visualStyle: {
+                overall: 'realistic',
+                colorTone: 'natural',
+                artStyle: 'cinematic',
+                lighting: 'natural',
+            },
+        };
+        await this.prisma.consistencyProfile.create({
+            data: {
+                novelId,
+                characters: defaultProfile.characters,
+                environments: defaultProfile.environments,
+                objects: defaultProfile.objects,
+                visualStyle: defaultProfile.visualStyle,
+            },
+        });
+        return defaultProfile;
+    }
+    async updateLog(logId, stage, status, progress, details, errorMessage) {
+        const updateData = {
+            stage,
+            status,
+            progress,
+            updatedAt: new Date(),
+        };
+        if (details) {
+            updateData.details = details;
+        }
+        if (errorMessage) {
+            updateData.errorMessage = errorMessage;
+        }
+        if (status === 'COMPLETED') {
+            updateData.completedAt = new Date();
+            const log = await this.prisma.videoGenerationLog.findUnique({
+                where: { id: logId },
+            });
+            if (log?.startedAt) {
+                updateData.duration = Math.floor((Date.now() - log.startedAt.getTime()) / 1000);
+            }
+        }
+        await this.prisma.videoGenerationLog.update({
+            where: { id: logId },
+            data: updateData,
+        });
+    }
+    getVideoUrl(localPath) {
+        const cdnUrl = process.env.VIDEO_CDN_URL || 'http://localhost:3000/videos';
+        const filename = path.basename(localPath);
+        return `${cdnUrl}/${filename}`;
+    }
+    cleanupTempFiles(files) {
+        files.forEach(file => {
+            try {
+                if (fs.existsSync(file)) {
+                    fs.unlinkSync(file);
+                    this.logger.debug(`已删除临时文件: ${file}`);
+                }
+            }
+            catch (error) {
+                this.logger.warn(`删除临时文件失败: ${file}`, error.message);
+            }
+        });
+    }
+};
+exports.VideoGenerationService = VideoGenerationService;
+exports.VideoGenerationService = VideoGenerationService = VideoGenerationService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof storyboard_agent_service_1.StoryboardAgentService !== "undefined" && storyboard_agent_service_1.StoryboardAgentService) === "function" ? _b : Object, typeof (_c = typeof image_generation_agent_service_1.ImageGenerationAgentService !== "undefined" && image_generation_agent_service_1.ImageGenerationAgentService) === "function" ? _c : Object, typeof (_d = typeof video_generation_agent_service_1.VideoGenerationAgentService !== "undefined" && video_generation_agent_service_1.VideoGenerationAgentService) === "function" ? _d : Object, typeof (_e = typeof volcengine_visual_provider_1.VolcengineVisualProvider !== "undefined" && volcengine_visual_provider_1.VolcengineVisualProvider) === "function" ? _e : Object, typeof (_f = typeof jimeng_video_provider_1.JimengVideoProvider !== "undefined" && jimeng_video_provider_1.JimengVideoProvider) === "function" ? _f : Object, typeof (_g = typeof kling_video_provider_1.KlingVideoProvider !== "undefined" && kling_video_provider_1.KlingVideoProvider) === "function" ? _g : Object, typeof (_h = typeof ffmpeg_service_1.FFmpegService !== "undefined" && ffmpeg_service_1.FFmpegService) === "function" ? _h : Object])
+], VideoGenerationService);
+
+
+/***/ }),
+
 /***/ "./apps/ai-service/src/modules/wizard/wizard.module.ts":
 /*!*************************************************************!*\
   !*** ./apps/ai-service/src/modules/wizard/wizard.module.ts ***!
   \*************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -2835,6 +3636,7 @@ exports.WizardModule = WizardModule = __decorate([
   \********************************************************/
 /***/ ((__unused_webpack_module, exports) => {
 
+"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BaseAIProvider = void 0;
@@ -2896,6 +3698,7 @@ exports.BaseAIProvider = BaseAIProvider;
   \**********************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ClaudeProvider = void 0;
@@ -3039,6 +3842,7 @@ exports.ClaudeProvider = ClaudeProvider;
   \************************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeepSeekProvider = void 0;
@@ -3183,6 +3987,7 @@ exports.DeepSeekProvider = DeepSeekProvider;
   \***********************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenericProvider = void 0;
@@ -3330,12 +4135,469 @@ exports.GenericProvider = GenericProvider;
 
 /***/ }),
 
+/***/ "./apps/ai-service/src/providers/jimeng-video.provider.ts":
+/*!****************************************************************!*\
+  !*** ./apps/ai-service/src/providers/jimeng-video.provider.ts ***!
+  \****************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var JimengVideoProvider_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JimengVideoProvider = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const axios_1 = __webpack_require__(/*! axios */ "axios");
+let JimengVideoProvider = JimengVideoProvider_1 = class JimengVideoProvider {
+    constructor() {
+        this.logger = new common_1.Logger(JimengVideoProvider_1.name);
+        this.apiKey = process.env.JIMENG_API_KEY || '';
+        this.apiUrl = process.env.JIMENG_API_URL || 'https://api.jimeng.ai';
+        this.client = axios_1.default.create({
+            baseURL: this.apiUrl,
+            timeout: 30000,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.apiKey}`,
+            },
+        });
+    }
+    async submitVideoTask(request) {
+        try {
+            this.logger.log(`提交图生视频任务，图片: ${request.imageUrl}`);
+            const requestBody = {
+                image_url: request.imageUrl,
+                motion_prompt: request.motionPrompt,
+                duration: request.duration,
+                motion_intensity: request.motionIntensity || 'medium',
+                fps: request.fps || 24,
+                resolution: request.resolution || '1024x576',
+                seed: request.seed,
+                character_id: request.characterId,
+            };
+            const response = await this.client.post('/v1/image-to-video', requestBody);
+            if (response.data && response.data.code === 200) {
+                const taskId = response.data.data.task_id;
+                this.logger.log(`视频生成任务已提交，任务ID: ${taskId}`);
+                return {
+                    success: true,
+                    taskId: taskId,
+                    status: 'pending',
+                    metadata: {
+                        model: 'jimeng-v1',
+                        resolution: request.resolution || '1024x576',
+                        fps: request.fps || 24,
+                        duration: request.duration,
+                    },
+                };
+            }
+            else {
+                throw new Error(response.data?.message || '任务提交失败');
+            }
+        }
+        catch (error) {
+            this.logger.error(`提交视频任务失败: ${error.message}`, error.stack);
+            return {
+                success: false,
+                status: 'failed',
+                error: error.message,
+            };
+        }
+    }
+    async queryTaskStatus(taskId) {
+        try {
+            const response = await this.client.get(`/v1/tasks/${taskId}`);
+            if (response.data && response.data.code === 200) {
+                const data = response.data.data;
+                return {
+                    taskId: taskId,
+                    status: this.mapStatus(data.status),
+                    progress: data.progress || 0,
+                    result: data.status === 'completed' ? {
+                        videoUrl: data.video_url,
+                    } : undefined,
+                    error: data.error,
+                    createdAt: new Date(data.created_at),
+                    updatedAt: new Date(data.updated_at),
+                    estimatedTimeRemaining: data.estimated_time_remaining,
+                };
+            }
+            else {
+                throw new Error(response.data?.message || '查询任务状态失败');
+            }
+        }
+        catch (error) {
+            this.logger.error(`查询任务状态失败: ${error.message}`);
+            throw error;
+        }
+    }
+    async waitForTaskCompletion(taskId, timeout = 600000) {
+        const startTime = Date.now();
+        const pollInterval = 5000;
+        this.logger.log(`开始等待任务完成，任务ID: ${taskId}`);
+        while (Date.now() - startTime < timeout) {
+            try {
+                const status = await this.queryTaskStatus(taskId);
+                if (status.status === 'completed') {
+                    this.logger.log(`任务完成，任务ID: ${taskId}`);
+                    return {
+                        success: true,
+                        taskId: taskId,
+                        videoUrl: status.result?.videoUrl,
+                        status: 'completed',
+                        duration: (Date.now() - startTime) / 1000,
+                    };
+                }
+                if (status.status === 'failed') {
+                    this.logger.error(`任务失败，任务ID: ${taskId}，错误: ${status.error}`);
+                    return {
+                        success: false,
+                        taskId: taskId,
+                        status: 'failed',
+                        error: status.error,
+                    };
+                }
+                this.logger.debug(`任务处理中，进度: ${status.progress}%`);
+                await this.delay(pollInterval);
+            }
+            catch (error) {
+                this.logger.error(`轮询任务状态出错: ${error.message}`);
+                await this.delay(pollInterval);
+            }
+        }
+        this.logger.warn(`任务等待超时，任务ID: ${taskId}`);
+        return {
+            success: false,
+            taskId: taskId,
+            status: 'failed',
+            error: '任务等待超时',
+        };
+    }
+    async cancelTask(taskId) {
+        try {
+            const response = await this.client.post(`/v1/tasks/${taskId}/cancel`);
+            if (response.data && response.data.code === 200) {
+                this.logger.log(`任务已取消，任务ID: ${taskId}`);
+                return true;
+            }
+            return false;
+        }
+        catch (error) {
+            this.logger.error(`取消任务失败: ${error.message}`);
+            return false;
+        }
+    }
+    async checkHealth() {
+        try {
+            const response = await this.client.get('/v1/health');
+            return response.status === 200;
+        }
+        catch (error) {
+            this.logger.error(`健康检查失败: ${error.message}`);
+            return false;
+        }
+    }
+    mapStatus(status) {
+        const statusMap = {
+            'pending': 'pending',
+            'queued': 'pending',
+            'processing': 'processing',
+            'running': 'processing',
+            'completed': 'completed',
+            'success': 'completed',
+            'failed': 'failed',
+            'error': 'failed',
+            'cancelled': 'failed',
+        };
+        return statusMap[status.toLowerCase()] || 'pending';
+    }
+    delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    async downloadVideo(videoUrl, savePath) {
+        try {
+            const response = await axios_1.default.get(videoUrl, {
+                responseType: 'stream',
+            });
+            const fs = __webpack_require__(/*! fs */ "fs");
+            const path = __webpack_require__(/*! path */ "path");
+            const dir = path.dirname(savePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            const writer = fs.createWriteStream(savePath);
+            response.data.pipe(writer);
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    this.logger.log(`视频已下载到: ${savePath}`);
+                    resolve(savePath);
+                });
+                writer.on('error', reject);
+            });
+        }
+        catch (error) {
+            this.logger.error(`视频下载失败: ${error.message}`);
+            throw error;
+        }
+    }
+};
+exports.JimengVideoProvider = JimengVideoProvider;
+exports.JimengVideoProvider = JimengVideoProvider = JimengVideoProvider_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], JimengVideoProvider);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/providers/kling-video.provider.ts":
+/*!***************************************************************!*\
+  !*** ./apps/ai-service/src/providers/kling-video.provider.ts ***!
+  \***************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var KlingVideoProvider_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.KlingVideoProvider = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const axios_1 = __webpack_require__(/*! axios */ "axios");
+let KlingVideoProvider = KlingVideoProvider_1 = class KlingVideoProvider {
+    constructor() {
+        this.logger = new common_1.Logger(KlingVideoProvider_1.name);
+        this.apiKey = process.env.KLING_API_KEY || '';
+        this.apiUrl = process.env.KLING_API_URL || 'https://api.kuaishou.com/kling';
+        this.client = axios_1.default.create({
+            baseURL: this.apiUrl,
+            timeout: 30000,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': this.apiKey,
+            },
+        });
+    }
+    async submitVideoTask(request) {
+        try {
+            this.logger.log(`可灵: 提交图生视频任务`);
+            const requestBody = {
+                image_url: request.imageUrl,
+                prompt: request.motionPrompt,
+                duration: request.duration,
+                motion_level: this.mapMotionIntensity(request.motionIntensity),
+                fps: request.fps || 24,
+                resolution: request.resolution || '1024x576',
+                character_reference: request.characterId,
+                seed: request.seed,
+            };
+            const response = await this.client.post('/v1/video/generate', requestBody);
+            if (response.data && response.data.success) {
+                const taskId = response.data.task_id;
+                this.logger.log(`可灵: 任务已提交，ID: ${taskId}`);
+                return {
+                    success: true,
+                    taskId: taskId,
+                    status: 'pending',
+                    metadata: {
+                        model: 'kling-v1',
+                        resolution: request.resolution || '1024x576',
+                        fps: request.fps || 24,
+                        duration: request.duration,
+                    },
+                };
+            }
+            else {
+                throw new Error(response.data?.error || '任务提交失败');
+            }
+        }
+        catch (error) {
+            this.logger.error(`可灵: 提交任务失败: ${error.message}`);
+            return {
+                success: false,
+                status: 'failed',
+                error: error.message,
+            };
+        }
+    }
+    async queryTaskStatus(taskId) {
+        try {
+            const response = await this.client.get(`/v1/video/status/${taskId}`);
+            if (response.data && response.data.success) {
+                const data = response.data.data;
+                return {
+                    taskId: taskId,
+                    status: this.mapStatus(data.status),
+                    progress: data.progress || 0,
+                    result: data.status === 'succeeded' ? {
+                        videoUrl: data.result.video_url,
+                    } : undefined,
+                    error: data.error_message,
+                    createdAt: new Date(data.created_time * 1000),
+                    updatedAt: new Date(data.updated_time * 1000),
+                    estimatedTimeRemaining: data.eta,
+                };
+            }
+            else {
+                throw new Error(response.data?.error || '查询失败');
+            }
+        }
+        catch (error) {
+            this.logger.error(`可灵: 查询任务状态失败: ${error.message}`);
+            throw error;
+        }
+    }
+    async waitForTaskCompletion(taskId, timeout = 600000) {
+        const startTime = Date.now();
+        const pollInterval = 5000;
+        this.logger.log(`可灵: 开始等待任务完成，ID: ${taskId}`);
+        while (Date.now() - startTime < timeout) {
+            try {
+                const status = await this.queryTaskStatus(taskId);
+                if (status.status === 'completed') {
+                    this.logger.log(`可灵: 任务完成，ID: ${taskId}`);
+                    return {
+                        success: true,
+                        taskId: taskId,
+                        videoUrl: status.result?.videoUrl,
+                        status: 'completed',
+                        duration: (Date.now() - startTime) / 1000,
+                    };
+                }
+                if (status.status === 'failed') {
+                    this.logger.error(`可灵: 任务失败，ID: ${taskId}`);
+                    return {
+                        success: false,
+                        taskId: taskId,
+                        status: 'failed',
+                        error: status.error,
+                    };
+                }
+                this.logger.debug(`可灵: 任务处理中，进度: ${status.progress}%`);
+                await this.delay(pollInterval);
+            }
+            catch (error) {
+                this.logger.error(`可灵: 轮询出错: ${error.message}`);
+                await this.delay(pollInterval);
+            }
+        }
+        this.logger.warn(`可灵: 任务等待超时，ID: ${taskId}`);
+        return {
+            success: false,
+            taskId: taskId,
+            status: 'failed',
+            error: '任务等待超时',
+        };
+    }
+    async cancelTask(taskId) {
+        try {
+            const response = await this.client.delete(`/v1/video/${taskId}`);
+            if (response.data && response.data.success) {
+                this.logger.log(`可灵: 任务已取消，ID: ${taskId}`);
+                return true;
+            }
+            return false;
+        }
+        catch (error) {
+            this.logger.error(`可灵: 取消任务失败: ${error.message}`);
+            return false;
+        }
+    }
+    async checkHealth() {
+        try {
+            const response = await this.client.get('/v1/health');
+            return response.status === 200 && response.data?.success;
+        }
+        catch (error) {
+            this.logger.error(`可灵: 健康检查失败: ${error.message}`);
+            return false;
+        }
+    }
+    mapMotionIntensity(intensity) {
+        const intensityMap = {
+            'low': 1,
+            'medium': 2,
+            'high': 3,
+        };
+        return intensityMap[intensity || 'medium'] || 2;
+    }
+    mapStatus(status) {
+        const statusMap = {
+            'pending': 'pending',
+            'submitted': 'pending',
+            'processing': 'processing',
+            'running': 'processing',
+            'succeeded': 'completed',
+            'completed': 'completed',
+            'failed': 'failed',
+            'error': 'failed',
+            'cancelled': 'failed',
+        };
+        return statusMap[status.toLowerCase()] || 'pending';
+    }
+    delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    async downloadVideo(videoUrl, savePath) {
+        try {
+            const response = await axios_1.default.get(videoUrl, {
+                responseType: 'stream',
+            });
+            const fs = __webpack_require__(/*! fs */ "fs");
+            const path = __webpack_require__(/*! path */ "path");
+            const dir = path.dirname(savePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            const writer = fs.createWriteStream(savePath);
+            response.data.pipe(writer);
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    this.logger.log(`可灵: 视频已下载到: ${savePath}`);
+                    resolve(savePath);
+                });
+                writer.on('error', reject);
+            });
+        }
+        catch (error) {
+            this.logger.error(`可灵: 视频下载失败: ${error.message}`);
+            throw error;
+        }
+    }
+};
+exports.KlingVideoProvider = KlingVideoProvider;
+exports.KlingVideoProvider = KlingVideoProvider = KlingVideoProvider_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], KlingVideoProvider);
+
+
+/***/ }),
+
 /***/ "./apps/ai-service/src/providers/openai.provider.ts":
 /*!**********************************************************!*\
   !*** ./apps/ai-service/src/providers/openai.provider.ts ***!
   \**********************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OpenAIProvider = void 0;
@@ -3471,6 +4733,7 @@ exports.OpenAIProvider = OpenAIProvider;
   \***********************************************************/
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+"use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AIProviderFactory = void 0;
@@ -3516,12 +4779,409 @@ AIProviderFactory.providerInstances = new Map();
 
 /***/ }),
 
+/***/ "./apps/ai-service/src/providers/volcengine-visual.provider.ts":
+/*!*********************************************************************!*\
+  !*** ./apps/ai-service/src/providers/volcengine-visual.provider.ts ***!
+  \*********************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var VolcengineVisualProvider_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VolcengineVisualProvider = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const axios_1 = __webpack_require__(/*! axios */ "axios");
+const crypto = __webpack_require__(/*! crypto */ "crypto");
+let VolcengineVisualProvider = VolcengineVisualProvider_1 = class VolcengineVisualProvider {
+    constructor() {
+        this.logger = new common_1.Logger(VolcengineVisualProvider_1.name);
+        this.config = {
+            accessKeyId: process.env.VOLCENGINE_ACCESS_KEY_ID || '',
+            secretAccessKey: process.env.VOLCENGINE_SECRET_ACCESS_KEY || '',
+            region: process.env.VOLCENGINE_VISUAL_REGION || 'cn-beijing',
+            endpoint: process.env.VOLCENGINE_VISUAL_ENDPOINT || 'https://visual.volcengineapi.com',
+            model: process.env.VOLCENGINE_VISUAL_MODEL || 'general-v2',
+        };
+        this.client = axios_1.default.create({
+            baseURL: this.config.endpoint,
+            timeout: 120000,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        this.client.interceptors.request.use((config) => {
+            const signature = this.generateSignature(config);
+            config.headers['Authorization'] = signature;
+            config.headers['X-Date'] = new Date().toISOString();
+            return config;
+        });
+    }
+    generateSignature(config) {
+        const stringToSign = `${config.method}\n${config.url}\n${JSON.stringify(config.data || {})}`;
+        const signature = crypto
+            .createHmac('sha256', this.config.secretAccessKey)
+            .update(stringToSign)
+            .digest('hex');
+        return `HMAC-SHA256 Credential=${this.config.accessKeyId}, Signature=${signature}`;
+    }
+    async generateImage(request) {
+        const startTime = Date.now();
+        try {
+            this.logger.log(`开始生成图片，提示词: ${request.prompt.substring(0, 50)}...`);
+            const requestBody = {
+                model: this.config.model,
+                prompt: request.prompt,
+                negative_prompt: request.negativePrompt,
+                width: request.width || 1024,
+                height: request.height || 576,
+                seed: request.seed || Math.floor(Math.random() * 1000000),
+                steps: request.steps || 20,
+                cfg_scale: request.cfgScale || 7.5,
+                sampler: request.sampler || 'euler_a',
+                num_images: request.batchSize || 1,
+            };
+            if (request.referenceImage) {
+                requestBody['reference_image'] = request.referenceImage;
+                requestBody['reference_weight'] = request.referenceWeight || 0.5;
+            }
+            const response = await this.client.post('/api/v1/text2img', requestBody);
+            const duration = (Date.now() - startTime) / 1000;
+            if (response.data && response.data.code === 0) {
+                const images = response.data.data.images || [];
+                this.logger.log(`图片生成成功，耗时: ${duration}秒，生成数量: ${images.length}`);
+                return {
+                    success: true,
+                    images: images,
+                    seed: response.data.data.seed,
+                    duration,
+                    metadata: {
+                        model: this.config.model,
+                        resolution: `${requestBody.width}x${requestBody.height}`,
+                        steps: requestBody.steps,
+                    },
+                };
+            }
+            else {
+                throw new Error(response.data?.message || '图片生成失败');
+            }
+        }
+        catch (error) {
+            const duration = (Date.now() - startTime) / 1000;
+            this.logger.error(`图片生成失败: ${error.message}`, error.stack);
+            return {
+                success: false,
+                images: [],
+                duration,
+                error: error.message,
+            };
+        }
+    }
+    async generateImageBatch(requests) {
+        this.logger.log(`开始批量生成图片，数量: ${requests.length}`);
+        const concurrency = 3;
+        const results = [];
+        for (let i = 0; i < requests.length; i += concurrency) {
+            const batch = requests.slice(i, i + concurrency);
+            const batchResults = await Promise.all(batch.map((req) => this.generateImage(req)));
+            results.push(...batchResults);
+            if (i + concurrency < requests.length) {
+                await this.delay(1000);
+            }
+        }
+        this.logger.log(`批量生成完成，成功: ${results.filter(r => r.success).length}/${requests.length}`);
+        return results;
+    }
+    async checkHealth() {
+        try {
+            const testPrompt = 'test';
+            const response = await this.client.post('/api/v1/text2img', {
+                model: this.config.model,
+                prompt: testPrompt,
+                width: 256,
+                height: 256,
+                steps: 1,
+            });
+            return response.status === 200;
+        }
+        catch (error) {
+            this.logger.error(`健康检查失败: ${error.message}`);
+            return false;
+        }
+    }
+    async downloadImage(imageUrl, savePath) {
+        try {
+            const response = await axios_1.default.get(imageUrl, {
+                responseType: 'arraybuffer',
+            });
+            const fs = __webpack_require__(/*! fs */ "fs");
+            const path = __webpack_require__(/*! path */ "path");
+            const dir = path.dirname(savePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            fs.writeFileSync(savePath, response.data);
+            this.logger.log(`图片已下载到: ${savePath}`);
+            return savePath;
+        }
+        catch (error) {
+            this.logger.error(`图片下载失败: ${error.message}`);
+            throw error;
+        }
+    }
+    delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+};
+exports.VolcengineVisualProvider = VolcengineVisualProvider;
+exports.VolcengineVisualProvider = VolcengineVisualProvider = VolcengineVisualProvider_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], VolcengineVisualProvider);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/queues/video-generation.processor.ts":
+/*!******************************************************************!*\
+  !*** ./apps/ai-service/src/queues/video-generation.processor.ts ***!
+  \******************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var VideoGenerationProcessor_1;
+var _a, _b, _c, _d, _e, _f, _g;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoGenerationProcessor = void 0;
+const bull_1 = __webpack_require__(/*! @nestjs/bull */ "@nestjs/bull");
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const bull_2 = __webpack_require__(/*! bull */ "bull");
+const video_generation_service_1 = __webpack_require__(/*! ../modules/video-generation/video-generation.service */ "./apps/ai-service/src/modules/video-generation/video-generation.service.ts");
+let VideoGenerationProcessor = VideoGenerationProcessor_1 = class VideoGenerationProcessor {
+    constructor(videoGenerationService) {
+        this.videoGenerationService = videoGenerationService;
+        this.logger = new common_1.Logger(VideoGenerationProcessor_1.name);
+    }
+    async handleVideoGeneration(job) {
+        this.logger.log(`开始处理视频生成任务: ${job.id}`);
+        const { userId, chapterId, ...options } = job.data;
+        try {
+            await job.progress(0);
+            const result = await this.videoGenerationService.generateChapterVideo(userId, { chapterId, ...options });
+            await job.progress(100);
+            this.logger.log(`视频生成任务完成: ${job.id}`);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`视频生成任务失败: ${job.id}`, error.stack);
+            throw error;
+        }
+    }
+    onActive(job) {
+        this.logger.log(`任务开始执行: ${job.id}, 章节: ${job.data.chapterId}`);
+    }
+    onCompleted(job, result) {
+        this.logger.log(`任务执行完成: ${job.id}`);
+    }
+    onFailed(job, error) {
+        this.logger.error(`任务执行失败: ${job.id}, 尝试次数: ${job.attemptsMade}/${job.opts.attempts}`, error.stack);
+    }
+};
+exports.VideoGenerationProcessor = VideoGenerationProcessor;
+__decorate([
+    (0, bull_1.Process)('generate-chapter-video'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof bull_2.Job !== "undefined" && bull_2.Job) === "function" ? _b : Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], VideoGenerationProcessor.prototype, "handleVideoGeneration", null);
+__decorate([
+    (0, bull_1.OnQueueActive)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof bull_2.Job !== "undefined" && bull_2.Job) === "function" ? _d : Object]),
+    __metadata("design:returntype", void 0)
+], VideoGenerationProcessor.prototype, "onActive", null);
+__decorate([
+    (0, bull_1.OnQueueCompleted)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_e = typeof bull_2.Job !== "undefined" && bull_2.Job) === "function" ? _e : Object, Object]),
+    __metadata("design:returntype", void 0)
+], VideoGenerationProcessor.prototype, "onCompleted", null);
+__decorate([
+    (0, bull_1.OnQueueFailed)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_f = typeof bull_2.Job !== "undefined" && bull_2.Job) === "function" ? _f : Object, typeof (_g = typeof Error !== "undefined" && Error) === "function" ? _g : Object]),
+    __metadata("design:returntype", void 0)
+], VideoGenerationProcessor.prototype, "onFailed", null);
+exports.VideoGenerationProcessor = VideoGenerationProcessor = VideoGenerationProcessor_1 = __decorate([
+    (0, bull_1.Processor)('video-generation'),
+    __metadata("design:paramtypes", [typeof (_a = typeof video_generation_service_1.VideoGenerationService !== "undefined" && video_generation_service_1.VideoGenerationService) === "function" ? _a : Object])
+], VideoGenerationProcessor);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/queues/video-generation.queue.ts":
+/*!**************************************************************!*\
+  !*** ./apps/ai-service/src/queues/video-generation.queue.ts ***!
+  \**************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var VideoGenerationQueue_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoGenerationQueue = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const bull_1 = __webpack_require__(/*! bull */ "bull");
+const bull_2 = __webpack_require__(/*! @nestjs/bull */ "@nestjs/bull");
+let VideoGenerationQueue = VideoGenerationQueue_1 = class VideoGenerationQueue {
+    constructor(videoQueue) {
+        this.videoQueue = videoQueue;
+        this.logger = new common_1.Logger(VideoGenerationQueue_1.name);
+    }
+    async addVideoGenerationJob(userId, dto, priority = 0) {
+        this.logger.log(`添加视频生成任务到队列: ${dto.chapterId}`);
+        const job = await this.videoQueue.add('generate-chapter-video', {
+            userId,
+            ...dto,
+        }, {
+            priority,
+            attempts: 3,
+            backoff: {
+                type: 'exponential',
+                delay: 60000,
+            },
+            removeOnComplete: false,
+            removeOnFail: false,
+            timeout: 600000,
+        });
+        this.logger.log(`任务已添加，Job ID: ${job.id}`);
+        return job;
+    }
+    async getJobStatus(jobId) {
+        const job = await this.videoQueue.getJob(jobId);
+        if (!job) {
+            return null;
+        }
+        const state = await job.getState();
+        const progress = job.progress();
+        return {
+            id: job.id,
+            state,
+            progress,
+            data: job.data,
+            returnValue: job.returnvalue,
+            failedReason: job.failedReason,
+            attemptsMade: job.attemptsMade,
+            processedOn: job.processedOn,
+            finishedOn: job.finishedOn,
+        };
+    }
+    async cancelJob(jobId) {
+        try {
+            const job = await this.videoQueue.getJob(jobId);
+            if (!job) {
+                return false;
+            }
+            await job.remove();
+            this.logger.log(`任务已取消: ${jobId}`);
+            return true;
+        }
+        catch (error) {
+            this.logger.error(`取消任务失败: ${error.message}`);
+            return false;
+        }
+    }
+    async getQueueStats() {
+        const [waiting, active, completed, failed, delayed] = await Promise.all([
+            this.videoQueue.getWaitingCount(),
+            this.videoQueue.getActiveCount(),
+            this.videoQueue.getCompletedCount(),
+            this.videoQueue.getFailedCount(),
+            this.videoQueue.getDelayedCount(),
+        ]);
+        return {
+            waiting,
+            active,
+            completed,
+            failed,
+            delayed,
+            total: waiting + active + completed + failed + delayed,
+        };
+    }
+    async cleanOldJobs(ageInHours = 24) {
+        this.logger.log(`清理${ageInHours}小时前的已完成任务...`);
+        const jobs = await this.videoQueue.getCompleted();
+        const now = Date.now();
+        const cutoffTime = now - ageInHours * 60 * 60 * 1000;
+        let cleanedCount = 0;
+        for (const job of jobs) {
+            if (job.finishedOn && job.finishedOn < cutoffTime) {
+                await job.remove();
+                cleanedCount++;
+            }
+        }
+        this.logger.log(`清理完成，共清理${cleanedCount}个任务`);
+        return cleanedCount;
+    }
+    async pauseQueue() {
+        await this.videoQueue.pause();
+        this.logger.log('队列已暂停');
+    }
+    async resumeQueue() {
+        await this.videoQueue.resume();
+        this.logger.log('队列已恢复');
+    }
+};
+exports.VideoGenerationQueue = VideoGenerationQueue;
+exports.VideoGenerationQueue = VideoGenerationQueue = VideoGenerationQueue_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, bull_2.InjectQueue)('video-generation')),
+    __metadata("design:paramtypes", [typeof (_a = typeof bull_1.Queue !== "undefined" && bull_1.Queue) === "function" ? _a : Object])
+], VideoGenerationQueue);
+
+
+/***/ }),
+
 /***/ "./apps/ai-service/src/services/ai-caller.service.ts":
 /*!***********************************************************!*\
   !*** ./apps/ai-service/src/services/ai-caller.service.ts ***!
   \***********************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -3909,6 +5569,7 @@ exports.AICallerService = AICallerService = __decorate([
   \*****************************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -4162,12 +5823,870 @@ exports.ContextManagerService = ContextManagerService = __decorate([
 
 /***/ }),
 
+/***/ "./apps/ai-service/src/services/ffmpeg.service.ts":
+/*!********************************************************!*\
+  !*** ./apps/ai-service/src/services/ffmpeg.service.ts ***!
+  \********************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var FFmpegService_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FFmpegService = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const util_1 = __webpack_require__(/*! util */ "util");
+const child_process_1 = __webpack_require__(/*! child_process */ "child_process");
+const fs = __webpack_require__(/*! fs */ "fs");
+const path = __webpack_require__(/*! path */ "path");
+const execAsync = (0, util_1.promisify)(child_process_1.exec);
+let FFmpegService = FFmpegService_1 = class FFmpegService {
+    constructor() {
+        this.logger = new common_1.Logger(FFmpegService_1.name);
+        this.ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
+        this.tempDir = process.env.VIDEO_TEMP_DIR || '/tmp/video-generation';
+        if (!fs.existsSync(this.tempDir)) {
+            fs.mkdirSync(this.tempDir, { recursive: true });
+        }
+    }
+    async mergeVideos(videoPaths, outputPath) {
+        this.logger.log(`开始合并视频，数量: ${videoPaths.length}`);
+        try {
+            const listFilePath = path.join(this.tempDir, `merge-list-${Date.now()}.txt`);
+            const listContent = videoPaths.map(p => `file '${p}'`).join('\n');
+            fs.writeFileSync(listFilePath, listContent);
+            const command = `${this.ffmpegPath} -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`;
+            const { stdout, stderr } = await execAsync(command);
+            this.logger.debug(`FFmpeg输出: ${stderr}`);
+            fs.unlinkSync(listFilePath);
+            if (!fs.existsSync(outputPath)) {
+                throw new Error('视频合并失败：输出文件不存在');
+            }
+            const stats = fs.statSync(outputPath);
+            this.logger.log(`视频合并成功，文件大小: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
+            return outputPath;
+        }
+        catch (error) {
+            this.logger.error(`视频合并失败: ${error.message}`, error.stack);
+            throw error;
+        }
+    }
+    async mergeVideosWithTransitions(videoPaths, outputPath, transitionDuration = 0.5) {
+        this.logger.log(`开始合并视频（带转场），数量: ${videoPaths.length}`);
+        try {
+            let filterComplex = '';
+            let currentLabel = '[0:v]';
+            for (let i = 1; i < videoPaths.length; i++) {
+                const nextLabel = i === videoPaths.length - 1 ? '[outv]' : `[v${i}]`;
+                filterComplex += `${currentLabel}[${i}:v]xfade=transition=fade:duration=${transitionDuration}:offset=0${nextLabel};`;
+                currentLabel = nextLabel;
+            }
+            const inputs = videoPaths.map(p => `-i "${p}"`).join(' ');
+            const command = `${this.ffmpegPath} ${inputs} -filter_complex "${filterComplex}" -map "[outv]" "${outputPath}"`;
+            const { stderr } = await execAsync(command, { maxBuffer: 10 * 1024 * 1024 });
+            this.logger.debug(`FFmpeg输出: ${stderr}`);
+            if (!fs.existsSync(outputPath)) {
+                throw new Error('视频合并失败：输出文件不存在');
+            }
+            this.logger.log(`视频合并成功（带转场）`);
+            return outputPath;
+        }
+        catch (error) {
+            this.logger.error(`视频合并失败: ${error.message}`);
+            this.logger.warn('降级为无转场合并');
+            return this.mergeVideos(videoPaths, outputPath);
+        }
+    }
+    async addTitleFrame(videoPath, title, duration, outputPath) {
+        this.logger.log(`添加标题帧: ${title}`);
+        try {
+            const titleImagePath = await this.createTitleImage(title);
+            const titleVideoPath = path.join(this.tempDir, `title-${Date.now()}.mp4`);
+            await this.imageToVideo(titleImagePath, titleVideoPath, duration);
+            await this.mergeVideos([titleVideoPath, videoPath], outputPath);
+            fs.unlinkSync(titleImagePath);
+            fs.unlinkSync(titleVideoPath);
+            return outputPath;
+        }
+        catch (error) {
+            this.logger.error(`添加标题帧失败: ${error.message}`);
+            throw error;
+        }
+    }
+    async createTitleImage(title) {
+        const imagePath = path.join(this.tempDir, `title-${Date.now()}.png`);
+        const command = `${this.ffmpegPath} -f lavfi -i color=c=black:s=1024x576:d=1 -vf "drawtext=text='${title}':fontsize=48:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2" -frames:v 1 "${imagePath}"`;
+        await execAsync(command);
+        return imagePath;
+    }
+    async imageToVideo(imagePath, videoPath, duration) {
+        const command = `${this.ffmpegPath} -loop 1 -i "${imagePath}" -c:v libx264 -t ${duration} -pix_fmt yuv420p -vf "scale=1024:576" "${videoPath}"`;
+        await execAsync(command);
+        return videoPath;
+    }
+    async compressVideo(inputPath, outputPath, quality = 'medium') {
+        this.logger.log(`压缩视频，质量: ${quality}`);
+        const crfMap = {
+            high: 18,
+            medium: 23,
+            low: 28,
+        };
+        const crf = crfMap[quality];
+        try {
+            const command = `${this.ffmpegPath} -i "${inputPath}" -c:v libx264 -crf ${crf} -preset medium -c:a aac -b:a 128k "${outputPath}"`;
+            const { stderr } = await execAsync(command);
+            this.logger.debug(`FFmpeg输出: ${stderr}`);
+            const inputStats = fs.statSync(inputPath);
+            const outputStats = fs.statSync(outputPath);
+            const compressionRatio = ((1 - outputStats.size / inputStats.size) * 100).toFixed(2);
+            this.logger.log(`视频压缩完成，压缩率: ${compressionRatio}%`);
+            return outputPath;
+        }
+        catch (error) {
+            this.logger.error(`视频压缩失败: ${error.message}`);
+            throw error;
+        }
+    }
+    async normalizeResolution(inputPath, outputPath, width = 1024, height = 576) {
+        this.logger.log(`统一视频分辨率: ${width}x${height}`);
+        try {
+            const command = `${this.ffmpegPath} -i "${inputPath}" -vf "scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2" -c:a copy "${outputPath}"`;
+            await execAsync(command);
+            return outputPath;
+        }
+        catch (error) {
+            this.logger.error(`统一分辨率失败: ${error.message}`);
+            throw error;
+        }
+    }
+    async addFadeEffect(inputPath, outputPath, fadeInDuration = 0.5, fadeOutDuration = 0.5) {
+        this.logger.log(`添加淡入淡出效果`);
+        try {
+            const duration = await this.getVideoDuration(inputPath);
+            const fadeOutStart = duration - fadeOutDuration;
+            const command = `${this.ffmpegPath} -i "${inputPath}" -vf "fade=t=in:st=0:d=${fadeInDuration},fade=t=out:st=${fadeOutStart}:d=${fadeOutDuration}" -c:a copy "${outputPath}"`;
+            await execAsync(command);
+            return outputPath;
+        }
+        catch (error) {
+            this.logger.error(`添加淡入淡出失败: ${error.message}`);
+            throw error;
+        }
+    }
+    async getVideoDuration(videoPath) {
+        try {
+            const command = `${this.ffmpegPath} -i "${videoPath}" 2>&1 | grep "Duration"`;
+            const { stdout } = await execAsync(command);
+            const match = stdout.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+            if (match) {
+                const hours = parseInt(match[1]);
+                const minutes = parseInt(match[2]);
+                const seconds = parseFloat(match[3]);
+                return hours * 3600 + minutes * 60 + seconds;
+            }
+            return 0;
+        }
+        catch (error) {
+            this.logger.error(`获取视频时长失败: ${error.message}`);
+            return 0;
+        }
+    }
+    async getVideoMetadata(videoPath) {
+        try {
+            const command = `${this.ffmpegPath} -i "${videoPath}" -f ffmetadata - 2>&1`;
+            const { stdout, stderr } = await execAsync(command);
+            const output = stderr + stdout;
+            const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+            const resolutionMatch = output.match(/(\d{3,4})x(\d{3,4})/);
+            const fpsMatch = output.match(/(\d+(?:\.\d+)?) fps/);
+            const bitrateMatch = output.match(/bitrate: (\d+) kb\/s/);
+            let duration = 0;
+            if (durationMatch) {
+                const hours = parseInt(durationMatch[1]);
+                const minutes = parseInt(durationMatch[2]);
+                const seconds = parseFloat(durationMatch[3]);
+                duration = hours * 3600 + minutes * 60 + seconds;
+            }
+            return {
+                duration,
+                resolution: resolutionMatch ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : 'unknown',
+                fps: fpsMatch ? parseFloat(fpsMatch[1]) : 0,
+                bitrate: bitrateMatch ? parseInt(bitrateMatch[1]) : 0,
+                fileSize: fs.existsSync(videoPath) ? fs.statSync(videoPath).size : 0,
+                format: path.extname(videoPath).slice(1),
+            };
+        }
+        catch (error) {
+            this.logger.error(`获取视频元数据失败: ${error.message}`);
+            return null;
+        }
+    }
+    async checkFFmpegAvailability() {
+        try {
+            const { stdout } = await execAsync(`${this.ffmpegPath} -version`);
+            this.logger.log(`FFmpeg版本: ${stdout.split('\n')[0]}`);
+            return true;
+        }
+        catch (error) {
+            this.logger.error(`FFmpeg不可用: ${error.message}`);
+            return false;
+        }
+    }
+};
+exports.FFmpegService = FFmpegService;
+exports.FFmpegService = FFmpegService = FFmpegService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], FFmpegService);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/services/image-generation-agent.service.ts":
+/*!************************************************************************!*\
+  !*** ./apps/ai-service/src/services/image-generation-agent.service.ts ***!
+  \************************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var ImageGenerationAgentService_1;
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ImageGenerationAgentService = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const database_1 = __webpack_require__(/*! @app/database */ "./libs/database/src/index.ts");
+const ai_caller_service_1 = __webpack_require__(/*! ./ai-caller.service */ "./apps/ai-service/src/services/ai-caller.service.ts");
+let ImageGenerationAgentService = ImageGenerationAgentService_1 = class ImageGenerationAgentService {
+    constructor(prisma, aiCaller) {
+        this.prisma = prisma;
+        this.aiCaller = aiCaller;
+        this.logger = new common_1.Logger(ImageGenerationAgentService_1.name);
+    }
+    async generateImagePrompt(scene, consistencyProfile, chapterNumber) {
+        this.logger.log(`生成图片提示词，场景: ${scene.sceneNumber}`);
+        const basePrompt = await this.generateBasePrompt(scene, consistencyProfile, chapterNumber);
+        const optimizedPrompt = await this.optimizePrompt(basePrompt, scene);
+        const negativePrompt = this.buildNegativePrompt();
+        const referenceImageUrl = await this.getConsistencyReference(scene.characters, consistencyProfile);
+        return {
+            sceneNumber: scene.sceneNumber,
+            positivePrompt: optimizedPrompt,
+            negativePrompt,
+            size: '1024x576',
+            seed: this.generateConsistentSeed(scene.sceneNumber),
+            referenceImageUrl,
+        };
+    }
+    async generateImagePromptBatch(scenes, consistencyProfile, chapterNumber) {
+        this.logger.log(`批量生成图片提示词，数量: ${scenes.length}`);
+        const prompts = [];
+        for (const scene of scenes) {
+            const prompt = await this.generateImagePrompt(scene, consistencyProfile, chapterNumber);
+            prompts.push(prompt);
+            await this.delay(500);
+        }
+        return prompts;
+    }
+    async generateBasePrompt(scene, consistencyProfile, chapterNumber) {
+        const agentConfig = await this.getAgentConfig('IMAGE_OPTIMIZER');
+        const systemPrompt = this.buildSystemPrompt(agentConfig);
+        const userPrompt = this.buildUserPrompt(scene, consistencyProfile, chapterNumber);
+        const response = await this.aiCaller.callAI({
+            userId: 'system',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+            ],
+            parameters: {
+                temperature: 0.8,
+                maxTokens: 500,
+            },
+        });
+        return response.content.trim();
+    }
+    async optimizePrompt(basePrompt, scene) {
+        const systemPrompt = `你是一个AI绘图提示词优化专家。你的任务是优化现有提示词，使其更加精确、视觉化，适合Stable Diffusion等AI绘图模型。
+
+优化要点：
+1. 增强视觉细节描述
+2. 添加艺术风格和质量标签
+3. 优化描述顺序（主体→环境→风格→质量）
+4. 使用英文关键词
+5. 保持原意不变
+
+输出优化后的提示词（英文），用逗号分隔关键词。`;
+        const userPrompt = `请优化以下提示词：
+
+${basePrompt}
+
+场景描述：${scene.description}
+镜头角度：${scene.cameraAngle}
+
+请输出优化后的英文提示词。`;
+        try {
+            const response = await this.aiCaller.callAI({
+                userId: 'system',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt },
+                ],
+                parameters: {
+                    temperature: 0.7,
+                    maxTokens: 400,
+                },
+            });
+            return response.content.trim();
+        }
+        catch (error) {
+            this.logger.error(`优化提示词失败: ${error.message}`);
+            return basePrompt;
+        }
+    }
+    buildSystemPrompt(agentConfig) {
+        if (agentConfig && agentConfig.systemPrompt) {
+            return agentConfig.systemPrompt;
+        }
+        return `你是一个专业的AI绘图提示词生成专家。你的任务是将场景描述转化为详细的视觉化提示词。
+
+你需要：
+1. 准确描述场景中的角色外貌和特征（确保一致性）
+2. 详细描述环境、氛围、光线
+3. 添加艺术风格、色调、质量标签
+4. 根据镜头角度调整构图描述
+5. 使用具体的视觉化词汇
+
+输出英文提示词，用逗号分隔关键词。`;
+    }
+    buildUserPrompt(scene, consistencyProfile, chapterNumber) {
+        let prompt = `请为以下场景生成详细的AI绘图提示词：
+
+【场景描述】
+${scene.description}
+
+【镜头角度】
+${scene.cameraAngle}
+
+【环境】
+${scene.environment}`;
+        if (scene.characters.length > 0 && consistencyProfile?.characters) {
+            prompt += `\n\n【角色信息（必须严格遵守）】`;
+            scene.characters.forEach((charName) => {
+                const char = consistencyProfile.characters[charName];
+                if (char) {
+                    prompt += `\n\n角色: ${char.name}`;
+                    prompt += `\n基础外貌: ${char.baseAppearance}`;
+                    const dynamicState = char.dynamicState?.[chapterNumber];
+                    if (dynamicState) {
+                        prompt += `\n当前状态: ${dynamicState}`;
+                    }
+                    if (char.keywords && char.keywords.length > 0) {
+                        prompt += `\n视觉关键词: ${char.keywords.join(', ')}`;
+                    }
+                }
+            });
+        }
+        if (consistencyProfile?.visualStyle) {
+            const style = consistencyProfile.visualStyle;
+            prompt += `\n\n【视觉风格】`;
+            prompt += `\n整体风格: ${style.overall}`;
+            prompt += `\n色调: ${style.colorTone}`;
+            prompt += `\n艺术风格: ${style.artStyle}`;
+            prompt += `\n光照: ${style.lighting}`;
+        }
+        prompt += `\n\n请生成英文提示词，用逗号分隔。格式：角色描述, 环境描述, 氛围描述, 风格标签, 质量标签`;
+        return prompt;
+    }
+    buildNegativePrompt() {
+        return `low quality, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, bad proportions, extra limbs, disfigured, deformed`;
+    }
+    async getConsistencyReference(characters, consistencyProfile) {
+        if (!characters.length || !consistencyProfile?.characters) {
+            return undefined;
+        }
+        const mainCharName = characters[0];
+        const char = consistencyProfile.characters[mainCharName];
+        return char?.referenceImageUrl;
+    }
+    generateConsistentSeed(sceneNumber) {
+        return 1000000 + sceneNumber * 1000;
+    }
+    async getAgentConfig(agentType) {
+        try {
+            const config = await this.prisma.agentPromptConfig.findFirst({
+                where: {
+                    agentType: agentType,
+                    isActive: true,
+                },
+                orderBy: {
+                    version: 'desc',
+                },
+            });
+            return config;
+        }
+        catch (error) {
+            this.logger.warn(`获取Agent配置失败: ${error.message}`);
+            return null;
+        }
+    }
+    delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+};
+exports.ImageGenerationAgentService = ImageGenerationAgentService;
+exports.ImageGenerationAgentService = ImageGenerationAgentService = ImageGenerationAgentService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof ai_caller_service_1.AICallerService !== "undefined" && ai_caller_service_1.AICallerService) === "function" ? _b : Object])
+], ImageGenerationAgentService);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/services/storyboard-agent.service.ts":
+/*!******************************************************************!*\
+  !*** ./apps/ai-service/src/services/storyboard-agent.service.ts ***!
+  \******************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var StoryboardAgentService_1;
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.StoryboardAgentService = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const database_1 = __webpack_require__(/*! @app/database */ "./libs/database/src/index.ts");
+const ai_caller_service_1 = __webpack_require__(/*! ./ai-caller.service */ "./apps/ai-service/src/services/ai-caller.service.ts");
+let StoryboardAgentService = StoryboardAgentService_1 = class StoryboardAgentService {
+    constructor(prisma, aiCaller) {
+        this.prisma = prisma;
+        this.aiCaller = aiCaller;
+        this.logger = new common_1.Logger(StoryboardAgentService_1.name);
+    }
+    async generateStoryboard(chapterId, consistencyProfile, options = {}) {
+        this.logger.log(`开始生成分镜脚本，章节ID: ${chapterId}`);
+        const chapter = await this.prisma.chapter.findUnique({
+            where: { id: chapterId },
+            include: {
+                novel: {
+                    select: {
+                        id: true,
+                        title: true,
+                        genre: true,
+                        settings: true,
+                    },
+                },
+            },
+        });
+        if (!chapter) {
+            throw new Error('章节不存在');
+        }
+        const agentConfig = await this.getAgentConfig('SCRIPT_GENERATOR');
+        const systemPrompt = this.buildSystemPrompt(agentConfig);
+        const userPrompt = this.buildUserPrompt(chapter, consistencyProfile, options);
+        const response = await this.aiCaller.callAI({
+            userId: chapter.novel.userId || 'system',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+            ],
+            parameters: {
+                temperature: 0.7,
+                maxTokens: 2000,
+            },
+        });
+        const storyboard = this.parseStoryboardResponse(response.content, options);
+        const optimizedStoryboard = await this.optimizeStoryboard(storyboard, consistencyProfile);
+        this.logger.log(`分镜脚本生成完成，共${optimizedStoryboard.scenes.length}个场景`);
+        return optimizedStoryboard;
+    }
+    buildSystemPrompt(agentConfig) {
+        if (agentConfig && agentConfig.systemPrompt) {
+            return agentConfig.systemPrompt;
+        }
+        return `你是一个专业的视频分镜脚本编写助手。你的任务是将小说章节内容转化为适合视频化的分镜脚本。
+
+你需要：
+1. 提取章节中的关键情节点和视觉化元素
+2. 识别出现的角色、场景和重要物品
+3. 为每个分镜场景生成详细描述，包括：
+   - 场景编号
+   - 场景描述（视觉化描述）
+   - 出现的角色列表
+   - 环境/场景
+   - 预计时长（秒）
+   - 关键情节点
+   - 镜头角度建议
+4. 确保分镜之间的时间线和逻辑连贯性
+5. 适当压缩和精炼，突出核心情节
+
+输出格式为JSON，包含scenes数组和摘要信息。`;
+    }
+    buildUserPrompt(chapter, consistencyProfile, options) {
+        const sceneCount = options.sceneCount || 5;
+        const totalDuration = options.totalDuration || 15;
+        const avgDuration = Math.floor(totalDuration / sceneCount);
+        let prompt = `请为以下章节内容生成${sceneCount}个分镜场景，总时长约${totalDuration}秒。
+
+【小说信息】
+标题：${chapter.novel.title}
+类型：${chapter.novel.genre || '未知'}
+
+【章节信息】
+章节号：第${chapter.chapterNumber}章
+标题：${chapter.title}
+内容：
+${chapter.content}
+
+【一致性要求】`;
+        if (consistencyProfile?.characters) {
+            const characters = Object.values(consistencyProfile.characters);
+            prompt += `\n\n已知角色特征：\n`;
+            characters.forEach((char) => {
+                prompt += `- ${char.name}: ${char.baseAppearance}\n`;
+                const dynamicState = char.dynamicState?.[chapter.chapterNumber];
+                if (dynamicState) {
+                    prompt += `  当前状态: ${dynamicState}\n`;
+                }
+            });
+        }
+        if (consistencyProfile?.visualStyle) {
+            const style = consistencyProfile.visualStyle;
+            prompt += `\n\n视觉风格：\n`;
+            prompt += `- 整体风格: ${style.overall}\n`;
+            prompt += `- 色调: ${style.colorTone}\n`;
+            prompt += `- 艺术风格: ${style.artStyle}\n`;
+        }
+        prompt += `\n\n请生成JSON格式的分镜脚本，每个场景平均${avgDuration}秒。确保：
+1. 场景描述具体、视觉化，适合生成图片
+2. 准确识别角色并应用一致性特征
+3. 镜头角度多样化（特写、中景、全景等）
+4. 情节连贯，时间分配合理
+
+JSON格式示例：
+{
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "description": "详细的视觉化场景描述",
+      "characters": ["角色名"],
+      "environment": "环境描述",
+      "duration": ${avgDuration},
+      "keyMoment": "关键情节点",
+      "cameraAngle": "镜头角度"
+    }
+  ],
+  "totalDuration": ${totalDuration},
+  "mainCharacters": ["主要角色列表"],
+  "summary": "整体摘要"
+}`;
+        return prompt;
+    }
+    parseStoryboardResponse(content, options) {
+        try {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('无法从响应中提取JSON');
+            }
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (!parsed.scenes || !Array.isArray(parsed.scenes)) {
+                throw new Error('响应格式错误：缺少scenes数组');
+            }
+            const scenes = parsed.scenes.map((scene, index) => ({
+                sceneNumber: scene.sceneNumber || index + 1,
+                description: scene.description || '',
+                characters: scene.characters || [],
+                environment: scene.environment || '',
+                duration: scene.duration || 3,
+                keyMoment: scene.keyMoment || '',
+                cameraAngle: scene.cameraAngle || 'medium',
+                specialEffects: scene.specialEffects,
+            }));
+            return {
+                scenes,
+                totalDuration: parsed.totalDuration || scenes.reduce((sum, s) => sum + s.duration, 0),
+                mainCharacters: parsed.mainCharacters || [],
+                summary: parsed.summary || '',
+            };
+        }
+        catch (error) {
+            this.logger.error(`解析分镜脚本失败: ${error.message}`);
+            return this.generateFallbackStoryboard(options);
+        }
+    }
+    async optimizeStoryboard(storyboard, consistencyProfile) {
+        const knownCharacters = consistencyProfile?.characters
+            ? Object.keys(consistencyProfile.characters)
+            : [];
+        storyboard.scenes.forEach((scene) => {
+            scene.characters = scene.characters.filter((char) => knownCharacters.includes(char));
+        });
+        const totalDuration = storyboard.totalDuration;
+        let currentTotal = storyboard.scenes.reduce((sum, s) => sum + s.duration, 0);
+        if (currentTotal !== totalDuration) {
+            const ratio = totalDuration / currentTotal;
+            storyboard.scenes.forEach((scene) => {
+                scene.duration = Math.max(2, Math.round(scene.duration * ratio));
+            });
+        }
+        storyboard.scenes.forEach((scene, index) => {
+            scene.sceneNumber = index + 1;
+        });
+        return storyboard;
+    }
+    async getAgentConfig(agentType) {
+        try {
+            const config = await this.prisma.agentPromptConfig.findFirst({
+                where: {
+                    agentType: agentType,
+                    isActive: true,
+                },
+                orderBy: {
+                    version: 'desc',
+                },
+            });
+            return config;
+        }
+        catch (error) {
+            this.logger.warn(`获取Agent配置失败: ${error.message}`);
+            return null;
+        }
+    }
+    generateFallbackStoryboard(options) {
+        const sceneCount = options.sceneCount || 5;
+        const totalDuration = options.totalDuration || 15;
+        const sceneDuration = Math.floor(totalDuration / sceneCount);
+        const scenes = Array.from({ length: sceneCount }, (_, i) => ({
+            sceneNumber: i + 1,
+            description: `场景${i + 1}描述`,
+            characters: [],
+            environment: '默认环境',
+            duration: sceneDuration,
+            keyMoment: `关键情节${i + 1}`,
+            cameraAngle: 'medium',
+        }));
+        return {
+            scenes,
+            totalDuration,
+            mainCharacters: [],
+            summary: '自动生成的兜底分镜脚本',
+        };
+    }
+};
+exports.StoryboardAgentService = StoryboardAgentService;
+exports.StoryboardAgentService = StoryboardAgentService = StoryboardAgentService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof ai_caller_service_1.AICallerService !== "undefined" && ai_caller_service_1.AICallerService) === "function" ? _b : Object])
+], StoryboardAgentService);
+
+
+/***/ }),
+
+/***/ "./apps/ai-service/src/services/video-generation-agent.service.ts":
+/*!************************************************************************!*\
+  !*** ./apps/ai-service/src/services/video-generation-agent.service.ts ***!
+  \************************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var VideoGenerationAgentService_1;
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoGenerationAgentService = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const database_1 = __webpack_require__(/*! @app/database */ "./libs/database/src/index.ts");
+const ai_caller_service_1 = __webpack_require__(/*! ./ai-caller.service */ "./apps/ai-service/src/services/ai-caller.service.ts");
+let VideoGenerationAgentService = VideoGenerationAgentService_1 = class VideoGenerationAgentService {
+    constructor(prisma, aiCaller) {
+        this.prisma = prisma;
+        this.aiCaller = aiCaller;
+        this.logger = new common_1.Logger(VideoGenerationAgentService_1.name);
+    }
+    async generateVideoPrompt(scene, imageUrl, consistencyProfile) {
+        this.logger.log(`生成视频提示词，场景: ${scene.sceneNumber}`);
+        const motionPrompt = await this.generateMotionPrompt(scene, consistencyProfile);
+        const motionIntensity = this.determineMotionIntensity(scene);
+        const characterConsistencyId = await this.getCharacterConsistencyId(scene.characters, consistencyProfile);
+        return {
+            sceneNumber: scene.sceneNumber,
+            motionPrompt,
+            duration: scene.duration,
+            motionIntensity,
+            characterConsistencyId,
+        };
+    }
+    async generateVideoPromptBatch(scenes, imageUrls, consistencyProfile) {
+        this.logger.log(`批量生成视频提示词，数量: ${scenes.length}`);
+        const prompts = [];
+        for (let i = 0; i < scenes.length; i++) {
+            const prompt = await this.generateVideoPrompt(scenes[i], imageUrls[i], consistencyProfile);
+            prompts.push(prompt);
+        }
+        return prompts;
+    }
+    async generateMotionPrompt(scene, consistencyProfile) {
+        const agentConfig = await this.getAgentConfig('VIDEO_OPTIMIZER');
+        const systemPrompt = this.buildSystemPrompt(agentConfig);
+        const userPrompt = this.buildUserPrompt(scene, consistencyProfile);
+        try {
+            const response = await this.aiCaller.callAI({
+                userId: 'system',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt },
+                ],
+                parameters: {
+                    temperature: 0.7,
+                    maxTokens: 200,
+                },
+            });
+            return response.content.trim();
+        }
+        catch (error) {
+            this.logger.error(`生成运动提示词失败: ${error.message}`);
+            return this.generateFallbackMotionPrompt(scene);
+        }
+    }
+    buildSystemPrompt(agentConfig) {
+        if (agentConfig && agentConfig.systemPrompt) {
+            return agentConfig.systemPrompt;
+        }
+        return `你是一个专业的视频运动描述专家。你的任务是为静态图片生成合适的运动提示词，使其转化为流畅的视频片段。
+
+你需要：
+1. 根据场景描述生成自然的运动效果
+2. 考虑镜头运动（推拉摇移升降）
+3. 考虑主体运动（角色动作、表情变化）
+4. 考虑环境动态（风吹、光影变化等）
+5. 保持运动幅度适中，避免过于夸张
+
+输出简洁的英文运动描述，30词以内。`;
+    }
+    buildUserPrompt(scene, consistencyProfile) {
+        let prompt = `请为以下场景生成视频运动描述：
+
+【场景描述】
+${scene.description}
+
+【关键情节】
+${scene.keyMoment}
+
+【镜头角度】
+${scene.cameraAngle}
+
+【时长】
+${scene.duration}秒`;
+        if (scene.characters.length > 0) {
+            prompt += `\n\n【角色】\n${scene.characters.join(', ')}`;
+        }
+        if (scene.specialEffects) {
+            prompt += `\n\n【特殊效果】\n${scene.specialEffects}`;
+        }
+        prompt += `\n\n请生成简洁的英文运动描述，描述镜头运动和主体动作。`;
+        return prompt;
+    }
+    determineMotionIntensity(scene) {
+        const description = scene.description.toLowerCase() + ' ' + scene.keyMoment.toLowerCase();
+        const highIntensityKeywords = ['战斗', '爆炸', '追逐', 'fight', 'explosion', 'chase', 'run', 'jump'];
+        const lowIntensityKeywords = ['静坐', '思考', '对话', 'sit', 'think', 'dialogue', 'talk', 'calm'];
+        if (highIntensityKeywords.some(keyword => description.includes(keyword))) {
+            return 'high';
+        }
+        if (lowIntensityKeywords.some(keyword => description.includes(keyword))) {
+            return 'low';
+        }
+        return 'medium';
+    }
+    async getCharacterConsistencyId(characters, consistencyProfile) {
+        if (!characters.length || !consistencyProfile?.characters) {
+            return undefined;
+        }
+        const mainCharName = characters[0];
+        const char = consistencyProfile.characters[mainCharName];
+        return char ? mainCharName : undefined;
+    }
+    generateFallbackMotionPrompt(scene) {
+        const cameraMotions = {
+            'close-up': 'slow zoom in, subtle movement',
+            'medium': 'gentle camera pan, natural motion',
+            'wide': 'slow camera dolly, establishing shot',
+            'full': 'smooth tracking shot, wide angle',
+        };
+        const cameraAngle = scene.cameraAngle.toLowerCase();
+        return cameraMotions[cameraAngle] || 'smooth camera movement, natural motion';
+    }
+    async getAgentConfig(agentType) {
+        try {
+            const config = await this.prisma.agentPromptConfig.findFirst({
+                where: {
+                    agentType: agentType,
+                    isActive: true,
+                },
+                orderBy: {
+                    version: 'desc',
+                },
+            });
+            return config;
+        }
+        catch (error) {
+            this.logger.warn(`获取Agent配置失败: ${error.message}`);
+            return null;
+        }
+    }
+};
+exports.VideoGenerationAgentService = VideoGenerationAgentService;
+exports.VideoGenerationAgentService = VideoGenerationAgentService = VideoGenerationAgentService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof ai_caller_service_1.AICallerService !== "undefined" && ai_caller_service_1.AICallerService) === "function" ? _b : Object])
+], VideoGenerationAgentService);
+
+
+/***/ }),
+
 /***/ "./apps/ai-service/src/strategies/jwt.strategy.ts":
 /*!********************************************************!*\
   !*** ./apps/ai-service/src/strategies/jwt.strategy.ts ***!
   \********************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -4214,12 +6733,23 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 /***/ }),
 
+/***/ "./libs/auth/src/index.ts":
+/*!********************************!*\
+  !*** ./libs/auth/src/index.ts ***!
+  \********************************/
+/***/ (() => {
+
+
+
+/***/ }),
+
 /***/ "./libs/common/src/guards/index.ts":
 /*!*****************************************!*\
   !*** ./libs/common/src/guards/index.ts ***!
   \*****************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -4248,6 +6778,7 @@ __exportStar(__webpack_require__(/*! ./tenant.guard */ "./libs/common/src/guards
   \**************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -4281,6 +6812,7 @@ exports.JwtAuthGuard = JwtAuthGuard = __decorate([
   \************************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -4316,6 +6848,7 @@ exports.TenantGuard = TenantGuard = __decorate([
   \**********************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -4349,6 +6882,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
   \************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -4377,6 +6911,7 @@ __exportStar(__webpack_require__(/*! ./prisma.service */ "./libs/database/src/pr
   \*********************************************/
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+"use strict";
 
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -4521,12 +7056,24 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 /***/ }),
 
+/***/ "@nestjs/bull":
+/*!*******************************!*\
+  !*** external "@nestjs/bull" ***!
+  \*******************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("@nestjs/bull");
+
+/***/ }),
+
 /***/ "@nestjs/common":
 /*!*********************************!*\
   !*** external "@nestjs/common" ***!
   \*********************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@nestjs/common");
 
 /***/ }),
@@ -4537,6 +7084,7 @@ module.exports = require("@nestjs/common");
   \*********************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@nestjs/config");
 
 /***/ }),
@@ -4547,6 +7095,7 @@ module.exports = require("@nestjs/config");
   \*******************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@nestjs/core");
 
 /***/ }),
@@ -4557,6 +7106,7 @@ module.exports = require("@nestjs/core");
   \******************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@nestjs/jwt");
 
 /***/ }),
@@ -4567,6 +7117,7 @@ module.exports = require("@nestjs/jwt");
   \****************************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@nestjs/microservices");
 
 /***/ }),
@@ -4577,6 +7128,7 @@ module.exports = require("@nestjs/microservices");
   \***********************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@nestjs/passport");
 
 /***/ }),
@@ -4587,6 +7139,7 @@ module.exports = require("@nestjs/passport");
   \**********************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@nestjs/swagger");
 
 /***/ }),
@@ -4597,6 +7150,7 @@ module.exports = require("@nestjs/swagger");
   \*********************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("@prisma/client");
 
 /***/ }),
@@ -4607,7 +7161,19 @@ module.exports = require("@prisma/client");
   \************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("axios");
+
+/***/ }),
+
+/***/ "bull":
+/*!***********************!*\
+  !*** external "bull" ***!
+  \***********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("bull");
 
 /***/ }),
 
@@ -4617,6 +7183,7 @@ module.exports = require("axios");
   \************************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("class-transformer");
 
 /***/ }),
@@ -4627,6 +7194,7 @@ module.exports = require("class-transformer");
   \**********************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("class-validator");
 
 /***/ }),
@@ -4637,6 +7205,7 @@ module.exports = require("class-validator");
   \**************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("express");
 
 /***/ }),
@@ -4647,7 +7216,19 @@ module.exports = require("express");
   \*******************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("passport-jwt");
+
+/***/ }),
+
+/***/ "child_process":
+/*!********************************!*\
+  !*** external "child_process" ***!
+  \********************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");
 
 /***/ }),
 
@@ -4657,7 +7238,41 @@ module.exports = require("passport-jwt");
   \*************************/
 /***/ ((module) => {
 
+"use strict";
 module.exports = require("crypto");
+
+/***/ }),
+
+/***/ "fs":
+/*!*********************!*\
+  !*** external "fs" ***!
+  \*********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("fs");
+
+/***/ }),
+
+/***/ "path":
+/*!***********************!*\
+  !*** external "path" ***!
+  \***********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("path");
+
+/***/ }),
+
+/***/ "util":
+/*!***********************!*\
+  !*** external "util" ***!
+  \***********************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("util");
 
 /***/ })
 
@@ -4689,8 +7304,9 @@ module.exports = require("crypto");
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
-// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
+// This entry needs to be wrapped in an IIFE because it needs to be in strict mode.
 (() => {
+"use strict";
 var exports = __webpack_exports__;
 /*!*************************************!*\
   !*** ./apps/ai-service/src/main.ts ***!

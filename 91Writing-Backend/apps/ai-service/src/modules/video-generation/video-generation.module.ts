@@ -1,0 +1,64 @@
+import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
+import { DatabaseModule } from '@app/database';
+import { AuthModule } from '@app/auth';
+import { VideoGenerationController } from './video-generation.controller';
+import { VideoGenerationService } from './video-generation.service';
+import { StoryboardAgentService } from '../../services/storyboard-agent.service';
+import { ImageGenerationAgentService } from '../../services/image-generation-agent.service';
+import { VideoGenerationAgentService } from '../../services/video-generation-agent.service';
+import { VolcengineVisualProvider } from '../../providers/volcengine-visual.provider';
+import { JimengVideoProvider } from '../../providers/jimeng-video.provider';
+import { KlingVideoProvider } from '../../providers/kling-video.provider';
+import { FFmpegService } from '../../services/ffmpeg.service';
+import { AICallerService } from '../../services/ai-caller.service';
+import { VideoGenerationQueue } from '../../queues/video-generation.queue';
+import { VideoGenerationProcessor } from '../../queues/video-generation.processor';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+
+@Module({
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    // Bull队列配置
+    BullModule.registerQueue({
+      name: 'video-generation',
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD || undefined,
+      },
+      defaultJobOptions: {
+        removeOnComplete: 100, // 保留最近100个已完成任务
+        removeOnFail: 50, // 保留最近50个失败任务
+      },
+    }),
+    ClientsModule.register([
+      {
+        name: 'USER_SERVICE',
+        transport: Transport.TCP,
+        options: {
+          host: process.env.USER_SERVICE_HOST || 'localhost',
+          port: parseInt(process.env.USER_SERVICE_PORT || '3001'),
+        },
+      },
+    ]),
+  ],
+  controllers: [VideoGenerationController],
+  providers: [
+    VideoGenerationService,
+    VideoGenerationQueue,
+    VideoGenerationProcessor,
+    StoryboardAgentService,
+    ImageGenerationAgentService,
+    VideoGenerationAgentService,
+    VolcengineVisualProvider,
+    JimengVideoProvider,
+    KlingVideoProvider,
+    FFmpegService,
+    AICallerService,
+  ],
+  exports: [VideoGenerationService, VideoGenerationQueue],
+})
+export class VideoGenerationModule {}
+

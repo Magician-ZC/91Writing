@@ -1475,6 +1475,151 @@ class ApiManager {
     })
   }
 
+  // ===== 视频生成API =====
+  
+  /**
+   * 生成章节视频
+   */
+  async generateVideo(params) {
+    return await this.request('/api/ai/video-generation/generate', {
+      method: 'POST',
+      data: params,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取视频生成状态
+   */
+  async getVideoStatus(chapterId) {
+    return await this.request(`/api/ai/video-generation/status/${chapterId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 删除章节视频
+   */
+  async deleteChapterVideo(novelId, chapterId) {
+    return await this.request(`/api/novel/novels/${novelId}/chapters/${chapterId}/video`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 一致性配置API =====
+  
+  /**
+   * 创建一致性配置
+   */
+  async createConsistency(data) {
+    return await this.request('/api/novel/consistency', {
+      method: 'POST',
+      data,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取一致性配置
+   */
+  async getConsistency(novelId) {
+    return await this.request(`/api/novel/consistency/${novelId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 更新一致性配置
+   */
+  async updateConsistency(novelId, data) {
+    return await this.request(`/api/novel/consistency/${novelId}`, {
+      method: 'PUT',
+      data,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 自动提取一致性配置
+   */
+  async autoExtractConsistency(params) {
+    return await this.request('/api/novel/consistency/auto-extract', {
+      method: 'POST',
+      data: params,
+      fallbackLocal: false
+    })
+  }
+
+  // ===== Agent配置管理API (管理后台) =====
+  
+  /**
+   * 获取Agent配置列表
+   */
+  async getAgentPrompts(agentType) {
+    const params = agentType ? { agentType } : {}
+    return await this.request('/api/admin/agent-prompts', {
+      method: 'GET',
+      params,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取激活的Agent配置
+   */
+  async getActiveAgentPrompt(agentType) {
+    return await this.request(`/api/admin/agent-prompts/active/${agentType}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 创建Agent配置
+   */
+  async createAgentPrompt(data) {
+    return await this.request('/api/admin/agent-prompts', {
+      method: 'POST',
+      data,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 更新Agent配置
+   */
+  async updateAgentPrompt(id, data) {
+    return await this.request(`/api/admin/agent-prompts/${id}`, {
+      method: 'PUT',
+      data,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 删除Agent配置
+   */
+  async deleteAgentPrompt(id) {
+    return await this.request(`/api/admin/agent-prompts/${id}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 测试Agent配置
+   */
+  async testAgentPrompt(data) {
+    return await this.request('/api/admin/agent-prompts/test', {
+      method: 'POST',
+      data,
+      fallbackLocal: false
+    })
+  }
+
   // ===== 工具方法 =====
   
   /**

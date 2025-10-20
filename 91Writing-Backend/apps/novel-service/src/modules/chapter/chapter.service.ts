@@ -520,4 +520,80 @@ export class ChapterService {
       },
     });
   }
+
+  /**
+   * 获取章节视频生成状态
+   */
+  async getVideoStatus(novelId: string, chapterId: string, userId: string) {
+    // 验证章节权限
+    const chapter = await this.prisma.chapter.findFirst({
+      where: { 
+        id: chapterId,
+        novelId,
+        novel: { userId }
+      },
+      select: {
+        id: true,
+        videoStatus: true,
+        videoUrl: true,
+      },
+    });
+
+    if (!chapter) {
+      throw new NotFoundException('章节不存在或无权访问');
+    }
+
+    // 获取最新的生成日志
+    const log = await this.prisma.videoGenerationLog.findFirst({
+      where: { chapterId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return {
+      chapterId: chapter.id,
+      status: chapter.videoStatus || 'PENDING',
+      stage: log?.stage || 'SCRIPT',
+      progress: log?.progress || 0,
+      videoUrl: chapter.videoUrl || null,
+      errorMessage: log?.errorMessage || null,
+      startedAt: log?.startedAt || null,
+      completedAt: log?.completedAt || null,
+    };
+  }
+
+  /**
+   * 删除章节视频
+   */
+  async deleteVideo(novelId: string, chapterId: string, userId: string) {
+    // 验证章节权限
+    const chapter = await this.prisma.chapter.findFirst({
+      where: { 
+        id: chapterId,
+        novelId,
+        novel: { userId }
+      },
+    });
+
+    if (!chapter) {
+      throw new NotFoundException('章节不存在或无权访问');
+    }
+
+    // 更新章节，清除视频相关信息
+    await this.prisma.chapter.update({
+      where: { id: chapterId },
+      data: {
+        videoStatus: null,
+        videoUrl: null,
+        videoMetadata: null,
+        generatedImages: null,
+      },
+    });
+
+    // TODO: 删除实际的视频文件和图片文件
+
+    return {
+      success: true,
+      message: '视频已删除',
+    };
+  }
 }
