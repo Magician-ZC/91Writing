@@ -3,6 +3,7 @@ import Dashboard from '../views/Dashboard.vue'
 import HomePage from '../views/HomePage.vue'
 import PromptsLibrary from '../views/PromptsLibrary.vue'
 import NovelManagement from '../views/NovelManagement.vue'
+import NovelListTest from '../views/NovelListTest.vue'
 import WritingGoals from '../views/WritingGoals.vue'
 import TokenBilling from '../views/TokenBilling.vue'
 import ApiConfig from '../views/ApiConfig.vue'
@@ -135,6 +136,12 @@ const routes = [
         name: 'NovelManagement',
         component: NovelManagement,
         meta: { title: '作品管理 - 91Writing' }
+      },
+      {
+        path: 'novels-test',
+        name: 'NovelListTest',
+        component: NovelListTest,
+        meta: { title: '小说测试 - 91Writing' }
       },
       {
         path: 'goals',

@@ -445,8 +445,8 @@ class ApiManager {
     })
   }
 
-  async getChapter(chapterId) {
-    return await this.request(`/api/v1/chapters/${chapterId}`, {
+  async getChapter(novelId, chapterId) {
+    return await this.request(`/api/v1/novels/${novelId}/chapters/${chapterId}`, {
       method: 'GET',
       fallbackLocal: false
     })
@@ -460,16 +460,16 @@ class ApiManager {
     })
   }
 
-  async updateChapter(chapterId, updateData) {
-    return await this.request(`/api/v1/chapters/${chapterId}`, {
+  async updateChapter(novelId, chapterId, updateData) {
+    return await this.request(`/api/v1/novels/${novelId}/chapters/${chapterId}`, {
       method: 'PATCH',
       data: updateData,
       fallbackLocal: false
     })
   }
 
-  async deleteChapter(chapterId) {
-    return await this.request(`/api/v1/chapters/${chapterId}`, {
+  async deleteChapter(novelId, chapterId) {
+    return await this.request(`/api/v1/novels/${novelId}/chapters/${chapterId}`, {
       method: 'DELETE',
       fallbackLocal: false
     })

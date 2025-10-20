@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { CreateChapterDto } from '../../dto/create-chapter.dto';
+import { UpdateChapterWithConflictDto, ConflictResponse } from '../../dto/update-chapter-with-conflict.dto';
 import { ChapterStatus } from '@prisma/client';
 
 @Injectable()
@@ -179,6 +180,165 @@ export class ChapterService {
     }
 
     return updatedChapter;
+  }
+
+  /**
+   * 带冲突检测的章节更新
+   */
+  async updateWithConflictDetection(
+    id: string, 
+    userId: string, 
+    updateDto: UpdateChapterWithConflictDto
+  ): Promise<any | ConflictResponse> {
+    // 验证权限并获取当前章节
+    const chapter = await this.prisma.chapter.findFirst({
+      where: {
+        id,
+        novel: { userId },
+      },
+      include: {
+        novel: {
+          select: {
+            id: true,
+            title: true,
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!chapter) {
+      throw new NotFoundException('章节不存在或无权访问');
+    }
+
+    // 解析客户端提供的最后已知更新时间
+    const clientLastKnownUpdate = new Date(updateDto.lastKnownUpdatedAt);
+    const serverLastUpdate = new Date(chapter.updatedAt);
+
+    // 检测冲突：服务器端的更新时间是否晚于客户端已知的时间
+    const hasConflict = serverLastUpdate > clientLastKnownUpdate;
+
+    // 如果有冲突且不是强制更新
+    if (hasConflict && !updateDto.forceUpdate) {
+      // 返回冲突信息
+      const conflictResponse: ConflictResponse = {
+        hasConflict: true,
+        serverVersion: {
+          updatedAt: serverLastUpdate,
+          title: chapter.title,
+          content: chapter.content,
+          wordCount: chapter.wordCount,
+        },
+        clientVersion: {
+          updatedAt: clientLastKnownUpdate,
+          title: updateDto.title,
+          content: updateDto.content,
+        },
+        message: '检测到数据冲突：服务器端的内容已被其他设备或用户修改',
+        suggestedActions: [
+          'keep-server: 放弃本地修改，使用服务器版本',
+          'keep-client: 用本地版本覆盖服务器版本',
+          'merge: 尝试合并两个版本（需手动处理）',
+        ],
+      };
+
+      // 抛出冲突异常，包含冲突详情
+      throw new ConflictException({
+        ...conflictResponse,
+        statusCode: 409,
+      });
+    }
+
+    // 如果没有冲突，或者是强制更新，或者客户端选择了解决策略
+    let finalData: any = {};
+
+    if (updateDto.conflictStrategy) {
+      // 根据冲突解决策略处理
+      switch (updateDto.conflictStrategy) {
+        case 'keep-server':
+          // 不更新，返回服务器版本
+          return {
+            resolved: true,
+            strategy: 'keep-server',
+            chapter,
+            message: '已保留服务器版本',
+          };
+
+        case 'keep-client':
+          // 使用客户端版本覆盖
+          finalData = {
+            title: updateDto.title !== undefined ? updateDto.title : chapter.title,
+            content: updateDto.content !== undefined ? updateDto.content : chapter.content,
+            status: updateDto.status !== undefined ? updateDto.status : chapter.status,
+          };
+          break;
+
+        case 'merge':
+          // 合并策略（这里简单实现，实际可能需要更复杂的合并逻辑）
+          finalData = {
+            title: updateDto.title || chapter.title,
+            content: this.mergeContent(chapter.content, updateDto.content || ''),
+            status: updateDto.status || chapter.status,
+          };
+          break;
+      }
+    } else {
+      // 正常更新
+      finalData = {
+        title: updateDto.title,
+        content: updateDto.content,
+        status: updateDto.status,
+      };
+    }
+
+    // 计算字数
+    let wordCount = chapter.wordCount;
+    if (finalData.content !== undefined) {
+      wordCount = this.calculateWordCount(finalData.content);
+    }
+
+    // 执行更新
+    const updatedChapter = await this.prisma.chapter.update({
+      where: { id },
+      data: {
+        ...finalData,
+        wordCount,
+      },
+      include: {
+        novel: {
+          select: {
+            id: true,
+            title: true,
+            userId: true,
+          },
+        },
+      },
+    });
+
+    // 更新小说统计
+    if (wordCount !== chapter.wordCount) {
+      await this.updateNovelStats(chapter.novelId);
+    }
+
+    return {
+      resolved: hasConflict,
+      strategy: updateDto.conflictStrategy,
+      chapter: updatedChapter,
+      message: hasConflict ? '冲突已解决，章节已更新' : '章节已更新',
+    };
+  }
+
+  /**
+   * 简单的内容合并逻辑
+   * 实际项目中可能需要更复杂的diff和merge算法
+   */
+  private mergeContent(serverContent: string, clientContent: string): string {
+    // 这里使用一个简单的策略：如果客户端内容更长，使用客户端版本
+    // 实际应用中应该使用更智能的合并算法
+    if (clientContent.length > serverContent.length) {
+      return clientContent;
+    }
+    return serverContent;
   }
 
   /**
