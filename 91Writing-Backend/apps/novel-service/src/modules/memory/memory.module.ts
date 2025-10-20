@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { MemoryService } from './memory.service';
 import { MemoryController } from './memory.controller';
+import { MemoryService } from './memory.service';
 
 @Module({
   controllers: [MemoryController],

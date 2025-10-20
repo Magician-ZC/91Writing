@@ -2,14 +2,16 @@ import {
   Controller,
   Get,
   Post,
-  Body,
-  Patch,
-  Param,
+  Put,
   Delete,
-  UseGuards,
-  Request,
+  Body,
+  Param,
   Query,
+  Request,
+  UseGuards,
   ValidationPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,22 +24,27 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@app/common/guards';
 import { MemoryService } from './memory.service';
-import { CreateMemoryDto } from '../../dto/create-memory.dto';
-import { MemoryType } from '@prisma/client';
+import {
+  CreateMemoryDto,
+  UpdateMemoryDto,
+  QueryMemoriesDto,
+  ExtractMemoriesDto,
+  ScoreMemoryDto,
+} from '../../dto/memory.dto';
 
-@ApiTags('memories')
+@ApiTags('记忆管理')
 @ApiBearerAuth('JWT-auth')
-@Controller('novels/:novelId/memories')
+@Controller()
 @UseGuards(JwtAuthGuard)
 export class MemoryController {
   constructor(private readonly memoryService: MemoryService) {}
 
-  @Post()
-  @ApiOperation({ 
+  @Post('memories')
+  @ApiOperation({
     summary: '创建记忆',
-    description: '为小说创建新的记忆项，包括人物、场景、情节等'
+    description: '为小说创建新的记忆条目'
   })
-  @ApiParam({ name: 'novelId', description: '小说ID' })
+  @ApiBody({ type: CreateMemoryDto })
   @ApiResponse({
     status: 201,
     description: '记忆创建成功',
@@ -49,94 +56,41 @@ export class MemoryController {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            memoryType: { type: 'string', enum: ['CHARACTER', 'SCENE', 'PLOT', 'WORLDVIEW', 'RELATIONSHIP', 'EVENT', 'OTHER'] },
-            title: { type: 'string' },
-            content: { type: 'string' },
-            importance: { type: 'number', example: 5 },
-            tags: { type: 'array', items: { type: 'string' } },
+            novelId: { type: 'string' },
+            memoryType: { type: 'string', example: 'CORE' },
+            content: { type: 'object' },
+            importance: { type: 'number', example: 0.8 },
+            chapterRange: { type: 'string' },
             createdAt: { type: 'string', format: 'date-time' }
           }
         }
       }
     }
   })
-  async create(
-    @Param('novelId') novelId: string,
+  @ApiResponse({ status: 400, description: '参数验证失败' })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 404, description: '小说不存在' })
+  async createMemory(
     @Request() req,
-    @Body(ValidationPipe) createMemoryDto: CreateMemoryDto,
+    @Body(ValidationPipe) dto: CreateMemoryDto
   ) {
-    return this.memoryService.create(novelId, req.user.id, createMemoryDto);
+    return this.memoryService.createMemory(req.user.id, dto);
   }
 
-  @Get()
-  @ApiOperation({ 
-    summary: '获取记忆列表',
-    description: '获取小说的所有记忆，支持按类型、重要性筛选和排序'
+  @Get('memories/novel/:novelId')
+  @ApiOperation({
+    summary: '获取小说记忆列表',
+    description: '获取指定小说的所有记忆，支持筛选和分页'
   })
   @ApiParam({ name: 'novelId', description: '小说ID' })
-  @ApiQuery({ name: 'type', required: false, enum: ['CHARACTER', 'SCENE', 'PLOT', 'WORLDVIEW', 'RELATIONSHIP', 'EVENT', 'OTHER'], description: '记忆类型' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: '返回数量限制' })
-  @ApiQuery({ name: 'orderBy', required: false, enum: ['importance', 'created', 'updated'], description: '排序方式' })
+  @ApiQuery({ name: 'memoryType', required: false, description: '记忆类型' })
+  @ApiQuery({ name: 'keyword', required: false, description: '关键词搜索' })
+  @ApiQuery({ name: 'minImportance', required: false, description: '最小重要性' })
+  @ApiQuery({ name: 'page', required: false, description: '页码' })
+  @ApiQuery({ name: 'pageSize', required: false, description: '每页数量' })
   @ApiResponse({
     status: 200,
     description: '获取成功',
-  })
-  async findAll(
-    @Param('novelId') novelId: string,
-    @Request() req,
-    @Query('type') memoryType?: MemoryType,
-    @Query('limit') limit?: string,
-    @Query('orderBy') orderBy?: 'importance' | 'created' | 'updated',
-  ) {
-    const options = {
-      memoryType,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      orderBy,
-    };
-    
-    return this.memoryService.findAll(novelId, req.user.id, options);
-  }
-
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Request() req) {
-    return this.memoryService.findOne(id, req.user.id);
-  }
-
-  @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Request() req,
-    @Body(ValidationPipe) updateData: Partial<CreateMemoryDto>,
-  ) {
-    return this.memoryService.update(id, req.user.id, updateData);
-  }
-
-  @Delete(':id')
-  async remove(@Param('id') id: string, @Request() req) {
-    return this.memoryService.remove(id, req.user.id);
-  }
-
-  @Post('initialize')
-  async initializeMemory(
-    @Param('novelId') novelId: string,
-    @Request() req,
-    @Body() basicInfo?: any,
-  ) {
-    return this.memoryService.initializeNovelMemory(novelId, req.user.id, basicInfo);
-  }
-
-  @Get('context/generation')
-  @ApiOperation({ 
-    summary: '获取AI生成上下文',
-    description: '获取用于AI生成的记忆上下文，智能筛选最相关的记忆'
-  })
-  @ApiParam({ name: 'novelId', description: '小说ID' })
-  @ApiQuery({ name: 'maxTokens', required: false, type: Number, description: '最大token数' })
-  @ApiQuery({ name: 'chapterContext', required: false, type: String, description: '当前章节上下文' })
-  @ApiQuery({ name: 'includeTypes', required: false, type: String, description: '包含的记忆类型（逗号分隔）' })
-  @ApiResponse({
-    status: 200,
-    description: '上下文获取成功',
     schema: {
       type: 'object',
       properties: {
@@ -144,67 +98,242 @@ export class MemoryController {
         data: {
           type: 'object',
           properties: {
-            context: { type: 'string', description: '组合的上下文文本' },
-            memories: { type: 'array', description: '使用的记忆列表' },
-            tokenCount: { type: 'number', example: 1500 }
+            items: {
+              type: 'array',
+              items: {
+                type: 'object'
+              }
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                pageSize: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' }
+              }
+            }
           }
         }
       }
     }
   })
-  async getGenerationContext(
-    @Param('novelId') novelId: string,
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 404, description: '小说不存在' })
+  async getMemories(
     @Request() req,
-    @Query('maxTokens') maxTokens?: string,
-    @Query('chapterContext') chapterContext?: string,
-    @Query('includeTypes') includeTypes?: string,
+    @Param('novelId') novelId: string,
+    @Query(ValidationPipe) query: QueryMemoriesDto
   ) {
-    const options: any = {};
-    
-    if (maxTokens) options.maxTokens = parseInt(maxTokens, 10);
-    if (chapterContext) options.chapterContext = chapterContext;
-    if (includeTypes) {
-      options.includeTypes = includeTypes.split(',') as MemoryType[];
+    return this.memoryService.getMemories(req.user.id, novelId, query);
+  }
+
+  @Get('memories/:id')
+  @ApiOperation({
+    summary: '获取单个记忆',
+    description: '获取指定ID的记忆详情'
+  })
+  @ApiParam({ name: 'id', description: '记忆ID' })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功'
+  })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 403, description: '无权访问' })
+  @ApiResponse({ status: 404, description: '记忆不存在' })
+  async getMemory(
+    @Request() req,
+    @Param('id') id: string
+  ) {
+    return this.memoryService.getMemory(req.user.id, id);
+  }
+
+  @Put('memories/:id')
+  @ApiOperation({
+    summary: '更新记忆',
+    description: '更新指定记忆的内容和属性'
+  })
+  @ApiParam({ name: 'id', description: '记忆ID' })
+  @ApiBody({ type: UpdateMemoryDto })
+  @ApiResponse({
+    status: 200,
+    description: '更新成功'
+  })
+  @ApiResponse({ status: 400, description: '参数验证失败' })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 403, description: '无权修改' })
+  @ApiResponse({ status: 404, description: '记忆不存在' })
+  @HttpCode(HttpStatus.OK)
+  async updateMemory(
+    @Request() req,
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: UpdateMemoryDto
+  ) {
+    return this.memoryService.updateMemory(req.user.id, id, dto);
+  }
+
+  @Delete('memories/:id')
+  @ApiOperation({
+    summary: '删除记忆',
+    description: '删除指定的记忆条目'
+  })
+  @ApiParam({ name: 'id', description: '记忆ID' })
+  @ApiResponse({
+    status: 200,
+    description: '删除成功'
+  })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 403, description: '无权删除' })
+  @ApiResponse({ status: 404, description: '记忆不存在' })
+  @HttpCode(HttpStatus.OK)
+  async deleteMemory(
+    @Request() req,
+    @Param('id') id: string
+  ) {
+    return this.memoryService.deleteMemory(req.user.id, id);
+  }
+
+  @Post('memories/extract')
+  @ApiOperation({
+    summary: '智能提取记忆',
+    description: '从指定章节中自动提取核心记忆'
+  })
+  @ApiBody({ type: ExtractMemoriesDto })
+  @ApiResponse({
+    status: 201,
+    description: '提取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            extracted: { type: 'number', example: 5 },
+            memories: {
+              type: 'array',
+              items: { type: 'object' }
+            }
+          }
+        }
+      }
     }
-    
-    return this.memoryService.getGenerationContext(novelId, req.user.id, options);
+  })
+  @ApiResponse({ status: 400, description: '参数验证失败' })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 404, description: '小说或章节不存在' })
+  async extractMemories(
+    @Request() req,
+    @Body(ValidationPipe) dto: ExtractMemoriesDto
+  ) {
+    return this.memoryService.extractMemories(req.user.id, dto);
   }
 
-  @Post('chapters/:chapterNumber/summary')
-  async updateChapterSummary(
-    @Param('novelId') novelId: string,
-    @Param('chapterNumber') chapterNumber: string,
+  @Post('memories/:id/score')
+  @ApiOperation({
+    summary: '更新记忆重要性',
+    description: '更新记忆的重要性评分'
+  })
+  @ApiParam({ name: 'id', description: '记忆ID' })
+  @ApiBody({ type: ScoreMemoryDto })
+  @ApiResponse({
+    status: 200,
+    description: '评分更新成功'
+  })
+  @ApiResponse({ status: 400, description: '参数验证失败' })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 404, description: '记忆不存在' })
+  @HttpCode(HttpStatus.OK)
+  async updateImportance(
     @Request() req,
-    @Body() body: { summary: string; keyEvents?: string[] },
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: ScoreMemoryDto
   ) {
-    return this.memoryService.updateChapterSummary(
-      novelId,
-      req.user.id,
-      parseInt(chapterNumber, 10),
-      body.summary,
-      body.keyEvents,
-    );
+    return this.memoryService.updateImportance(req.user.id, id, dto.importance);
   }
 
-  @Delete('batch')
-  async removeMany(
-    @Param('novelId') novelId: string,
+  @Get('memories/novel/:novelId/search')
+  @ApiOperation({
+    summary: '搜索相关记忆',
+    description: '根据关键词搜索相关记忆，按相关性排序'
+  })
+  @ApiParam({ name: 'novelId', description: '小说ID' })
+  @ApiQuery({
+    name: 'keywords',
+    required: true,
+    description: '搜索关键词（逗号分隔）',
+    example: '主角,背景,设定'
+  })
+  @ApiResponse({
+    status: 200,
+    description: '搜索成功',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              content: { type: 'object' },
+              importance: { type: 'number' },
+              relevanceScore: { type: 'number', example: 15.6 }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 404, description: '小说不存在' })
+  async searchMemories(
     @Request() req,
-    @Body() body: { memoryIds: string[] },
+    @Param('novelId') novelId: string,
+    @Query('keywords') keywords: string
   ) {
-    return this.memoryService.removeMany(novelId, req.user.id, body.memoryIds);
+    const keywordArray = keywords.split(',').map(k => k.trim()).filter(k => k);
+    return this.memoryService.searchMemories(req.user.id, novelId, keywordArray);
   }
 
-  @Post('cleanup')
-  async cleanup(
-    @Param('novelId') novelId: string,
+  @Get('memories/novel/:novelId/stats')
+  @ApiOperation({
+    summary: '获取记忆统计',
+    description: '获取小说记忆的统计信息'
+  })
+  @ApiParam({ name: 'novelId', description: '小说ID' })
+  @ApiResponse({
+    status: 200,
+    description: '获取成功',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            total: { type: 'number', example: 42 },
+            byType: {
+              type: 'object',
+              properties: {
+                CORE: { type: 'number' },
+                SUMMARY: { type: 'number' },
+                CONTEXT: { type: 'number' }
+              }
+            },
+            averageImportance: { type: 'number', example: 0.73 }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 401, description: '未授权访问' })
+  @ApiResponse({ status: 404, description: '小说不存在' })
+  async getMemoryStats(
     @Request() req,
-    @Body() options?: {
-      minImportance?: number;
-      maxAge?: number;
-      preserveCore?: boolean;
-    },
+    @Param('novelId') novelId: string
   ) {
-    return this.memoryService.cleanupMemories(novelId, req.user.id, options);
+    return this.memoryService.getMemoryStats(req.user.id, novelId);
   }
 }

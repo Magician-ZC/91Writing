@@ -6,6 +6,9 @@ import { DatabaseModule } from '@app/database';
 import { NovelModule } from './modules/novel/novel.module';
 import { ChapterModule } from './modules/chapter/chapter.module';
 import { MemoryModule } from './modules/memory/memory.module';
+import { SuggestionModule } from './modules/suggestion/suggestion.module';
+import { CharacterModule } from './modules/character/character.module';
+import { WorldModule } from './modules/world/world.module';
 import { MaterialModule } from './modules/material/material.module';
 import { PromptModule } from './modules/prompt/prompt.module';
 import { CollaborationModule } from './modules/collaboration/collaboration.module';
@@ -44,6 +47,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     NovelModule,
     ChapterModule,
     MemoryModule,
+    SuggestionModule,
+    CharacterModule,
+    WorldModule,
     MaterialModule,
     PromptModule,
     CollaborationModule,

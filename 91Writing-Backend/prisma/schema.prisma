@@ -33,14 +33,15 @@ model User {
   tenantId String? @map("tenant_id")
 
   // 关联
-  profile         UserProfile?
-  subscription    Subscription?
-  novels          Novel[]
-  activities      UserActivity[]
-  materials       Material[]
-  prompts         Prompt[]
-  paymentOrders   PaymentOrder[]
-  aiUsageLogs     AIUsageLog[]
+  profile       UserProfile?
+  subscription  Subscription?
+  novels        Novel[]
+  activities    UserActivity[]
+  materials     Material[]
+  prompts       Prompt[]
+  paymentOrders PaymentOrder[]
+  aiUsageLogs   AIUsageLog[]
+  suggestions   WritingSuggestion[]
 
   // 邀请关系
   inviter         User?          @relation("UserInvites", fields: [invitedBy], references: [id])
@@ -57,7 +58,7 @@ model User {
   comments        ChapterComment[]
 
   // AI配置
-  aiConfigs       UserAIConfig[]
+  aiConfigs UserAIConfig[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -100,8 +101,8 @@ model Package {
   status       PackageStatus @default(ACTIVE)
 
   // 关联
-  subscriptions   Subscription[]
-  paymentOrders   PaymentOrder[]
+  subscriptions Subscription[]
+  paymentOrders PaymentOrder[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -132,7 +133,6 @@ model Subscription {
   @@index([endDate])
   @@map("subscriptions")
 }
-
 
 // 支付订单表
 model PaymentOrder {
@@ -176,10 +176,15 @@ model Novel {
   settings     Json? // 小说设置(角色、世界观等)
 
   // 关联
-  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chapters       Chapter[]
-  memories       NovelMemory[]
-  collaborations NovelCollaboration[]
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapters               Chapter[]
+  memories               NovelMemory[]
+  collaborations         NovelCollaboration[]
+  suggestions            WritingSuggestion[]
+  characters             Character[]
+  characterRelationships CharacterRelationship[]
+  characterAppearances   CharacterAppearance[]
+  worldSettings          WorldSetting[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -200,13 +205,16 @@ model Chapter {
   wordCount     Int           @default(0) @map("word_count")
   chapterNumber Int           @map("chapter_number")
   status        ChapterStatus @default(DRAFT)
+  isDeleted     Boolean       @default(false) @map("is_deleted") // 软删除标记
+  orderNum      Int           @default(0) @map("order_num") // 章节排序号
 
   // 关联
-  novel      Novel              @relation(fields: [novelId], references: [id], onDelete: Cascade)
-  lock       ChapterLock?
-  editEvents ChapterEditEvent[]
-  versions   ChapterVersion[]
-  comments   ChapterComment[]
+  novel       Novel               @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  lock        ChapterLock?
+  editEvents  ChapterEditEvent[]
+  versions    ChapterVersion[]
+  comments    ChapterComment[]
+  suggestions WritingSuggestion[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -214,6 +222,8 @@ model Chapter {
 
   @@unique([novelId, chapterNumber])
   @@index([novelId, status])
+  @@index([novelId, isDeleted])
+  @@index([novelId, orderNum])
   @@map("chapters")
 }
 
@@ -287,11 +297,11 @@ model ChapterLock {
 
 // 章节编辑事件表
 model ChapterEditEvent {
-  id        String   @id @default(cuid())
-  chapterId String   @map("chapter_id")
-  userId    String   @map("user_id")
-  eventType String   @map("event_type") @db.VarChar(50)
-  eventData Json     @map("event_data")
+  id        String @id @default(cuid())
+  chapterId String @map("chapter_id")
+  userId    String @map("user_id")
+  eventType String @map("event_type") @db.VarChar(50)
+  eventData Json   @map("event_data")
 
   // 关联
   chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
@@ -332,13 +342,13 @@ model ChapterVersion {
 
 // 章节评论表
 model ChapterComment {
-  id         String        @id @default(cuid())
-  chapterId  String        @map("chapter_id")
-  userId     String        @map("user_id")
-  content    String        @db.Text
-  position   Json? // 评论位置信息（段落、字符位置等）
-  status     CommentStatus @default(ACTIVE)
-  parentId   String?       @map("parent_id") // 父评论ID（用于回复）
+  id        String        @id @default(cuid())
+  chapterId String        @map("chapter_id")
+  userId    String        @map("user_id")
+  content   String        @db.Text
+  position  Json? // 评论位置信息（段落、字符位置等）
+  status    CommentStatus @default(ACTIVE)
+  parentId  String?       @map("parent_id") // 父评论ID（用于回复）
 
   // 关联
   chapter Chapter          @relation(fields: [chapterId], references: [id], onDelete: Cascade)
@@ -498,7 +508,6 @@ enum SubscriptionStatus {
   PENDING
 }
 
-
 enum PaymentMethod {
   ALIPAY
   WECHAT
@@ -631,24 +640,24 @@ enum CommentStatus {
 // ===== AI配置系统 =====
 // 用户AI配置表
 model UserAIConfig {
-  id         String   @id @default(cuid())
-  userId     String   @map("user_id")
+  id         String     @id @default(cuid())
+  userId     String     @map("user_id")
   name       String // 配置名称
   provider   AIProvider // AI服务商
   model      String // 模型名称
-  apiUrl     String   @map("api_url") @db.VarChar(500)
-  apiKey     String   @map("api_key") @db.VarChar(500) // 加密存储
-  enabled    Boolean  @default(true)
-  isDefault  Boolean  @default(false) @map("is_default")
+  apiUrl     String     @map("api_url") @db.VarChar(500)
+  apiKey     String     @map("api_key") @db.VarChar(500) // 加密存储
+  enabled    Boolean    @default(true)
+  isDefault  Boolean    @default(false) @map("is_default")
   parameters Json // 模型参数配置
-  
+
   // 关联
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   @@index([userId, enabled])
   @@index([userId, isDefault])
   @@map("user_ai_configs")
@@ -656,23 +665,23 @@ model UserAIConfig {
 
 // AI使用统计表（扩展）
 model AIUsageStats {
-  id             Int      @id @default(autoincrement())
-  userId         String   @map("user_id")
-  configId       String?  @map("config_id") // 使用的配置ID
-  configType     ConfigType @map("config_type") // 配置类型：SYSTEM/USER
-  provider       AIProvider
-  model          String
-  tokensUsed     Int      @default(0) @map("tokens_used")
-  requestCount   Int      @default(0) @map("request_count")
-  successCount   Int      @default(0) @map("success_count")
-  failureCount   Int      @default(0) @map("failure_count")
-  totalCost      Decimal  @default(0) @db.Decimal(10, 4) @map("total_cost") // 总成本
-  date           DateTime @db.Date // 统计日期
-  
+  id           Int        @id @default(autoincrement())
+  userId       String     @map("user_id")
+  configId     String?    @map("config_id") // 使用的配置ID
+  configType   ConfigType @map("config_type") // 配置类型：SYSTEM/USER
+  provider     AIProvider
+  model        String
+  tokensUsed   Int        @default(0) @map("tokens_used")
+  requestCount Int        @default(0) @map("request_count")
+  successCount Int        @default(0) @map("success_count")
+  failureCount Int        @default(0) @map("failure_count")
+  totalCost    Decimal    @default(0) @map("total_cost") @db.Decimal(10, 4) // 总成本
+  date         DateTime   @db.Date // 统计日期
+
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   @@unique([userId, configType, date])
   @@index([userId, date])
   @@index([date])
@@ -700,4 +709,240 @@ enum AITier {
   BASIC // 基础会员
   PREMIUM // 高级会员
   UNLIMITED // 无限制
+}
+
+// ===== 写作建议系统 =====
+// 写作建议表
+model WritingSuggestion {
+  id             String              @id @default(cuid())
+  novelId        String              @map("novel_id")
+  chapterId      String?             @map("chapter_id")
+  userId         String              @map("user_id") // 建议所属用户
+  suggestionType SuggestionType      @map("suggestion_type")
+  dimension      SuggestionDimension // 建议维度（剧情/人物/节奏等）
+  title          String              @db.VarChar(200)
+  content        String              @db.Text
+  priority       Int                 @default(0) // 优先级评分 0-100
+  context        Json? // 建议相关的上下文信息
+  aiModel        String?             @map("ai_model") @db.VarChar(50) // 生成建议的AI模型
+
+  // 采纳反馈
+  isAdopted Boolean   @default(false) @map("is_adopted")
+  adoptedAt DateTime? @map("adopted_at")
+  feedback  String?   @db.Text // 用户反馈
+  rating    Int? // 用户评分 1-5星
+
+  // 关联
+  novel   Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([novelId, suggestionType])
+  @@index([chapterId])
+  @@index([userId])
+  @@index([isAdopted])
+  @@index([dimension])
+  @@map("writing_suggestions")
+}
+
+// 建议类型枚举
+enum SuggestionType {
+  AUTO // 自动生成
+  REQUESTED // 用户请求
+  SYSTEM // 系统推荐
+}
+
+// 建议维度枚举
+enum SuggestionDimension {
+  PLOT // 剧情相关
+  CHARACTER // 人物相关
+  PACING // 节奏相关
+  DIALOGUE // 对话相关
+  SCENE // 场景相关
+  STYLE // 风格相关
+  STRUCTURE // 结构相关
+  CONFLICT // 冲突相关
+  THEME // 主题相关
+  OTHER // 其他
+}
+
+// ===== 角色系统 =====
+// 角色表
+model Character {
+  id         String        @id @default(cuid())
+  novelId    String        @map("novel_id")
+  name       String        @db.VarChar(100)
+  aliases    Json? // 别名/称号列表
+  role       CharacterRole @default(SUPPORTING) // 角色定位
+  importance Int           @default(50) // 重要性评分 0-100
+
+  // 基本信息
+  age        String? @db.VarChar(50)
+  gender     String? @db.VarChar(20)
+  occupation String? @db.VarChar(100)
+  appearance String? @db.Text // 外貌描写
+
+  // 性格特征
+  personality String? @db.Text // 性格描写
+  traits      Json? // 性格特质标签
+  strengths   Json? // 优点列表
+  weaknesses  Json? // 缺点列表
+
+  // 背景设定
+  background String? @db.Text // 背景故事
+  motivation String? @db.Text // 动机目标
+  arc        String? @db.Text // 角色弧光
+
+  // 其他信息
+  abilities    Json? // 能力/技能
+  equipment    Json? // 装备/道具
+  customFields Json? @map("custom_fields") // 自定义字段
+
+  // 统计信息
+  appearanceCount Int     @default(0) @map("appearance_count") // 出场次数
+  lastAppearance  String? @map("last_appearance") // 最后出场章节
+
+  // 关联
+  novel             Novel                   @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  relationshipsFrom CharacterRelationship[] @relation("CharacterFrom")
+  relationshipsTo   CharacterRelationship[] @relation("CharacterTo")
+  appearances       CharacterAppearance[]
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([novelId])
+  @@index([novelId, role])
+  @@index([novelId, importance])
+  @@map("characters")
+}
+
+// 角色关系表
+model CharacterRelationship {
+  id               String             @id @default(cuid())
+  novelId          String             @map("novel_id")
+  fromCharId       String             @map("from_char_id")
+  toCharId         String             @map("to_char_id")
+  relationshipType String             @map("relationship_type") @db.VarChar(50) // 关系类型
+  description      String?            @db.Text // 关系描述
+  intimacy         Int                @default(50) // 亲密度 0-100
+  status           RelationshipStatus @default(ACTIVE) // 关系状态
+
+  // 关联
+  novel    Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  fromChar Character @relation("CharacterFrom", fields: [fromCharId], references: [id], onDelete: Cascade)
+  toChar   Character @relation("CharacterTo", fields: [toCharId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([fromCharId, toCharId])
+  @@index([novelId])
+  @@index([fromCharId])
+  @@index([toCharId])
+  @@map("character_relationships")
+}
+
+// 角色出场记录表
+model CharacterAppearance {
+  id          String @id @default(cuid())
+  characterId String @map("character_id")
+  chapterId   String @map("chapter_id")
+  novelId     String @map("novel_id")
+  scenes      Json? // 出场场景描述
+  importance  Int    @default(50) // 此次出场重要性
+
+  // 关联
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  novel     Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([characterId])
+  @@index([chapterId])
+  @@index([novelId])
+  @@map("character_appearances")
+}
+
+// ===== 世界观系统 =====
+// 世界观设定表
+model WorldSetting {
+  id          String        @id @default(cuid())
+  novelId     String        @map("novel_id")
+  category    WorldCategory // 世界观类别
+  name        String        @db.VarChar(200)
+  description String?       @db.Text
+  details     Json? // 详细设定（结构化数据）
+
+  // 位置信息（针对地点类）
+  location    String? @db.VarChar(200)
+  coordinates Json? // 坐标/位置关系
+
+  // 组织信息（针对组织/势力类）
+  leadership String? @db.Text // 领导层
+  members    Json? // 成员信息
+  power      Int?    @default(50) // 势力强度 0-100
+
+  // 其他
+  tags         Json? // 标签
+  references   Json? // 相关引用
+  customFields Json? @map("custom_fields")
+
+  // 关联
+  novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([novelId, category])
+  @@index([novelId])
+  @@map("world_settings")
+}
+
+// ===== 角色和世界观枚举 =====
+// 角色定位枚举
+enum CharacterRole {
+  PROTAGONIST // 主角
+  ANTAGONIST // 反派
+  SUPPORTING // 配角
+  MINOR // 龙套
+  MENTOR // 导师
+  LOVE_INTEREST // 爱情对象
+  COMIC_RELIEF // 喜剧角色
+  OTHER // 其他
+}
+
+// 关系状态枚举
+enum RelationshipStatus {
+  ACTIVE // 活跃
+  INACTIVE // 不活跃
+  BROKEN // 破裂
+  EVOLVING // 发展中
+}
+
+// 世界观类别枚举
+enum WorldCategory {
+  LOCATION // 地点
+  ORGANIZATION // 组织
+  FACTION // 势力
+  MAGIC_SYSTEM // 魔法/能力体系
+  TECHNOLOGY // 科技体系
+  CULTURE // 文化
+  HISTORY // 历史
+  ECONOMY // 经济
+  POLITICS // 政治
+  RELIGION // 宗教
+  RACE // 种族
+  CREATURE // 生物
+  ITEM // 物品
+  EVENT // 事件
+  CUSTOM // 自定义
 }

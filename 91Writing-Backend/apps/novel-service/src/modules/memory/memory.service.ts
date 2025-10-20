@@ -1,8 +1,17 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@app/database';
-import { CreateMemoryDto } from '../../dto/create-memory.dto';
-import { MemoryType } from '@prisma/client';
+import { MemoryType, Prisma } from '@prisma/client';
+import {
+  CreateMemoryDto,
+  UpdateMemoryDto,
+  QueryMemoriesDto,
+  ExtractMemoriesDto,
+} from '../../dto/memory.dto';
 
+/**
+ * 记忆管理服务
+ * 负责小说记忆的CRUD、智能提取、重要性评分等
+ */
 @Injectable()
 export class MemoryService {
   constructor(private readonly prisma: PrismaService) {}
@@ -10,81 +19,123 @@ export class MemoryService {
   /**
    * 创建记忆
    */
-  async create(novelId: string, userId: string, createMemoryDto: CreateMemoryDto) {
+  async createMemory(userId: string, dto: CreateMemoryDto) {
     // 验证小说权限
     const novel = await this.prisma.novel.findFirst({
-      where: { id: novelId, userId },
-    });
-
-    if (!novel) {
-      throw new NotFoundException('小说不存在或无权访问');
-    }
-
-    const memory = await this.prisma.novelMemory.create({
-      data: {
-        novelId,
-        ...createMemoryDto,
+      where: {
+        id: dto.novelId,
+        userId,
       },
     });
 
-    return memory;
+    if (!novel) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: '小说不存在或无权访问',
+          error: 'NOVEL_NOT_FOUND',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    // 创建记忆
+    const memory = await this.prisma.novelMemory.create({
+      data: {
+        novelId: dto.novelId,
+        memoryType: dto.memoryType,
+        content: dto.content as Prisma.JsonObject,
+        importance: dto.importance !== undefined ? dto.importance : 0.5,
+        chapterRange: dto.chapterRange,
+      },
+    });
+
+    return {
+      success: true,
+      data: this.formatMemory(memory),
+    };
   }
 
   /**
-   * 获取小说的记忆列表
+   * 获取记忆列表
    */
-  async findAll(novelId: string, userId: string, options?: {
-    memoryType?: MemoryType;
-    limit?: number;
-    orderBy?: 'importance' | 'created' | 'updated';
-  }) {
-    // 验证权限
-    const novel = await this.prisma.novel.findFirst({
-      where: { id: novelId, userId },
-    });
+  async getMemories(userId: string, novelId: string, query: QueryMemoriesDto) {
+    // 验证小说权限
+    await this.validateNovelAccess(userId, novelId);
 
-    if (!novel) {
-      throw new NotFoundException('小说不存在或无权访问');
+    // 构建查询条件
+    const where: Prisma.NovelMemoryWhereInput = {
+      novelId,
+    };
+
+    if (query.memoryType) {
+      where.memoryType = query.memoryType;
     }
 
-    const { memoryType, limit = 50, orderBy = 'importance' } = options || {};
-    
-    const where: any = { novelId };
-    if (memoryType) where.memoryType = memoryType;
-
-    let orderByClause: any;
-    switch (orderBy) {
-      case 'importance':
-        orderByClause = { importance: 'desc' };
-        break;
-      case 'created':
-        orderByClause = { createdAt: 'desc' };
-        break;
-      case 'updated':
-        orderByClause = { updatedAt: 'desc' };
-        break;
-      default:
-        orderByClause = { importance: 'desc' };
+    if (query.minImportance !== undefined) {
+      where.importance = {
+        gte: query.minImportance,
+      };
     }
 
-    const memories = await this.prisma.novelMemory.findMany({
-      where,
-      orderBy: orderByClause,
-      take: limit,
-    });
+    // 关键词搜索
+    if (query.keyword) {
+      // 使用JSON路径搜索（注意：这在不同数据库中实现不同）
+      where.OR = [
+        {
+          content: {
+            path: ['title'],
+            string_contains: query.keyword,
+          },
+        },
+        {
+          content: {
+            path: ['description'],
+            string_contains: query.keyword,
+          },
+        },
+      ];
+    }
 
-    return memories;
+    // 计算分页
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 20;
+    const skip = (page - 1) * pageSize;
+
+    // 查询数据
+    const [memories, total] = await Promise.all([
+      this.prisma.novelMemory.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: [
+          { importance: 'desc' },
+          { updatedAt: 'desc' },
+        ],
+      }),
+      this.prisma.novelMemory.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        items: memories.map(m => this.formatMemory(m)),
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+        },
+      },
+    };
   }
 
   /**
    * 获取单个记忆
    */
-  async findOne(id: string, userId: string) {
-    const memory = await this.prisma.novelMemory.findFirst({
-      where: {
-        id,
-        novel: { userId },
-      },
+  async getMemory(userId: string, memoryId: string) {
+    const memory = await this.prisma.novelMemory.findUnique({
+      where: { id: memoryId },
       include: {
         novel: {
           select: {
@@ -97,431 +148,451 @@ export class MemoryService {
     });
 
     if (!memory) {
-      throw new NotFoundException('记忆不存在或无权访问');
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: '记忆不存在',
+          error: 'MEMORY_NOT_FOUND',
+        },
+        HttpStatus.NOT_FOUND,
+      );
     }
 
-    return memory;
+    // 验证权限
+    if (memory.novel.userId !== userId) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.FORBIDDEN,
+          message: '无权访问此记忆',
+          error: 'FORBIDDEN',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    return {
+      success: true,
+      data: this.formatMemory(memory),
+    };
   }
 
   /**
    * 更新记忆
    */
-  async update(id: string, userId: string, updateData: Partial<CreateMemoryDto>) {
-    // 验证权限
-    const memory = await this.prisma.novelMemory.findFirst({
-      where: {
-        id,
-        novel: { userId },
+  async updateMemory(userId: string, memoryId: string, dto: UpdateMemoryDto) {
+    // 验证记忆存在和权限
+    const existing = await this.prisma.novelMemory.findUnique({
+      where: { id: memoryId },
+      include: {
+        novel: {
+          select: {
+            userId: true,
+          },
+        },
       },
     });
 
-    if (!memory) {
-      throw new NotFoundException('记忆不存在或无权访问');
+    if (!existing) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: '记忆不存在',
+          error: 'MEMORY_NOT_FOUND',
+        },
+        HttpStatus.NOT_FOUND,
+      );
     }
 
-    const updatedMemory = await this.prisma.novelMemory.update({
-      where: { id },
-      data: updateData,
+    if (existing.novel.userId !== userId) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.FORBIDDEN,
+          message: '无权修改此记忆',
+          error: 'FORBIDDEN',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // 更新记忆
+    const memory = await this.prisma.novelMemory.update({
+      where: { id: memoryId },
+      data: {
+        memoryType: dto.memoryType,
+        content: dto.content as Prisma.JsonObject | undefined,
+        importance: dto.importance,
+        chapterRange: dto.chapterRange,
+      },
     });
 
-    return updatedMemory;
+    return {
+      success: true,
+      data: this.formatMemory(memory),
+    };
   }
 
   /**
    * 删除记忆
    */
-  async remove(id: string, userId: string) {
+  async deleteMemory(userId: string, memoryId: string) {
     // 验证权限
-    const memory = await this.prisma.novelMemory.findFirst({
-      where: {
-        id,
-        novel: { userId },
-      },
-    });
-
-    if (!memory) {
-      throw new NotFoundException('记忆不存在或无权访问');
-    }
-
-    await this.prisma.novelMemory.delete({
-      where: { id },
-    });
-
-    return { message: '记忆已删除' };
-  }
-
-  /**
-   * 初始化小说记忆结构
-   */
-  async initializeNovelMemory(novelId: string, userId: string, basicInfo: any = {}) {
-    // 验证权限
-    const novel = await this.prisma.novel.findFirst({
-      where: { id: novelId, userId },
-    });
-
-    if (!novel) {
-      throw new NotFoundException('小说不存在或无权访问');
-    }
-
-    // 检查是否已经初始化
-    const existingMemories = await this.prisma.novelMemory.findMany({
-      where: { novelId },
-    });
-
-    if (existingMemories.length > 0) {
-      throw new BadRequestException('记忆系统已经初始化');
-    }
-
-    // 创建基础记忆结构
-    const coreMemory = {
-      // 基本信息
-      novelId,
-      title: basicInfo.title || novel.title,
-      genre: basicInfo.genre || novel.genre || '',
-      theme: basicInfo.theme || '',
-      intro: basicInfo.intro || novel.description || '',
-      
-      // 核心设定层
-      coreMemory: {
-        characters: [],
-        worldSetting: {
-          worldType: '',
-          coreRules: [],
-          powerSystem: '',
-          socialStructure: ''
+    const existing = await this.prisma.novelMemory.findUnique({
+      where: { id: memoryId },
+      include: {
+        novel: {
+          select: {
+            userId: true,
+          },
         },
-        mainPlot: {
-          premise: '',
-          mainConflict: '',
-          plotPoints: [],
-          currentArc: ''
-        }
-      },
-      
-      // 元数据
-      version: '1.0'
-    };
-
-    // 创建核心记忆
-    await this.prisma.novelMemory.create({
-      data: {
-        novelId,
-        memoryType: MemoryType.CORE,
-        content: coreMemory,
-        importance: 1.0,
-        chapterRange: 'all',
       },
     });
 
-    // 创建初始上下文管理记忆
-    const contextMemory = {
-      recentChapters: [],
-      currentChapterContext: {},
-      relevantHistory: [],
-      tokenBudget: {
-        total: 3000,
-        used: 0,
-        remaining: 3000
-      }
-    };
+    if (!existing) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: '记忆不存在',
+          error: 'MEMORY_NOT_FOUND',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
 
-    await this.prisma.novelMemory.create({
-      data: {
-        novelId,
-        memoryType: MemoryType.CONTEXT,
-        content: contextMemory,
-        importance: 0.8,
-      },
+    if (existing.novel.userId !== userId) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.FORBIDDEN,
+          message: '无权删除此记忆',
+          error: 'FORBIDDEN',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // 删除记忆
+    await this.prisma.novelMemory.delete({
+      where: { id: memoryId },
     });
 
-    return { message: '记忆系统初始化完成' };
+    return {
+      success: true,
+      message: '记忆已删除',
+    };
   }
 
   /**
-   * 获取生成上下文（用于AI生成）
+   * 智能提取记忆
+   * 从指定章节中自动提取核心记忆
    */
-  async getGenerationContext(novelId: string, userId: string, options: {
-    maxTokens?: number;
-    chapterContext?: string;
-    includeTypes?: MemoryType[];
-  } = {}) {
-    // 验证权限
-    const novel = await this.prisma.novel.findFirst({
-      where: { id: novelId, userId },
+  async extractMemories(userId: string, dto: ExtractMemoriesDto) {
+    // 验证小说权限
+    await this.validateNovelAccess(userId, dto.novelId);
+
+    // 获取章节内容
+    const chapters = await this.prisma.chapter.findMany({
+      where: {
+        id: {
+          in: dto.chapterIds,
+        },
+        novelId: dto.novelId,
+        isDeleted: false,
+      },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        orderNum: true,
+      },
+      orderBy: {
+        orderNum: 'asc',
+      },
     });
 
-    if (!novel) {
-      throw new NotFoundException('小说不存在或无权访问');
+    if (chapters.length === 0) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: '未找到指定的章节',
+          error: 'CHAPTERS_NOT_FOUND',
+        },
+        HttpStatus.NOT_FOUND,
+      );
     }
 
-    const { maxTokens = 2000, includeTypes = [MemoryType.CORE, MemoryType.SUMMARY, MemoryType.CONTEXT] } = options;
+    // 使用AI提取记忆（简单实现，可以后续接入AI服务）
+    const extractedMemories = await this.extractMemoriesFromChapters(
+      chapters,
+      dto.extractType || MemoryType.CORE,
+    );
 
-    // 获取相关记忆
+    // 保存提取的记忆
+    const createdMemories = await Promise.all(
+      extractedMemories.map(memory =>
+        this.prisma.novelMemory.create({
+          data: {
+            novelId: dto.novelId,
+            memoryType: memory.memoryType,
+            content: memory.content as Prisma.JsonObject,
+            importance: memory.importance,
+            chapterRange: memory.chapterRange,
+          },
+        }),
+      ),
+    );
+
+    return {
+      success: true,
+      data: {
+        extracted: createdMemories.length,
+        memories: createdMemories.map(m => this.formatMemory(m)),
+      },
+    };
+  }
+
+  /**
+   * 更新记忆重要性评分
+   */
+  async updateImportance(userId: string, memoryId: string, importance: number) {
+    // 验证权限
+    const existing = await this.prisma.novelMemory.findUnique({
+      where: { id: memoryId },
+      include: {
+        novel: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: '记忆不存在',
+          error: 'MEMORY_NOT_FOUND',
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (existing.novel.userId !== userId) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.FORBIDDEN,
+          message: '无权修改此记忆',
+          error: 'FORBIDDEN',
+        },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    // 更新重要性
+    const memory = await this.prisma.novelMemory.update({
+      where: { id: memoryId },
+      data: {
+        importance,
+      },
+    });
+
+    return {
+      success: true,
+      data: this.formatMemory(memory),
+    };
+  }
+
+  /**
+   * 搜索相关记忆
+   * 根据关键词或内容查找相关记忆
+   */
+  async searchMemories(userId: string, novelId: string, keywords: string[]) {
+    await this.validateNovelAccess(userId, novelId);
+
     const memories = await this.prisma.novelMemory.findMany({
       where: {
         novelId,
-        memoryType: { in: includeTypes },
       },
-      orderBy: { importance: 'desc' },
-      take: 20, // 最多20个记忆项
+      orderBy: [
+        { importance: 'desc' },
+        { updatedAt: 'desc' },
+      ],
     });
 
-    // 构建格式化上下文
-    let formattedContext = '';
-    let usedTokens = 0;
+    // 计算相关性评分
+    const scoredMemories = memories.map(memory => {
+      const score = this.calculateRelevanceScore(memory, keywords);
+      return {
+        ...this.formatMemory(memory),
+        relevanceScore: score,
+      };
+    });
 
-    for (const memory of memories) {
-      const memoryText = this.formatMemoryForContext(memory);
-      const estimatedTokens = this.estimateTokens(memoryText);
-
-      if (usedTokens + estimatedTokens <= maxTokens) {
-        formattedContext += memoryText + '\n\n';
-        usedTokens += estimatedTokens;
-      } else {
-        break;
-      }
-    }
+    // 按相关性排序并返回
+    scoredMemories.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
     return {
-      formattedContext,
-      usedTokens,
-      memoryCount: memories.length,
-      novelInfo: {
-        id: novel.id,
-        title: novel.title,
-        genre: novel.genre,
-        wordCount: novel.wordCount,
-        chapterCount: novel.chapterCount,
-      },
+      success: true,
+      data: scoredMemories.filter(m => m.relevanceScore > 0),
     };
   }
 
   /**
-   * 更新章节摘要
+   * 获取记忆统计
    */
-  async updateChapterSummary(novelId: string, userId: string, chapterNumber: number, summary: string, keyEvents: string[] = []) {
-    // 验证权限
-    const novel = await this.prisma.novel.findFirst({
-      where: { id: novelId, userId },
-    });
+  async getMemoryStats(userId: string, novelId: string) {
+    await this.validateNovelAccess(userId, novelId);
 
-    if (!novel) {
-      throw new NotFoundException('小说不存在或无权访问');
-    }
-
-    // 查找或创建章节摘要记忆
-    let summaryMemory = await this.prisma.novelMemory.findFirst({
-      where: {
-        novelId,
-        memoryType: MemoryType.SUMMARY,
-        chapterRange: chapterNumber.toString(),
-      },
-    });
-
-    const summaryContent = {
-      chapterNumber,
-      summary,
-      keyEvents,
-      wordCount: this.estimateTokens(summary),
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (summaryMemory) {
-      // 更新现有摘要
-      summaryMemory = await this.prisma.novelMemory.update({
-        where: { id: summaryMemory.id },
-        data: {
-          content: summaryContent,
-          tokenCost: this.estimateTokens(summary),
-          importance: this.calculateSummaryImportance(chapterNumber, keyEvents),
+    const [total, byType, avgImportance] = await Promise.all([
+      this.prisma.novelMemory.count({
+        where: { novelId },
+      }),
+      this.prisma.novelMemory.groupBy({
+        by: ['memoryType'],
+        where: { novelId },
+        _count: true,
+      }),
+      this.prisma.novelMemory.aggregate({
+        where: { novelId },
+        _avg: {
+          importance: true,
         },
-      });
-    } else {
-      // 创建新摘要
-      summaryMemory = await this.prisma.novelMemory.create({
-        data: {
-          novelId,
-          memoryType: MemoryType.SUMMARY,
-          content: summaryContent,
-          chapterRange: chapterNumber.toString(),
-          tokenCost: this.estimateTokens(summary),
-          importance: this.calculateSummaryImportance(chapterNumber, keyEvents),
-        },
-      });
-    }
+      }),
+    ]);
 
-    return summaryMemory;
+    return {
+      success: true,
+      data: {
+        total,
+        byType: byType.reduce((acc, item) => {
+          acc[item.memoryType] = item._count;
+          return acc;
+        }, {}),
+        averageImportance: avgImportance._avg.importance || 0,
+      },
+    };
   }
 
   /**
-   * 批量删除记忆
+   * 验证小说访问权限
    */
-  async removeMany(novelId: string, userId: string, memoryIds: string[]) {
-    // 验证权限
+  private async validateNovelAccess(userId: string, novelId: string) {
     const novel = await this.prisma.novel.findFirst({
-      where: { id: novelId, userId },
-    });
-
-    if (!novel) {
-      throw new NotFoundException('小说不存在或无权访问');
-    }
-
-    const result = await this.prisma.novelMemory.deleteMany({
       where: {
-        id: { in: memoryIds },
-        novelId,
+        id: novelId,
+        userId,
       },
     });
 
-    return {
-      deleted: result.count,
-      message: `已删除${result.count}个记忆项`,
-    };
-  }
-
-  /**
-   * 清理过期或低重要度记忆
-   */
-  async cleanupMemories(novelId: string, userId: string, options: {
-    minImportance?: number;
-    maxAge?: number; // 天数
-    preserveCore?: boolean;
-  } = {}) {
-    // 验证权限
-    const novel = await this.prisma.novel.findFirst({
-      where: { id: novelId, userId },
-    });
-
     if (!novel) {
-      throw new NotFoundException('小说不存在或无权访问');
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.NOT_FOUND,
+          message: '小说不存在或无权访问',
+          error: 'NOVEL_NOT_FOUND',
+        },
+        HttpStatus.NOT_FOUND,
+      );
     }
 
-    const { minImportance = 0.1, maxAge = 30, preserveCore = true } = options;
-    
-    const where: any = { novelId };
-    
-    // 构建删除条件
-    const conditions = [];
-    
-    if (minImportance > 0) {
-      conditions.push({ importance: { lt: minImportance } });
-    }
-    
-    if (maxAge > 0) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - maxAge);
-      conditions.push({ createdAt: { lt: cutoffDate } });
-    }
-    
-    if (preserveCore) {
-      where.memoryType = { not: MemoryType.CORE };
-    }
-    
-    if (conditions.length > 0) {
-      where.OR = conditions;
-    }
-
-    const result = await this.prisma.novelMemory.deleteMany({ where });
-
-    return {
-      cleaned: result.count,
-      message: `已清理${result.count}个记忆项`,
-    };
+    return novel;
   }
 
   /**
-   * 格式化记忆用于上下文生成
+   * 从章节内容中提取记忆
    */
-  private formatMemoryForContext(memory: any): string {
-    let formatted = `[${memory.memoryType}记忆]`;
-    
-    if (memory.chapterRange) {
-      formatted += ` (章节${memory.chapterRange})`;
-    }
-    
-    formatted += '\n';
-    
-    try {
-      const content = memory.content;
+  private async extractMemoriesFromChapters(
+    chapters: any[],
+    extractType: MemoryType,
+  ): Promise<any[]> {
+    const memories: any[] = [];
+
+    // 简单实现：基于章节内容提取关键信息
+    for (const chapter of chapters) {
+      const content = chapter.content || '';
       
-      switch (memory.memoryType) {
-        case MemoryType.CORE:
-          if (content.coreMemory) {
-            if (content.coreMemory.characters && content.coreMemory.characters.length > 0) {
-              formatted += '主要角色：\n';
-              content.coreMemory.characters.forEach((char: any) => {
-                formatted += `- ${char.name}：${char.keyTraits?.join('、') || ''}\n`;
-              });
-            }
-            
-            if (content.coreMemory.mainPlot) {
-              formatted += `主线情节：${content.coreMemory.mainPlot.premise || ''}\n`;
-            }
-            
-            if (content.coreMemory.worldSetting?.coreRules?.length > 0) {
-              formatted += `世界规则：${content.coreMemory.worldSetting.coreRules.join('；')}\n`;
-            }
-          }
-          break;
-          
-        case MemoryType.SUMMARY:
-          if (content.summary) {
-            formatted += `摘要：${content.summary}\n`;
-          }
-          if (content.keyEvents && content.keyEvents.length > 0) {
-            formatted += `关键事件：${content.keyEvents.join('；')}\n`;
-          }
-          break;
-          
-        case MemoryType.CONTEXT:
-          if (content.recentChapters && content.recentChapters.length > 0) {
-            formatted += '近期章节：\n';
-            content.recentChapters.forEach((chapter: any) => {
-              formatted += `- 第${chapter.chapterNumber}章：${chapter.summary || ''}\n`;
-            });
-          }
-          break;
-          
-        default:
-          formatted += JSON.stringify(content, null, 2);
-      }
-    } catch (error) {
-      formatted += '记忆格式错误';
+      // 提取前500字作为摘要
+      const summary = content.slice(0, 500);
+
+      // 简单的关键词提取（实际应该用NLP或AI）
+      const keywords = this.extractKeywords(content);
+
+      memories.push({
+        memoryType: extractType,
+        content: {
+          title: `${chapter.title} - 核心记忆`,
+          description: summary,
+          keywords,
+          source: chapter.title,
+        },
+        importance: 0.7, // 自动提取的记忆默认重要性为0.7
+        chapterRange: chapter.orderNum.toString(),
+      });
     }
-    
-    return formatted;
+
+    return memories;
   }
 
   /**
-   * 估算Token数量
+   * 提取关键词（简单实现）
    */
-  private estimateTokens(text: string): number {
-    if (!text || typeof text !== 'string') return 0;
+  private extractKeywords(text: string): string[] {
+    // 移除标点符号
+    const cleanText = text.replace(/[，。！？；：""''（）【】《》、]/g, ' ');
     
-    // 移除HTML标签
-    const cleanText = text.replace(/<[^>]*>/g, '');
+    // 分词
+    const words = cleanText.split(/\s+/).filter(w => w.length > 1);
     
-    // 中文字符计算
-    const chineseChars = (cleanText.match(/[\u4e00-\u9fff]/g) || []).length;
-    const otherChars = cleanText.length - chineseChars;
-    
-    // 中文字符按0.75个token计算，其他字符按4个字符1个token计算
-    return Math.ceil(chineseChars * 0.75 + otherChars / 4);
+    // 统计词频
+    const wordCount = words.reduce((acc, word) => {
+      acc[word] = (acc[word] || 0) + 1;
+      return acc;
+    }, {});
+
+    // 返回频率最高的10个词
+    return Object.entries(wordCount)
+      .sort(([, a]: any, [, b]: any) => b - a)
+      .slice(0, 10)
+      .map(([word]) => word);
   }
 
   /**
-   * 计算摘要重要度
+   * 计算记忆相关性评分
    */
-  private calculateSummaryImportance(chapterNumber: number, keyEvents: string[]): number {
-    let importance = 0.5; // 基础重要度
-    
-    // 早期章节更重要
-    if (chapterNumber <= 3) importance += 0.2;
-    else if (chapterNumber <= 10) importance += 0.1;
-    
-    // 关键事件数量影响重要度
-    importance += Math.min(0.3, keyEvents.length * 0.05);
-    
-    return Math.min(1.0, importance);
+  private calculateRelevanceScore(memory: any, keywords: string[]): number {
+    if (!keywords || keywords.length === 0) {
+      return 0;
+    }
+
+    const content = JSON.stringify(memory.content).toLowerCase();
+    let score = 0;
+
+    for (const keyword of keywords) {
+      const lowerKeyword = keyword.toLowerCase();
+      const occurrences = (content.match(new RegExp(lowerKeyword, 'g')) || []).length;
+      score += occurrences;
+    }
+
+    // 考虑记忆的重要性
+    const importanceWeight = parseFloat(memory.importance.toString());
+    score = score * (1 + importanceWeight);
+
+    return score;
+  }
+
+  /**
+   * 格式化记忆数据
+   */
+  private formatMemory(memory: any) {
+    return {
+      id: memory.id,
+      novelId: memory.novelId,
+      memoryType: memory.memoryType,
+      content: memory.content,
+      importance: parseFloat(memory.importance.toString()),
+      chapterRange: memory.chapterRange,
+      tokenCost: memory.tokenCost,
+      createdAt: memory.createdAt,
+      updatedAt: memory.updatedAt,
+    };
   }
 }

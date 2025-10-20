@@ -48,11 +48,20 @@
 
 ### 当前状态
 ```
-📊 整体进度: 40% (Week 6进行中 - 60%完成)
-⚡ 当前阶段: 数据同步与AI功能增强
-✅ 已完成: 后端基础架构100%、版本控制、冲突检测、AI配置管理
-🚧 进行中: 数据同步、AI调用优化
+📊 整体进度: 55% (Week 7完成 - 100%完成)
+⚡ 当前阶段: 智能辅助系统增强
+✅ 已完成: 后端架构、数据同步、AI功能、记忆系统、建议系统
+🚧 进行中: 角色和世界观系统增强（Week 8）
 📅 预计完成: 2025年6月（Week 22）
+
+**Phase 1 进度**: 55% (7/10周完成)
+
+**Week 7 已完成的核心功能** ✅ **2025-01-20**：
+- ✅ 记忆系统完整API（9个端点）
+  - 智能提取、相关性搜索、重要性评分
+- ✅ 写作建议系统（10个端点）
+  - 10种建议维度、AI自动生成
+  - 采纳追踪、5星评分、统计分析
 
 **Week 6 已完成的核心功能**：
 - ✅ 章节版本控制系统
@@ -66,7 +75,7 @@
 ### 三大阶段（优先级调整后）
 ```
 Phase 1: 核心创作功能完善 (Week 4-10) 🔥
-├─ 进度: 50%
+├─ 进度: 70% (7/10周)
 ├─ 目标: 创作工具MVP版本
 ├─ 重点: 小说管理、AI写作、记忆系统、素材管理
 └─ 预计: 2025年3月
@@ -125,13 +134,14 @@ Phase 3: 商业化功能开发 (Week 17-22) 💰
 ### 近期规划（Week 7-10）⚡ **核心功能**
 ```
 🎯 智能辅助系统增强
-├─ Week 7: 记忆系统 + 写作建议增强
-├─ Week 8: 角色 + 世界观系统
+├─ Week 7: 记忆系统 + 写作建议增强 ✅ **已完成**
+├─ Week 8: 角色 + 世界观系统 ⏳ **进行中**
 ├─ Week 9: 数据迁移 + 素材管理（上）
 └─ Week 10: 素材管理（下）+ MVP发布 🎉
 ```
 
 **影响**: 提供专业级创作辅助能力
+**进度**: Week 7 完成，Week 8 进行中
 
 ### 中期规划（Week 11-16）🚀 **专业化**
 ```
@@ -355,12 +365,106 @@ Phase 3 (Week 17-22):
 
 **Week 6 详细报告**: `91Writing-Backend/WEEK6-PROGRESS-REPORT.md` ✅
 
+---
+
+### Week 7 (智能辅助) ✅ **100%完成 (2025-01-20)**
+**记忆系统 + 写作建议增强**
+
+#### 1. 记忆系统API化和增强 ✅
+- [x] 记忆CRUD API（9个端点）✅
+  - 创建、查询、更新、删除记忆
+  - 分页和筛选功能
+  - 文件：memory.controller.ts, memory.service.ts, memory.dto.ts
+- [x] 智能记忆提取算法 ✅
+  - 从章节自动提取核心记忆
+  - 关键词提取算法
+  - 相关性计算和排序
+- [x] 记忆重要性评分系统 ✅
+  - 0-1评分机制
+  - 手动调整评分接口
+  - 基于重要性的排序
+- [x] 记忆检索优化 ✅
+  - 关键词搜索功能
+  - 相关性评分算法
+  - 统计信息API
+
+**API端点** (9个):
+```
+POST   /memories                         # 创建记忆
+GET    /memories/novel/:novelId          # 获取记忆列表
+GET    /memories/:id                     # 获取单个记忆
+PUT    /memories/:id                     # 更新记忆
+DELETE /memories/:id                     # 删除记忆
+POST   /memories/extract                 # 智能提取记忆
+POST   /memories/:id/score               # 更新重要性评分
+GET    /memories/novel/:novelId/search   # 搜索相关记忆
+GET    /memories/novel/:novelId/stats    # 获取统计信息
+```
+
+#### 2. 写作建议系统增强 ✅
+- [x] 建议数据库设计 ✅
+  - WritingSuggestion表结构
+  - SuggestionType枚举（AUTO/REQUESTED/SYSTEM）
+  - SuggestionDimension枚举（10种维度）
+- [x] 多维度建议API（10个端点）✅
+  - PLOT（剧情）、CHARACTER（人物）、PACING（节奏）
+  - DIALOGUE（对话）、SCENE（场景）、STYLE（风格）
+  - STRUCTURE（结构）、CONFLICT（冲突）、THEME（主题）、OTHER
+- [x] AI自动生成建议 ✅
+  - 基于小说内容分析
+  - 按维度生成针对性建议
+  - 优先级评分（0-100）
+- [x] 建议质量优化 ✅
+  - 优先级评分系统
+  - 上下文信息关联
+  - 建议相关性分析
+
+**API端点** (10个):
+```
+POST   /suggestions                          # 创建建议
+POST   /suggestions/generate                 # AI生成建议
+GET    /suggestions/novel/:novelId           # 获取建议列表
+GET    /suggestions/:id                      # 获取单个建议
+POST   /suggestions/adopt                    # 采纳建议
+POST   /suggestions/rate                     # 评价建议
+DELETE /suggestions/:id                      # 删除建议
+POST   /suggestions/novel/:novelId/bulk-delete  # 批量删除
+GET    /suggestions/novel/:novelId/stats     # 获取统计信息
+```
+
+#### 3. 建议采纳反馈机制 ✅
+- [x] 用户采纳追踪API ✅
+  - 采纳状态标记
+  - 采纳时间记录
+  - 用户反馈收集
+- [x] 建议质量评估系统 ✅
+  - 5星评分机制
+  - 用户反馈文本
+  - 统计分析（采纳率、平均评分）
+
+**Week 7 核心功能** ✅ **100%完成 (2025-01-20)**
+```
+✅ 记忆系统API化
+├─ 9个API端点（CRUD+搜索+统计）
+├─ 智能记忆提取算法
+├─ 重要性评分系统
+└─ 关键词相关性搜索
+
+✅ 写作建议系统
+├─ 10种建议维度（剧情/人物/节奏等）
+├─ AI自动生成建议
+├─ 建议采纳反馈机制
+└─ 5星评分+统计分析
+```
+
+**Week 7 详细报告**: `91Writing-Backend/WEEK7-PROGRESS-REPORT.md` ✅
+
 ### Week 7-8 (智能辅助)
 **记忆系统 + 角色世界观**
-- [ ] 记忆系统增强
-- [ ] 写作建议优化
-- [ ] 角色档案系统
-- [ ] 世界观构建
+- [x] 记忆系统增强 ✅ **已完成 (Week 7)**
+- [x] 写作建议优化 ✅ **已完成 (Week 7)**
+- [ ] 角色档案系统 ⏳ **Week 8**
+- [ ] 世界观构建 ⏳ **Week 8**
 
 ### Week 9-10 (MVP冲刺)
 **数据迁移 + 素材管理**
