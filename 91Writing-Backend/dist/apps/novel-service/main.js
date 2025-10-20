@@ -45,14 +45,18 @@ const passport_1 = __webpack_require__(8);
 const database_1 = __webpack_require__(9);
 const novel_module_1 = __webpack_require__(13);
 const chapter_module_1 = __webpack_require__(23);
-const memory_module_1 = __webpack_require__(27);
-const material_module_1 = __webpack_require__(31);
-const prompt_module_1 = __webpack_require__(36);
-const collaboration_module_1 = __webpack_require__(40);
-const version_module_1 = __webpack_require__(52);
-const comment_module_1 = __webpack_require__(56);
-const health_module_1 = __webpack_require__(60);
-const jwt_strategy_1 = __webpack_require__(63);
+const memory_module_1 = __webpack_require__(28);
+const suggestion_module_1 = __webpack_require__(33);
+const character_module_1 = __webpack_require__(37);
+const world_module_1 = __webpack_require__(41);
+const material_module_1 = __webpack_require__(45);
+const migration_module_1 = __webpack_require__(49);
+const prompt_module_1 = __webpack_require__(53);
+const collaboration_module_1 = __webpack_require__(57);
+const version_module_1 = __webpack_require__(69);
+const comment_module_1 = __webpack_require__(73);
+const health_module_1 = __webpack_require__(77);
+const jwt_strategy_1 = __webpack_require__(80);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -78,7 +82,11 @@ exports.AppModule = AppModule = __decorate([
             novel_module_1.NovelModule,
             chapter_module_1.ChapterModule,
             memory_module_1.MemoryModule,
+            suggestion_module_1.SuggestionModule,
+            character_module_1.CharacterModule,
+            world_module_1.WorldModule,
             material_module_1.MaterialModule,
+            migration_module_1.MigrationModule,
             prompt_module_1.PromptModule,
             collaboration_module_1.CollaborationModule,
             version_module_1.VersionModule,
@@ -1285,6 +1293,123 @@ let ChapterService = class ChapterService {
         }
         return updatedChapter;
     }
+    async updateWithConflictDetection(id, userId, updateDto) {
+        const chapter = await this.prisma.chapter.findFirst({
+            where: {
+                id,
+                novel: { userId },
+            },
+            include: {
+                novel: {
+                    select: {
+                        id: true,
+                        title: true,
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (!chapter) {
+            throw new common_1.NotFoundException('章节不存在或无权访问');
+        }
+        const clientLastKnownUpdate = new Date(updateDto.lastKnownUpdatedAt);
+        const serverLastUpdate = new Date(chapter.updatedAt);
+        const hasConflict = serverLastUpdate > clientLastKnownUpdate;
+        if (hasConflict && !updateDto.forceUpdate) {
+            const conflictResponse = {
+                hasConflict: true,
+                serverVersion: {
+                    updatedAt: serverLastUpdate,
+                    title: chapter.title,
+                    content: chapter.content,
+                    wordCount: chapter.wordCount,
+                },
+                clientVersion: {
+                    updatedAt: clientLastKnownUpdate,
+                    title: updateDto.title,
+                    content: updateDto.content,
+                },
+                message: '检测到数据冲突：服务器端的内容已被其他设备或用户修改',
+                suggestedActions: [
+                    'keep-server: 放弃本地修改，使用服务器版本',
+                    'keep-client: 用本地版本覆盖服务器版本',
+                    'merge: 尝试合并两个版本（需手动处理）',
+                ],
+            };
+            throw new common_1.ConflictException({
+                ...conflictResponse,
+                statusCode: 409,
+            });
+        }
+        let finalData = {};
+        if (updateDto.conflictStrategy) {
+            switch (updateDto.conflictStrategy) {
+                case 'keep-server':
+                    return {
+                        resolved: true,
+                        strategy: 'keep-server',
+                        chapter,
+                        message: '已保留服务器版本',
+                    };
+                case 'keep-client':
+                    finalData = {
+                        title: updateDto.title !== undefined ? updateDto.title : chapter.title,
+                        content: updateDto.content !== undefined ? updateDto.content : chapter.content,
+                        status: updateDto.status !== undefined ? updateDto.status : chapter.status,
+                    };
+                    break;
+                case 'merge':
+                    finalData = {
+                        title: updateDto.title || chapter.title,
+                        content: this.mergeContent(chapter.content, updateDto.content || ''),
+                        status: updateDto.status || chapter.status,
+                    };
+                    break;
+            }
+        }
+        else {
+            finalData = {
+                title: updateDto.title,
+                content: updateDto.content,
+                status: updateDto.status,
+            };
+        }
+        let wordCount = chapter.wordCount;
+        if (finalData.content !== undefined) {
+            wordCount = this.calculateWordCount(finalData.content);
+        }
+        const updatedChapter = await this.prisma.chapter.update({
+            where: { id },
+            data: {
+                ...finalData,
+                wordCount,
+            },
+            include: {
+                novel: {
+                    select: {
+                        id: true,
+                        title: true,
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (wordCount !== chapter.wordCount) {
+            await this.updateNovelStats(chapter.novelId);
+        }
+        return {
+            resolved: hasConflict,
+            strategy: updateDto.conflictStrategy,
+            chapter: updatedChapter,
+            message: hasConflict ? '冲突已解决，章节已更新' : '章节已更新',
+        };
+    }
+    mergeContent(serverContent, clientContent) {
+        if (clientContent.length > serverContent.length) {
+            return clientContent;
+        }
+        return serverContent;
+    }
     async remove(id, userId) {
         const chapter = await this.prisma.chapter.findFirst({
             where: {
@@ -1426,13 +1551,15 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ChapterController = void 0;
 const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
 const guards_1 = __webpack_require__(16);
 const chapter_service_1 = __webpack_require__(24);
 const create_chapter_dto_1 = __webpack_require__(26);
+const update_chapter_with_conflict_dto_1 = __webpack_require__(27);
 let ChapterController = class ChapterController {
     constructor(chapterService) {
         this.chapterService = chapterService;
@@ -1455,6 +1582,9 @@ let ChapterController = class ChapterController {
     async updateContent(id, req, content) {
         return this.chapterService.updateContent(id, req.user.id, content);
     }
+    async updateWithConflictCheck(id, req, updateDto) {
+        return this.chapterService.updateWithConflictDetection(id, req.user.id, updateDto);
+    }
     async remove(id, req) {
         return this.chapterService.remove(id, req.user.id);
     }
@@ -1468,6 +1598,35 @@ let ChapterController = class ChapterController {
 exports.ChapterController = ChapterController;
 __decorate([
     (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({
+        summary: '创建章节',
+        description: '在指定小说中创建新的章节'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '章节创建成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', example: 'cm1234567890' },
+                        title: { type: 'string', example: '第一章：开端' },
+                        chapterNumber: { type: 'number', example: 1 },
+                        content: { type: 'string', example: '章节内容...' },
+                        wordCount: { type: 'number', example: 2500 },
+                        status: { type: 'string', enum: ['DRAFT', 'PUBLISHED'], example: 'DRAFT' },
+                        createdAt: { type: 'string', format: 'date-time' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
     __param(0, (0, common_1.Param)('novelId')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
@@ -1477,6 +1636,35 @@ __decorate([
 ], ChapterController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取章节列表',
+        description: '获取指定小说的所有章节列表'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            title: { type: 'string' },
+                            chapterNumber: { type: 'number' },
+                            wordCount: { type: 'number' },
+                            status: { type: 'string' },
+                            createdAt: { type: 'string', format: 'date-time' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
     __param(0, (0, common_1.Param)('novelId')),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -1485,6 +1673,17 @@ __decorate([
 ], ChapterController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取章节详情',
+        description: '获取指定章节的详细信息'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -1493,6 +1692,31 @@ __decorate([
 ], ChapterController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Get)(':id/content'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取章节内容',
+        description: '获取指定章节的完整内容'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        title: { type: 'string' },
+                        content: { type: 'string', example: '章节完整内容...' },
+                        wordCount: { type: 'number' }
+                    }
+                }
+            }
+        }
+    }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -1501,6 +1725,17 @@ __decorate([
 ], ChapterController.prototype, "getContent", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '更新章节信息',
+        description: '更新章节的标题、状态等基本信息'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '更新成功',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
@@ -1510,6 +1745,24 @@ __decorate([
 ], ChapterController.prototype, "update", null);
 __decorate([
     (0, common_1.Patch)(':id/content'),
+    (0, swagger_1.ApiOperation)({
+        summary: '更新章节内容',
+        description: '更新章节的正文内容，自动计算字数'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                content: { type: 'string', example: '更新后的章节内容...' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '内容更新成功',
+    }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)('content')),
@@ -1518,7 +1771,98 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ChapterController.prototype, "updateContent", null);
 __decorate([
+    (0, common_1.Patch)(':id/update-with-conflict-check'),
+    (0, swagger_1.ApiOperation)({
+        summary: '带冲突检测的章节更新',
+        description: '更新章节时检测多设备数据冲突，支持冲突解决策略'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, swagger_1.ApiBody)({ type: update_chapter_with_conflict_dto_1.UpdateChapterWithConflictDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '更新成功或冲突已解决',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        resolved: { type: 'boolean', example: false, description: '是否解决了冲突' },
+                        strategy: { type: 'string', example: 'keep-client', description: '使用的冲突解决策略' },
+                        chapter: {
+                            type: 'object',
+                            description: '更新后的章节'
+                        },
+                        message: { type: 'string', example: '章节已更新' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 409,
+        description: '检测到数据冲突',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: false },
+                error: {
+                    type: 'object',
+                    properties: {
+                        hasConflict: { type: 'boolean', example: true },
+                        serverVersion: {
+                            type: 'object',
+                            properties: {
+                                updatedAt: { type: 'string', format: 'date-time' },
+                                title: { type: 'string' },
+                                content: { type: 'string' },
+                                wordCount: { type: 'number' }
+                            }
+                        },
+                        clientVersion: {
+                            type: 'object',
+                            properties: {
+                                updatedAt: { type: 'string', format: 'date-time' },
+                                title: { type: 'string' },
+                                content: { type: 'string' }
+                            }
+                        },
+                        message: { type: 'string', example: '检测到数据冲突' },
+                        suggestedActions: {
+                            type: 'array',
+                            items: { type: 'string' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, typeof (_d = typeof update_chapter_with_conflict_dto_1.UpdateChapterWithConflictDto !== "undefined" && update_chapter_with_conflict_dto_1.UpdateChapterWithConflictDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], ChapterController.prototype, "updateWithConflictCheck", null);
+__decorate([
     (0, common_1.Delete)(':id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '删除章节',
+        description: '删除指定的章节'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '删除成功',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
@@ -1527,6 +1871,32 @@ __decorate([
 ], ChapterController.prototype, "remove", null);
 __decorate([
     (0, common_1.Patch)('status'),
+    (0, swagger_1.ApiOperation)({
+        summary: '批量更新章节状态',
+        description: '批量更新多个章节的状态'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                chapterIds: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    example: ['cm123', 'cm456']
+                },
+                status: {
+                    type: 'string',
+                    enum: ['DRAFT', 'PUBLISHED'],
+                    example: 'PUBLISHED'
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '状态更新成功',
+    }),
     __param(0, (0, common_1.Param)('novelId')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
@@ -1536,6 +1906,32 @@ __decorate([
 ], ChapterController.prototype, "updateStatus", null);
 __decorate([
     (0, common_1.Patch)('reorder'),
+    (0, swagger_1.ApiOperation)({
+        summary: '重新排序章节',
+        description: '调整章节的顺序编号'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                chapterOrders: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string', example: 'cm123' },
+                            chapterNumber: { type: 'number', example: 1 }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '排序成功',
+    }),
     __param(0, (0, common_1.Param)('novelId')),
     __param(1, (0, common_1.Request)()),
     __param(2, (0, common_1.Body)()),
@@ -1544,6 +1940,8 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], ChapterController.prototype, "reorder", null);
 exports.ChapterController = ChapterController = __decorate([
+    (0, swagger_1.ApiTags)('chapters'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.Controller)('novels/:novelId/chapters'),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
     __metadata("design:paramtypes", [typeof (_a = typeof chapter_service_1.ChapterService !== "undefined" && chapter_service_1.ChapterService) === "function" ? _a : Object])
@@ -1644,11 +2042,99 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateChapterWithConflictDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
+class UpdateChapterWithConflictDto {
+    constructor() {
+        this.forceUpdate = false;
+    }
+}
+exports.UpdateChapterWithConflictDto = UpdateChapterWithConflictDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节标题',
+        example: '第一章：新的开始',
+        maxLength: 200
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '标题必须是字符串' }),
+    (0, class_validator_1.MinLength)(1, { message: '标题不能为空' }),
+    (0, class_validator_1.MaxLength)(200, { message: '标题不能超过200个字符' }),
+    __metadata("design:type", String)
+], UpdateChapterWithConflictDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节内容',
+        example: '章节正文内容...'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '内容必须是字符串' }),
+    __metadata("design:type", String)
+], UpdateChapterWithConflictDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节状态',
+        enum: ['DRAFT', 'PUBLISHED'],
+        example: 'DRAFT'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", typeof (_a = typeof client_1.ChapterStatus !== "undefined" && client_1.ChapterStatus) === "function" ? _a : Object)
+], UpdateChapterWithConflictDto.prototype, "status", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '客户端最后已知的更新时间（用于冲突检测）',
+        example: '2025-01-08T10:30:00.000Z',
+        type: String,
+        format: 'date-time'
+    }),
+    (0, class_validator_1.IsDateString)({}, { message: '最后更新时间格式不正确' }),
+    __metadata("design:type", String)
+], UpdateChapterWithConflictDto.prototype, "lastKnownUpdatedAt", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否强制更新（忽略冲突）',
+        default: false,
+        type: Boolean
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)({ message: '强制更新标志必须是布尔值' }),
+    __metadata("design:type", Boolean)
+], UpdateChapterWithConflictDto.prototype, "forceUpdate", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '冲突解决策略：keep-server(保留服务器)、keep-client(保留客户端)、merge(合并)',
+        enum: ['keep-server', 'keep-client', 'merge'],
+        example: 'keep-client'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateChapterWithConflictDto.prototype, "conflictStrategy", void 0);
+
+
+/***/ }),
+/* 28 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MemoryModule = void 0;
 const common_1 = __webpack_require__(3);
-const memory_service_1 = __webpack_require__(28);
 const memory_controller_1 = __webpack_require__(29);
+const memory_service_1 = __webpack_require__(30);
 let MemoryModule = class MemoryModule {
 };
 exports.MemoryModule = MemoryModule;
@@ -1662,7 +2148,372 @@ exports.MemoryModule = MemoryModule = __decorate([
 
 
 /***/ }),
-/* 28 */
+/* 29 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MemoryController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const guards_1 = __webpack_require__(16);
+const memory_service_1 = __webpack_require__(30);
+const memory_dto_1 = __webpack_require__(31);
+let MemoryController = class MemoryController {
+    constructor(memoryService) {
+        this.memoryService = memoryService;
+    }
+    async createMemory(req, dto) {
+        return this.memoryService.createMemory(req.user.id, dto);
+    }
+    async getMemories(req, novelId, query) {
+        return this.memoryService.getMemories(req.user.id, novelId, query);
+    }
+    async getMemory(req, id) {
+        return this.memoryService.getMemory(req.user.id, id);
+    }
+    async updateMemory(req, id, dto) {
+        return this.memoryService.updateMemory(req.user.id, id, dto);
+    }
+    async deleteMemory(req, id) {
+        return this.memoryService.deleteMemory(req.user.id, id);
+    }
+    async extractMemories(req, dto) {
+        return this.memoryService.extractMemories(req.user.id, dto);
+    }
+    async updateImportance(req, id, dto) {
+        return this.memoryService.updateImportance(req.user.id, id, dto.importance);
+    }
+    async searchMemories(req, novelId, keywords) {
+        const keywordArray = keywords.split(',').map(k => k.trim()).filter(k => k);
+        return this.memoryService.searchMemories(req.user.id, novelId, keywordArray);
+    }
+    async getMemoryStats(req, novelId) {
+        return this.memoryService.getMemoryStats(req.user.id, novelId);
+    }
+};
+exports.MemoryController = MemoryController;
+__decorate([
+    (0, common_1.Post)('memories'),
+    (0, swagger_1.ApiOperation)({
+        summary: '创建记忆',
+        description: '为小说创建新的记忆条目'
+    }),
+    (0, swagger_1.ApiBody)({ type: memory_dto_1.CreateMemoryDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '记忆创建成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        novelId: { type: 'string' },
+                        memoryType: { type: 'string', example: 'CORE' },
+                        content: { type: 'object' },
+                        importance: { type: 'number', example: 0.8 },
+                        chapterRange: { type: 'string' },
+                        createdAt: { type: 'string', format: 'date-time' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof memory_dto_1.CreateMemoryDto !== "undefined" && memory_dto_1.CreateMemoryDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "createMemory", null);
+__decorate([
+    (0, common_1.Get)('memories/novel/:novelId'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取小说记忆列表',
+        description: '获取指定小说的所有记忆，支持筛选和分页'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiQuery)({ name: 'memoryType', required: false, description: '记忆类型' }),
+    (0, swagger_1.ApiQuery)({ name: 'keyword', required: false, description: '关键词搜索' }),
+    (0, swagger_1.ApiQuery)({ name: 'minImportance', required: false, description: '最小重要性' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, description: '页码' }),
+    (0, swagger_1.ApiQuery)({ name: 'pageSize', required: false, description: '每页数量' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        items: {
+                            type: 'array',
+                            items: {
+                                type: 'object'
+                            }
+                        },
+                        pagination: {
+                            type: 'object',
+                            properties: {
+                                page: { type: 'number' },
+                                pageSize: { type: 'number' },
+                                total: { type: 'number' },
+                                totalPages: { type: 'number' }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __param(2, (0, common_1.Query)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_c = typeof memory_dto_1.QueryMemoriesDto !== "undefined" && memory_dto_1.QueryMemoriesDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "getMemories", null);
+__decorate([
+    (0, common_1.Get)('memories/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取单个记忆',
+        description: '获取指定ID的记忆详情'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '记忆ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '无权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '记忆不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "getMemory", null);
+__decorate([
+    (0, common_1.Put)('memories/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '更新记忆',
+        description: '更新指定记忆的内容和属性'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '记忆ID' }),
+    (0, swagger_1.ApiBody)({ type: memory_dto_1.UpdateMemoryDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '更新成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '无权修改' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '记忆不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_d = typeof memory_dto_1.UpdateMemoryDto !== "undefined" && memory_dto_1.UpdateMemoryDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "updateMemory", null);
+__decorate([
+    (0, common_1.Delete)('memories/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '删除记忆',
+        description: '删除指定的记忆条目'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '记忆ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '删除成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '无权删除' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '记忆不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "deleteMemory", null);
+__decorate([
+    (0, common_1.Post)('memories/extract'),
+    (0, swagger_1.ApiOperation)({
+        summary: '智能提取记忆',
+        description: '从指定章节中自动提取核心记忆'
+    }),
+    (0, swagger_1.ApiBody)({ type: memory_dto_1.ExtractMemoriesDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '提取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        extracted: { type: 'number', example: 5 },
+                        memories: {
+                            type: 'array',
+                            items: { type: 'object' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说或章节不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_e = typeof memory_dto_1.ExtractMemoriesDto !== "undefined" && memory_dto_1.ExtractMemoriesDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "extractMemories", null);
+__decorate([
+    (0, common_1.Post)('memories/:id/score'),
+    (0, swagger_1.ApiOperation)({
+        summary: '更新记忆重要性',
+        description: '更新记忆的重要性评分'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '记忆ID' }),
+    (0, swagger_1.ApiBody)({ type: memory_dto_1.ScoreMemoryDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '评分更新成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '记忆不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_f = typeof memory_dto_1.ScoreMemoryDto !== "undefined" && memory_dto_1.ScoreMemoryDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "updateImportance", null);
+__decorate([
+    (0, common_1.Get)('memories/novel/:novelId/search'),
+    (0, swagger_1.ApiOperation)({
+        summary: '搜索相关记忆',
+        description: '根据关键词搜索相关记忆，按相关性排序'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiQuery)({
+        name: 'keywords',
+        required: true,
+        description: '搜索关键词（逗号分隔）',
+        example: '主角,背景,设定'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '搜索成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            content: { type: 'object' },
+                            importance: { type: 'number' },
+                            relevanceScore: { type: 'number', example: 15.6 }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __param(2, (0, common_1.Query)('keywords')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "searchMemories", null);
+__decorate([
+    (0, common_1.Get)('memories/novel/:novelId/stats'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取记忆统计',
+        description: '获取小说记忆的统计信息'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number', example: 42 },
+                        byType: {
+                            type: 'object',
+                            properties: {
+                                CORE: { type: 'number' },
+                                SUMMARY: { type: 'number' },
+                                CONTEXT: { type: 'number' }
+                            }
+                        },
+                        averageImportance: { type: 'number', example: 0.73 }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MemoryController.prototype, "getMemoryStats", null);
+exports.MemoryController = MemoryController = __decorate([
+    (0, swagger_1.ApiTags)('记忆管理'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof memory_service_1.MemoryService !== "undefined" && memory_service_1.MemoryService) === "function" ? _a : Object])
+], MemoryController);
+
+
+/***/ }),
+/* 30 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1685,59 +2536,94 @@ let MemoryService = class MemoryService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async create(novelId, userId, createMemoryDto) {
+    async createMemory(userId, dto) {
         const novel = await this.prisma.novel.findFirst({
-            where: { id: novelId, userId },
+            where: {
+                id: dto.novelId,
+                userId,
+            },
         });
         if (!novel) {
-            throw new common_1.NotFoundException('小说不存在或无权访问');
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '小说不存在或无权访问',
+                error: 'NOVEL_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
         }
         const memory = await this.prisma.novelMemory.create({
             data: {
-                novelId,
-                ...createMemoryDto,
+                novelId: dto.novelId,
+                memoryType: dto.memoryType,
+                content: dto.content,
+                importance: dto.importance !== undefined ? dto.importance : 0.5,
+                chapterRange: dto.chapterRange,
             },
         });
-        return memory;
+        return {
+            success: true,
+            data: this.formatMemory(memory),
+        };
     }
-    async findAll(novelId, userId, options) {
-        const novel = await this.prisma.novel.findFirst({
-            where: { id: novelId, userId },
-        });
-        if (!novel) {
-            throw new common_1.NotFoundException('小说不存在或无权访问');
+    async getMemories(userId, novelId, query) {
+        await this.validateNovelAccess(userId, novelId);
+        const where = {
+            novelId,
+        };
+        if (query.memoryType) {
+            where.memoryType = query.memoryType;
         }
-        const { memoryType, limit = 50, orderBy = 'importance' } = options || {};
-        const where = { novelId };
-        if (memoryType)
-            where.memoryType = memoryType;
-        let orderByClause;
-        switch (orderBy) {
-            case 'importance':
-                orderByClause = { importance: 'desc' };
-                break;
-            case 'created':
-                orderByClause = { createdAt: 'desc' };
-                break;
-            case 'updated':
-                orderByClause = { updatedAt: 'desc' };
-                break;
-            default:
-                orderByClause = { importance: 'desc' };
+        if (query.minImportance !== undefined) {
+            where.importance = {
+                gte: query.minImportance,
+            };
         }
-        const memories = await this.prisma.novelMemory.findMany({
-            where,
-            orderBy: orderByClause,
-            take: limit,
-        });
-        return memories;
-    }
-    async findOne(id, userId) {
-        const memory = await this.prisma.novelMemory.findFirst({
-            where: {
-                id,
-                novel: { userId },
+        if (query.keyword) {
+            where.OR = [
+                {
+                    content: {
+                        path: ['title'],
+                        string_contains: query.keyword,
+                    },
+                },
+                {
+                    content: {
+                        path: ['description'],
+                        string_contains: query.keyword,
+                    },
+                },
+            ];
+        }
+        const page = query.page || 1;
+        const pageSize = query.pageSize || 20;
+        const skip = (page - 1) * pageSize;
+        const [memories, total] = await Promise.all([
+            this.prisma.novelMemory.findMany({
+                where,
+                skip,
+                take: pageSize,
+                orderBy: [
+                    { importance: 'desc' },
+                    { updatedAt: 'desc' },
+                ],
+            }),
+            this.prisma.novelMemory.count({ where }),
+        ]);
+        return {
+            success: true,
+            data: {
+                items: memories.map(m => this.formatMemory(m)),
+                pagination: {
+                    page,
+                    pageSize,
+                    total,
+                    totalPages: Math.ceil(total / pageSize),
+                },
             },
+        };
+    }
+    async getMemory(userId, memoryId) {
+        const memory = await this.prisma.novelMemory.findUnique({
+            where: { id: memoryId },
             include: {
                 novel: {
                     select: {
@@ -1749,307 +2635,306 @@ let MemoryService = class MemoryService {
             },
         });
         if (!memory) {
-            throw new common_1.NotFoundException('记忆不存在或无权访问');
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '记忆不存在',
+                error: 'MEMORY_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
         }
-        return memory;
+        if (memory.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权访问此记忆',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
+        return {
+            success: true,
+            data: this.formatMemory(memory),
+        };
     }
-    async update(id, userId, updateData) {
-        const memory = await this.prisma.novelMemory.findFirst({
-            where: {
-                id,
-                novel: { userId },
+    async updateMemory(userId, memoryId, dto) {
+        const existing = await this.prisma.novelMemory.findUnique({
+            where: { id: memoryId },
+            include: {
+                novel: {
+                    select: {
+                        userId: true,
+                    },
+                },
             },
         });
-        if (!memory) {
-            throw new common_1.NotFoundException('记忆不存在或无权访问');
+        if (!existing) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '记忆不存在',
+                error: 'MEMORY_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
         }
-        const updatedMemory = await this.prisma.novelMemory.update({
-            where: { id },
-            data: updateData,
-        });
-        return updatedMemory;
-    }
-    async remove(id, userId) {
-        const memory = await this.prisma.novelMemory.findFirst({
-            where: {
-                id,
-                novel: { userId },
+        if (existing.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权修改此记忆',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
+        const memory = await this.prisma.novelMemory.update({
+            where: { id: memoryId },
+            data: {
+                memoryType: dto.memoryType,
+                content: dto.content,
+                importance: dto.importance,
+                chapterRange: dto.chapterRange,
             },
         });
-        if (!memory) {
-            throw new common_1.NotFoundException('记忆不存在或无权访问');
+        return {
+            success: true,
+            data: this.formatMemory(memory),
+        };
+    }
+    async deleteMemory(userId, memoryId) {
+        const existing = await this.prisma.novelMemory.findUnique({
+            where: { id: memoryId },
+            include: {
+                novel: {
+                    select: {
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (!existing) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '记忆不存在',
+                error: 'MEMORY_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        if (existing.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权删除此记忆',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
         }
         await this.prisma.novelMemory.delete({
-            where: { id },
+            where: { id: memoryId },
         });
-        return { message: '记忆已删除' };
+        return {
+            success: true,
+            message: '记忆已删除',
+        };
     }
-    async initializeNovelMemory(novelId, userId, basicInfo = {}) {
-        const novel = await this.prisma.novel.findFirst({
-            where: { id: novelId, userId },
-        });
-        if (!novel) {
-            throw new common_1.NotFoundException('小说不存在或无权访问');
-        }
-        const existingMemories = await this.prisma.novelMemory.findMany({
-            where: { novelId },
-        });
-        if (existingMemories.length > 0) {
-            throw new common_1.BadRequestException('记忆系统已经初始化');
-        }
-        const coreMemory = {
-            novelId,
-            title: basicInfo.title || novel.title,
-            genre: basicInfo.genre || novel.genre || '',
-            theme: basicInfo.theme || '',
-            intro: basicInfo.intro || novel.description || '',
-            coreMemory: {
-                characters: [],
-                worldSetting: {
-                    worldType: '',
-                    coreRules: [],
-                    powerSystem: '',
-                    socialStructure: ''
+    async extractMemories(userId, dto) {
+        await this.validateNovelAccess(userId, dto.novelId);
+        const chapters = await this.prisma.chapter.findMany({
+            where: {
+                id: {
+                    in: dto.chapterIds,
                 },
-                mainPlot: {
-                    premise: '',
-                    mainConflict: '',
-                    plotPoints: [],
-                    currentArc: ''
-                }
+                novelId: dto.novelId,
+                isDeleted: false,
             },
-            version: '1.0'
-        };
-        await this.prisma.novelMemory.create({
-            data: {
-                novelId,
-                memoryType: client_1.MemoryType.CORE,
-                content: coreMemory,
-                importance: 1.0,
-                chapterRange: 'all',
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                orderNum: true,
+            },
+            orderBy: {
+                orderNum: 'asc',
             },
         });
-        const contextMemory = {
-            recentChapters: [],
-            currentChapterContext: {},
-            relevantHistory: [],
-            tokenBudget: {
-                total: 3000,
-                used: 0,
-                remaining: 3000
-            }
-        };
-        await this.prisma.novelMemory.create({
-            data: {
-                novelId,
-                memoryType: client_1.MemoryType.CONTEXT,
-                content: contextMemory,
-                importance: 0.8,
-            },
-        });
-        return { message: '记忆系统初始化完成' };
-    }
-    async getGenerationContext(novelId, userId, options = {}) {
-        const novel = await this.prisma.novel.findFirst({
-            where: { id: novelId, userId },
-        });
-        if (!novel) {
-            throw new common_1.NotFoundException('小说不存在或无权访问');
+        if (chapters.length === 0) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '未找到指定的章节',
+                error: 'CHAPTERS_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
         }
-        const { maxTokens = 2000, includeTypes = [client_1.MemoryType.CORE, client_1.MemoryType.SUMMARY, client_1.MemoryType.CONTEXT] } = options;
+        const extractedMemories = await this.extractMemoriesFromChapters(chapters, dto.extractType || client_1.MemoryType.CORE);
+        const createdMemories = await Promise.all(extractedMemories.map(memory => this.prisma.novelMemory.create({
+            data: {
+                novelId: dto.novelId,
+                memoryType: memory.memoryType,
+                content: memory.content,
+                importance: memory.importance,
+                chapterRange: memory.chapterRange,
+            },
+        })));
+        return {
+            success: true,
+            data: {
+                extracted: createdMemories.length,
+                memories: createdMemories.map(m => this.formatMemory(m)),
+            },
+        };
+    }
+    async updateImportance(userId, memoryId, importance) {
+        const existing = await this.prisma.novelMemory.findUnique({
+            where: { id: memoryId },
+            include: {
+                novel: {
+                    select: {
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (!existing) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '记忆不存在',
+                error: 'MEMORY_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        if (existing.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权修改此记忆',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
+        const memory = await this.prisma.novelMemory.update({
+            where: { id: memoryId },
+            data: {
+                importance,
+            },
+        });
+        return {
+            success: true,
+            data: this.formatMemory(memory),
+        };
+    }
+    async searchMemories(userId, novelId, keywords) {
+        await this.validateNovelAccess(userId, novelId);
         const memories = await this.prisma.novelMemory.findMany({
             where: {
                 novelId,
-                memoryType: { in: includeTypes },
             },
-            orderBy: { importance: 'desc' },
-            take: 20,
+            orderBy: [
+                { importance: 'desc' },
+                { updatedAt: 'desc' },
+            ],
         });
-        let formattedContext = '';
-        let usedTokens = 0;
-        for (const memory of memories) {
-            const memoryText = this.formatMemoryForContext(memory);
-            const estimatedTokens = this.estimateTokens(memoryText);
-            if (usedTokens + estimatedTokens <= maxTokens) {
-                formattedContext += memoryText + '\n\n';
-                usedTokens += estimatedTokens;
-            }
-            else {
-                break;
-            }
-        }
+        const scoredMemories = memories.map(memory => {
+            const score = this.calculateRelevanceScore(memory, keywords);
+            return {
+                ...this.formatMemory(memory),
+                relevanceScore: score,
+            };
+        });
+        scoredMemories.sort((a, b) => b.relevanceScore - a.relevanceScore);
         return {
-            formattedContext,
-            usedTokens,
-            memoryCount: memories.length,
-            novelInfo: {
-                id: novel.id,
-                title: novel.title,
-                genre: novel.genre,
-                wordCount: novel.wordCount,
-                chapterCount: novel.chapterCount,
+            success: true,
+            data: scoredMemories.filter(m => m.relevanceScore > 0),
+        };
+    }
+    async getMemoryStats(userId, novelId) {
+        await this.validateNovelAccess(userId, novelId);
+        const [total, byType, avgImportance] = await Promise.all([
+            this.prisma.novelMemory.count({
+                where: { novelId },
+            }),
+            this.prisma.novelMemory.groupBy({
+                by: ['memoryType'],
+                where: { novelId },
+                _count: true,
+            }),
+            this.prisma.novelMemory.aggregate({
+                where: { novelId },
+                _avg: {
+                    importance: true,
+                },
+            }),
+        ]);
+        return {
+            success: true,
+            data: {
+                total,
+                byType: byType.reduce((acc, item) => {
+                    acc[item.memoryType] = item._count;
+                    return acc;
+                }, {}),
+                averageImportance: avgImportance._avg.importance || 0,
             },
         };
     }
-    async updateChapterSummary(novelId, userId, chapterNumber, summary, keyEvents = []) {
+    async validateNovelAccess(userId, novelId) {
         const novel = await this.prisma.novel.findFirst({
-            where: { id: novelId, userId },
-        });
-        if (!novel) {
-            throw new common_1.NotFoundException('小说不存在或无权访问');
-        }
-        let summaryMemory = await this.prisma.novelMemory.findFirst({
             where: {
-                novelId,
-                memoryType: client_1.MemoryType.SUMMARY,
-                chapterRange: chapterNumber.toString(),
+                id: novelId,
+                userId,
             },
         });
-        const summaryContent = {
-            chapterNumber,
-            summary,
-            keyEvents,
-            wordCount: this.estimateTokens(summary),
-            updatedAt: new Date().toISOString(),
-        };
-        if (summaryMemory) {
-            summaryMemory = await this.prisma.novelMemory.update({
-                where: { id: summaryMemory.id },
-                data: {
-                    content: summaryContent,
-                    tokenCost: this.estimateTokens(summary),
-                    importance: this.calculateSummaryImportance(chapterNumber, keyEvents),
+        if (!novel) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '小说不存在或无权访问',
+                error: 'NOVEL_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        return novel;
+    }
+    async extractMemoriesFromChapters(chapters, extractType) {
+        const memories = [];
+        for (const chapter of chapters) {
+            const content = chapter.content || '';
+            const summary = content.slice(0, 500);
+            const keywords = this.extractKeywords(content);
+            memories.push({
+                memoryType: extractType,
+                content: {
+                    title: `${chapter.title} - 核心记忆`,
+                    description: summary,
+                    keywords,
+                    source: chapter.title,
                 },
+                importance: 0.7,
+                chapterRange: chapter.orderNum.toString(),
             });
         }
-        else {
-            summaryMemory = await this.prisma.novelMemory.create({
-                data: {
-                    novelId,
-                    memoryType: client_1.MemoryType.SUMMARY,
-                    content: summaryContent,
-                    chapterRange: chapterNumber.toString(),
-                    tokenCost: this.estimateTokens(summary),
-                    importance: this.calculateSummaryImportance(chapterNumber, keyEvents),
-                },
-            });
-        }
-        return summaryMemory;
+        return memories;
     }
-    async removeMany(novelId, userId, memoryIds) {
-        const novel = await this.prisma.novel.findFirst({
-            where: { id: novelId, userId },
-        });
-        if (!novel) {
-            throw new common_1.NotFoundException('小说不存在或无权访问');
-        }
-        const result = await this.prisma.novelMemory.deleteMany({
-            where: {
-                id: { in: memoryIds },
-                novelId,
-            },
-        });
-        return {
-            deleted: result.count,
-            message: `已删除${result.count}个记忆项`,
-        };
+    extractKeywords(text) {
+        const cleanText = text.replace(/[，。！？；：""''（）【】《》、]/g, ' ');
+        const words = cleanText.split(/\s+/).filter(w => w.length > 1);
+        const wordCount = words.reduce((acc, word) => {
+            acc[word] = (acc[word] || 0) + 1;
+            return acc;
+        }, {});
+        return Object.entries(wordCount)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 10)
+            .map(([word]) => word);
     }
-    async cleanupMemories(novelId, userId, options = {}) {
-        const novel = await this.prisma.novel.findFirst({
-            where: { id: novelId, userId },
-        });
-        if (!novel) {
-            throw new common_1.NotFoundException('小说不存在或无权访问');
-        }
-        const { minImportance = 0.1, maxAge = 30, preserveCore = true } = options;
-        const where = { novelId };
-        const conditions = [];
-        if (minImportance > 0) {
-            conditions.push({ importance: { lt: minImportance } });
-        }
-        if (maxAge > 0) {
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - maxAge);
-            conditions.push({ createdAt: { lt: cutoffDate } });
-        }
-        if (preserveCore) {
-            where.memoryType = { not: client_1.MemoryType.CORE };
-        }
-        if (conditions.length > 0) {
-            where.OR = conditions;
-        }
-        const result = await this.prisma.novelMemory.deleteMany({ where });
-        return {
-            cleaned: result.count,
-            message: `已清理${result.count}个记忆项`,
-        };
-    }
-    formatMemoryForContext(memory) {
-        let formatted = `[${memory.memoryType}记忆]`;
-        if (memory.chapterRange) {
-            formatted += ` (章节${memory.chapterRange})`;
-        }
-        formatted += '\n';
-        try {
-            const content = memory.content;
-            switch (memory.memoryType) {
-                case client_1.MemoryType.CORE:
-                    if (content.coreMemory) {
-                        if (content.coreMemory.characters && content.coreMemory.characters.length > 0) {
-                            formatted += '主要角色：\n';
-                            content.coreMemory.characters.forEach((char) => {
-                                formatted += `- ${char.name}：${char.keyTraits?.join('、') || ''}\n`;
-                            });
-                        }
-                        if (content.coreMemory.mainPlot) {
-                            formatted += `主线情节：${content.coreMemory.mainPlot.premise || ''}\n`;
-                        }
-                        if (content.coreMemory.worldSetting?.coreRules?.length > 0) {
-                            formatted += `世界规则：${content.coreMemory.worldSetting.coreRules.join('；')}\n`;
-                        }
-                    }
-                    break;
-                case client_1.MemoryType.SUMMARY:
-                    if (content.summary) {
-                        formatted += `摘要：${content.summary}\n`;
-                    }
-                    if (content.keyEvents && content.keyEvents.length > 0) {
-                        formatted += `关键事件：${content.keyEvents.join('；')}\n`;
-                    }
-                    break;
-                case client_1.MemoryType.CONTEXT:
-                    if (content.recentChapters && content.recentChapters.length > 0) {
-                        formatted += '近期章节：\n';
-                        content.recentChapters.forEach((chapter) => {
-                            formatted += `- 第${chapter.chapterNumber}章：${chapter.summary || ''}\n`;
-                        });
-                    }
-                    break;
-                default:
-                    formatted += JSON.stringify(content, null, 2);
-            }
-        }
-        catch (error) {
-            formatted += '记忆格式错误';
-        }
-        return formatted;
-    }
-    estimateTokens(text) {
-        if (!text || typeof text !== 'string')
+    calculateRelevanceScore(memory, keywords) {
+        if (!keywords || keywords.length === 0) {
             return 0;
-        const cleanText = text.replace(/<[^>]*>/g, '');
-        const chineseChars = (cleanText.match(/[\u4e00-\u9fff]/g) || []).length;
-        const otherChars = cleanText.length - chineseChars;
-        return Math.ceil(chineseChars * 0.75 + otherChars / 4);
+        }
+        const content = JSON.stringify(memory.content).toLowerCase();
+        let score = 0;
+        for (const keyword of keywords) {
+            const lowerKeyword = keyword.toLowerCase();
+            const occurrences = (content.match(new RegExp(lowerKeyword, 'g')) || []).length;
+            score += occurrences;
+        }
+        const importanceWeight = parseFloat(memory.importance.toString());
+        score = score * (1 + importanceWeight);
+        return score;
     }
-    calculateSummaryImportance(chapterNumber, keyEvents) {
-        let importance = 0.5;
-        if (chapterNumber <= 3)
-            importance += 0.2;
-        else if (chapterNumber <= 10)
-            importance += 0.1;
-        importance += Math.min(0.3, keyEvents.length * 0.05);
-        return Math.min(1.0, importance);
+    formatMemory(memory) {
+        return {
+            id: memory.id,
+            novelId: memory.novelId,
+            memoryType: memory.memoryType,
+            content: memory.content,
+            importance: parseFloat(memory.importance.toString()),
+            chapterRange: memory.chapterRange,
+            tokenCost: memory.tokenCost,
+            createdAt: memory.createdAt,
+            updatedAt: memory.updatedAt,
+        };
     }
 };
 exports.MemoryService = MemoryService;
@@ -2060,7 +2945,279 @@ exports.MemoryService = MemoryService = __decorate([
 
 
 /***/ }),
-/* 29 */
+/* 31 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e, _f;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ScoreMemoryDto = exports.ExtractMemoriesDto = exports.QueryMemoriesDto = exports.UpdateMemoryDto = exports.CreateMemoryDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
+const class_transformer_1 = __webpack_require__(32);
+class CreateMemoryDto {
+}
+exports.CreateMemoryDto = CreateMemoryDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说ID不能为空' }),
+    __metadata("design:type", String)
+], CreateMemoryDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '记忆类型',
+        enum: client_1.MemoryType,
+        example: 'CORE'
+    }),
+    (0, class_validator_1.IsEnum)(client_1.MemoryType, { message: '记忆类型无效' }),
+    __metadata("design:type", typeof (_a = typeof client_1.MemoryType !== "undefined" && client_1.MemoryType) === "function" ? _a : Object)
+], CreateMemoryDto.prototype, "memoryType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '记忆内容（JSON格式）',
+        example: {
+            title: '主角背景设定',
+            description: '主角出生在一个小村庄...',
+            tags: ['主角', '背景']
+        }
+    }),
+    (0, class_validator_1.IsObject)({ message: '内容必须是对象' }),
+    __metadata("design:type", typeof (_b = typeof Record !== "undefined" && Record) === "function" ? _b : Object)
+], CreateMemoryDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '重要性评分（0-1）',
+        example: 0.8,
+        minimum: 0,
+        maximum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '重要性必须是数字' }),
+    (0, class_validator_1.Min)(0, { message: '重要性不能小于0' }),
+    (0, class_validator_1.Max)(1, { message: '重要性不能大于1' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], CreateMemoryDto.prototype, "importance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节范围（如：1-5）',
+        example: '1-5'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '章节范围必须是字符串' }),
+    __metadata("design:type", String)
+], CreateMemoryDto.prototype, "chapterRange", void 0);
+class UpdateMemoryDto {
+}
+exports.UpdateMemoryDto = UpdateMemoryDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '记忆类型',
+        enum: client_1.MemoryType
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.MemoryType, { message: '记忆类型无效' }),
+    __metadata("design:type", typeof (_c = typeof client_1.MemoryType !== "undefined" && client_1.MemoryType) === "function" ? _c : Object)
+], UpdateMemoryDto.prototype, "memoryType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '记忆内容（JSON格式）'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)({ message: '内容必须是对象' }),
+    __metadata("design:type", typeof (_d = typeof Record !== "undefined" && Record) === "function" ? _d : Object)
+], UpdateMemoryDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '重要性评分（0-1）',
+        minimum: 0,
+        maximum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '重要性必须是数字' }),
+    (0, class_validator_1.Min)(0, { message: '重要性不能小于0' }),
+    (0, class_validator_1.Max)(1, { message: '重要性不能大于1' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], UpdateMemoryDto.prototype, "importance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节范围'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '章节范围必须是字符串' }),
+    __metadata("design:type", String)
+], UpdateMemoryDto.prototype, "chapterRange", void 0);
+class QueryMemoriesDto {
+    constructor() {
+        this.page = 1;
+        this.pageSize = 20;
+    }
+}
+exports.QueryMemoriesDto = QueryMemoriesDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '记忆类型筛选',
+        enum: client_1.MemoryType
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.MemoryType, { message: '记忆类型无效' }),
+    __metadata("design:type", typeof (_e = typeof client_1.MemoryType !== "undefined" && client_1.MemoryType) === "function" ? _e : Object)
+], QueryMemoriesDto.prototype, "memoryType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '关键词搜索'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '关键词必须是字符串' }),
+    __metadata("design:type", String)
+], QueryMemoriesDto.prototype, "keyword", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '最小重要性',
+        minimum: 0,
+        maximum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '最小重要性必须是数字' }),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(1),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryMemoriesDto.prototype, "minImportance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '页码',
+        example: 1,
+        minimum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '页码必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '页码不能小于1' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryMemoriesDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '每页数量',
+        example: 20,
+        minimum: 1,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '每页数量必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '每页数量不能小于1' }),
+    (0, class_validator_1.Max)(100, { message: '每页数量不能大于100' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryMemoriesDto.prototype, "pageSize", void 0);
+class ExtractMemoriesDto {
+}
+exports.ExtractMemoriesDto = ExtractMemoriesDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说ID不能为空' }),
+    __metadata("design:type", String)
+], ExtractMemoriesDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '章节ID列表',
+        example: ['cm111', 'cm222']
+    }),
+    (0, class_validator_1.IsString)({ each: true, message: '章节ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '章节ID列表不能为空' }),
+    __metadata("design:type", Array)
+], ExtractMemoriesDto.prototype, "chapterIds", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '提取类型',
+        enum: client_1.MemoryType
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.MemoryType),
+    __metadata("design:type", typeof (_f = typeof client_1.MemoryType !== "undefined" && client_1.MemoryType) === "function" ? _f : Object)
+], ExtractMemoriesDto.prototype, "extractType", void 0);
+class ScoreMemoryDto {
+}
+exports.ScoreMemoryDto = ScoreMemoryDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '记忆ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '记忆ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '记忆ID不能为空' }),
+    __metadata("design:type", String)
+], ScoreMemoryDto.prototype, "memoryId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '新的重要性评分',
+        example: 0.9,
+        minimum: 0,
+        maximum: 1
+    }),
+    (0, class_validator_1.IsNumber)({}, { message: '评分必须是数字' }),
+    (0, class_validator_1.Min)(0, { message: '评分不能小于0' }),
+    (0, class_validator_1.Max)(1, { message: '评分不能大于1' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], ScoreMemoryDto.prototype, "importance", void 0);
+
+
+/***/ }),
+/* 32 */
+/***/ ((module) => {
+
+module.exports = require("class-transformer");
+
+/***/ }),
+/* 33 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SuggestionModule = void 0;
+const common_1 = __webpack_require__(3);
+const suggestion_controller_1 = __webpack_require__(34);
+const suggestion_service_1 = __webpack_require__(35);
+let SuggestionModule = class SuggestionModule {
+};
+exports.SuggestionModule = SuggestionModule;
+exports.SuggestionModule = SuggestionModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [suggestion_controller_1.SuggestionController],
+        providers: [suggestion_service_1.SuggestionService],
+        exports: [suggestion_service_1.SuggestionService],
+    })
+], SuggestionModule);
+
+
+/***/ }),
+/* 34 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2076,165 +3233,342 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d;
+var _a, _b, _c, _d, _e, _f, _g;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MemoryController = void 0;
+exports.SuggestionController = void 0;
 const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
 const guards_1 = __webpack_require__(16);
-const memory_service_1 = __webpack_require__(28);
-const create_memory_dto_1 = __webpack_require__(30);
-const client_1 = __webpack_require__(12);
-let MemoryController = class MemoryController {
-    constructor(memoryService) {
-        this.memoryService = memoryService;
+const suggestion_service_1 = __webpack_require__(35);
+const suggestion_dto_1 = __webpack_require__(36);
+let SuggestionController = class SuggestionController {
+    constructor(suggestionService) {
+        this.suggestionService = suggestionService;
     }
-    async create(novelId, req, createMemoryDto) {
-        return this.memoryService.create(novelId, req.user.id, createMemoryDto);
+    async createSuggestion(req, dto) {
+        return this.suggestionService.createSuggestion(req.user.id, dto);
     }
-    async findAll(novelId, req, memoryType, limit, orderBy) {
-        const options = {
-            memoryType,
-            limit: limit ? parseInt(limit, 10) : undefined,
-            orderBy,
-        };
-        return this.memoryService.findAll(novelId, req.user.id, options);
+    async generateSuggestions(req, dto) {
+        return this.suggestionService.generateSuggestions(req.user.id, dto);
     }
-    async findOne(id, req) {
-        return this.memoryService.findOne(id, req.user.id);
+    async getSuggestions(req, novelId, query) {
+        return this.suggestionService.getSuggestions(req.user.id, novelId, query);
     }
-    async update(id, req, updateData) {
-        return this.memoryService.update(id, req.user.id, updateData);
+    async getSuggestion(req, id) {
+        return this.suggestionService.getSuggestion(req.user.id, id);
     }
-    async remove(id, req) {
-        return this.memoryService.remove(id, req.user.id);
+    async adoptSuggestion(req, dto) {
+        return this.suggestionService.adoptSuggestion(req.user.id, dto);
     }
-    async initializeMemory(novelId, req, basicInfo) {
-        return this.memoryService.initializeNovelMemory(novelId, req.user.id, basicInfo);
+    async rateSuggestion(req, dto) {
+        return this.suggestionService.rateSuggestion(req.user.id, dto);
     }
-    async getGenerationContext(novelId, req, maxTokens, chapterContext, includeTypes) {
-        const options = {};
-        if (maxTokens)
-            options.maxTokens = parseInt(maxTokens, 10);
-        if (chapterContext)
-            options.chapterContext = chapterContext;
-        if (includeTypes) {
-            options.includeTypes = includeTypes.split(',');
-        }
-        return this.memoryService.getGenerationContext(novelId, req.user.id, options);
+    async deleteSuggestion(req, id) {
+        return this.suggestionService.deleteSuggestion(req.user.id, id);
     }
-    async updateChapterSummary(novelId, chapterNumber, req, body) {
-        return this.memoryService.updateChapterSummary(novelId, req.user.id, parseInt(chapterNumber, 10), body.summary, body.keyEvents);
+    async bulkDeleteSuggestions(req, novelId, dto) {
+        return this.suggestionService.bulkDeleteSuggestions(req.user.id, novelId, dto.suggestionIds);
     }
-    async removeMany(novelId, req, body) {
-        return this.memoryService.removeMany(novelId, req.user.id, body.memoryIds);
-    }
-    async cleanup(novelId, req, options) {
-        return this.memoryService.cleanupMemories(novelId, req.user.id, options);
+    async getSuggestionStats(req, novelId) {
+        return this.suggestionService.getSuggestionStats(req.user.id, novelId);
     }
 };
-exports.MemoryController = MemoryController;
+exports.SuggestionController = SuggestionController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Param)('novelId')),
-    __param(1, (0, common_1.Request)()),
+    (0, common_1.Post)('suggestions'),
+    (0, swagger_1.ApiOperation)({
+        summary: '创建写作建议',
+        description: '手动创建一条写作建议'
+    }),
+    (0, swagger_1.ApiBody)({ type: suggestion_dto_1.CreateSuggestionDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '建议创建成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        title: { type: 'string' },
+                        content: { type: 'string' },
+                        dimension: { type: 'string', example: 'PLOT' },
+                        priority: { type: 'number', example: 75 }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof suggestion_dto_1.CreateSuggestionDto !== "undefined" && suggestion_dto_1.CreateSuggestionDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], SuggestionController.prototype, "createSuggestion", null);
+__decorate([
+    (0, common_1.Post)('suggestions/generate'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'AI生成写作建议',
+        description: '使用AI分析小说内容并生成多维度的写作建议'
+    }),
+    (0, swagger_1.ApiBody)({ type: suggestion_dto_1.GenerateSuggestionsDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '建议生成成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        generated: { type: 'number', example: 5 },
+                        suggestions: {
+                            type: 'array',
+                            items: { type: 'object' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof suggestion_dto_1.GenerateSuggestionsDto !== "undefined" && suggestion_dto_1.GenerateSuggestionsDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], SuggestionController.prototype, "generateSuggestions", null);
+__decorate([
+    (0, common_1.Get)('suggestions/novel/:novelId'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取小说的建议列表',
+        description: '获取指定小说的所有写作建议，支持筛选和分页'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiQuery)({ name: 'suggestionType', required: false, description: '建议类型' }),
+    (0, swagger_1.ApiQuery)({ name: 'dimension', required: false, description: '建议维度' }),
+    (0, swagger_1.ApiQuery)({ name: 'onlyPending', required: false, description: '只显示未采纳' }),
+    (0, swagger_1.ApiQuery)({ name: 'minPriority', required: false, description: '最小优先级' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, description: '页码' }),
+    (0, swagger_1.ApiQuery)({ name: 'pageSize', required: false, description: '每页数量' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        items: {
+                            type: 'array',
+                            items: { type: 'object' }
+                        },
+                        pagination: {
+                            type: 'object',
+                            properties: {
+                                page: { type: 'number' },
+                                pageSize: { type: 'number' },
+                                total: { type: 'number' },
+                                totalPages: { type: 'number' }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __param(2, (0, common_1.Query)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_d = typeof suggestion_dto_1.QuerySuggestionsDto !== "undefined" && suggestion_dto_1.QuerySuggestionsDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], SuggestionController.prototype, "getSuggestions", null);
+__decorate([
+    (0, common_1.Get)('suggestions/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取单个建议',
+        description: '获取指定ID的建议详情'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '建议ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '无权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '建议不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], SuggestionController.prototype, "getSuggestion", null);
+__decorate([
+    (0, common_1.Post)('suggestions/adopt'),
+    (0, swagger_1.ApiOperation)({
+        summary: '采纳建议',
+        description: '标记建议为已采纳，并可以提供反馈和评分'
+    }),
+    (0, swagger_1.ApiBody)({ type: suggestion_dto_1.AdoptSuggestionDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '采纳成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '建议不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_e = typeof suggestion_dto_1.AdoptSuggestionDto !== "undefined" && suggestion_dto_1.AdoptSuggestionDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], SuggestionController.prototype, "adoptSuggestion", null);
+__decorate([
+    (0, common_1.Post)('suggestions/rate'),
+    (0, swagger_1.ApiOperation)({
+        summary: '评价建议',
+        description: '对建议进行评分和反馈'
+    }),
+    (0, swagger_1.ApiBody)({ type: suggestion_dto_1.RateSuggestionDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '评价成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '建议不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_f = typeof suggestion_dto_1.RateSuggestionDto !== "undefined" && suggestion_dto_1.RateSuggestionDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], SuggestionController.prototype, "rateSuggestion", null);
+__decorate([
+    (0, common_1.Delete)('suggestions/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '删除建议',
+        description: '删除指定的建议'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '建议ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '删除成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '无权删除' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '建议不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], SuggestionController.prototype, "deleteSuggestion", null);
+__decorate([
+    (0, common_1.Post)('suggestions/novel/:novelId/bulk-delete'),
+    (0, swagger_1.ApiOperation)({
+        summary: '批量删除建议',
+        description: '批量删除指定小说的多条建议'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiBody)({ type: suggestion_dto_1.BulkSuggestionDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '批量删除成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        deleted: { type: 'number', example: 5 }
+                    }
+                },
+                message: { type: 'string', example: '成功删除5条建议' }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
     __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, typeof (_b = typeof create_memory_dto_1.CreateMemoryDto !== "undefined" && create_memory_dto_1.CreateMemoryDto) === "function" ? _b : Object]),
+    __metadata("design:paramtypes", [Object, String, typeof (_g = typeof suggestion_dto_1.BulkSuggestionDto !== "undefined" && suggestion_dto_1.BulkSuggestionDto) === "function" ? _g : Object]),
     __metadata("design:returntype", Promise)
-], MemoryController.prototype, "create", null);
+], SuggestionController.prototype, "bulkDeleteSuggestions", null);
 __decorate([
-    (0, common_1.Get)(),
-    __param(0, (0, common_1.Param)('novelId')),
-    __param(1, (0, common_1.Request)()),
-    __param(2, (0, common_1.Query)('type')),
-    __param(3, (0, common_1.Query)('limit')),
-    __param(4, (0, common_1.Query)('orderBy')),
+    (0, common_1.Get)('suggestions/novel/:novelId/stats'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取建议统计',
+        description: '获取小说建议的统计信息'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'number', example: 42 },
+                        adopted: { type: 'number', example: 15 },
+                        pending: { type: 'number', example: 27 },
+                        adoptionRate: { type: 'string', example: '35.71%' },
+                        byDimension: {
+                            type: 'object',
+                            properties: {
+                                PLOT: { type: 'number' },
+                                CHARACTER: { type: 'number' },
+                                PACING: { type: 'number' }
+                            }
+                        },
+                        averageRating: { type: 'number', example: 4.2 }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '小说不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, typeof (_c = typeof client_1.MemoryType !== "undefined" && client_1.MemoryType) === "function" ? _c : Object, String, String]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
-], MemoryController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, typeof (_d = typeof Partial !== "undefined" && Partial) === "function" ? _d : Object]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "remove", null);
-__decorate([
-    (0, common_1.Post)('initialize'),
-    __param(0, (0, common_1.Param)('novelId')),
-    __param(1, (0, common_1.Request)()),
-    __param(2, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, Object]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "initializeMemory", null);
-__decorate([
-    (0, common_1.Get)('context/generation'),
-    __param(0, (0, common_1.Param)('novelId')),
-    __param(1, (0, common_1.Request)()),
-    __param(2, (0, common_1.Query)('maxTokens')),
-    __param(3, (0, common_1.Query)('chapterContext')),
-    __param(4, (0, common_1.Query)('includeTypes')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, String, String, String]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "getGenerationContext", null);
-__decorate([
-    (0, common_1.Post)('chapters/:chapterNumber/summary'),
-    __param(0, (0, common_1.Param)('novelId')),
-    __param(1, (0, common_1.Param)('chapterNumber')),
-    __param(2, (0, common_1.Request)()),
-    __param(3, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, Object, Object]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "updateChapterSummary", null);
-__decorate([
-    (0, common_1.Delete)('batch'),
-    __param(0, (0, common_1.Param)('novelId')),
-    __param(1, (0, common_1.Request)()),
-    __param(2, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, Object]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "removeMany", null);
-__decorate([
-    (0, common_1.Post)('cleanup'),
-    __param(0, (0, common_1.Param)('novelId')),
-    __param(1, (0, common_1.Request)()),
-    __param(2, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, Object]),
-    __metadata("design:returntype", Promise)
-], MemoryController.prototype, "cleanup", null);
-exports.MemoryController = MemoryController = __decorate([
-    (0, common_1.Controller)('novels/:novelId/memories'),
+], SuggestionController.prototype, "getSuggestionStats", null);
+exports.SuggestionController = SuggestionController = __decorate([
+    (0, swagger_1.ApiTags)('写作建议'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [typeof (_a = typeof memory_service_1.MemoryService !== "undefined" && memory_service_1.MemoryService) === "function" ? _a : Object])
-], MemoryController);
+    __metadata("design:paramtypes", [typeof (_a = typeof suggestion_service_1.SuggestionService !== "undefined" && suggestion_service_1.SuggestionService) === "function" ? _a : Object])
+], SuggestionController);
 
 
 /***/ }),
-/* 30 */
+/* 35 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2249,149 +3583,813 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CreateMemoryDto = void 0;
-const class_validator_1 = __webpack_require__(20);
-const swagger_1 = __webpack_require__(4);
+exports.SuggestionService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
 const client_1 = __webpack_require__(12);
-class CreateMemoryDto {
-    constructor() {
-        this.importance = 0.5;
-        this.tokenCost = 0;
+let SuggestionService = class SuggestionService {
+    constructor(prisma) {
+        this.prisma = prisma;
     }
-}
-exports.CreateMemoryDto = CreateMemoryDto;
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: '记忆类型',
-        enum: client_1.MemoryType,
-        example: client_1.MemoryType.CORE,
-        enumName: 'MemoryType'
-    }),
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsEnum)(client_1.MemoryType),
-    __metadata("design:type", typeof (_a = typeof client_1.MemoryType !== "undefined" && client_1.MemoryType) === "function" ? _a : Object)
-], CreateMemoryDto.prototype, "memoryType", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: '记忆内容(JSON对象，根据类型存储不同结构的数据)',
-        type: 'object',
-        examples: {
-            core_character: {
-                summary: '核心角色记忆示例',
-                value: {
-                    type: 'character_profile',
-                    character: '艾莉亚',
-                    details: {
-                        name: '艾莉亚·晨光',
-                        age: 18,
-                        appearance: '长发飘逸，眼神坚定，身材修长',
-                        personality: '勇敢、好奇心强、有强烈的正义感',
-                        background: '北方小村庄的普通少女，在18岁时觉醒了强大的魔法能力',
-                        abilities: ['火系魔法', '治愈术', '敏锐的直觉'],
-                        relationships: {
-                            '萨姆': '青梅竹马，最信任的伙伴',
-                            '梅林教授': '魔法导师，亦师亦父'
-                        },
-                        goals: ['掌握自己的魔法力量', '保护所爱的人', '寻找生命的真谛'],
-                        fears: ['失控的力量伤害他人', '辜负大家的期望']
-                    }
-                }
+    async createSuggestion(userId, dto) {
+        await this.validateNovelAccess(userId, dto.novelId);
+        if (dto.chapterId) {
+            await this.validateChapterAccess(userId, dto.chapterId, dto.novelId);
+        }
+        const suggestion = await this.prisma.writingSuggestion.create({
+            data: {
+                novelId: dto.novelId,
+                chapterId: dto.chapterId,
+                userId,
+                suggestionType: dto.suggestionType,
+                dimension: dto.dimension,
+                title: dto.title,
+                content: dto.content,
+                priority: dto.priority || 50,
+                context: dto.context,
             },
-            summary_plot: {
-                summary: '情节摘要记忆示例',
-                value: {
-                    type: 'plot_summary',
-                    chapters: '1-3',
-                    summary: '艾莉亚觉醒魔法能力后进入学院学习，结识了室友莉娜和导师梅林教授，在第一次魔法课上展现出惊人天赋，但也引起了同学的嫉妒',
-                    key_events: [
-                        '魔法觉醒',
-                        '进入魔法学院',
-                        '遇见室友莉娜',
-                        '梅林教授的第一课',
-                        '展现魔法天赋'
-                    ],
-                    character_development: '从紧张不安到逐渐适应学院生活',
-                    conflicts: ['同学的嫉妒和排斥', '对自己力量的恐惧'],
-                    resolutions: ['通过努力获得认可', '学会控制魔法力量']
-                }
+        });
+        return {
+            success: true,
+            data: this.formatSuggestion(suggestion),
+        };
+    }
+    async generateSuggestions(userId, dto) {
+        const novel = await this.validateNovelAccess(userId, dto.novelId);
+        let chapters = [];
+        if (dto.chapterIds && dto.chapterIds.length > 0) {
+            chapters = await this.prisma.chapter.findMany({
+                where: {
+                    id: { in: dto.chapterIds },
+                    novelId: dto.novelId,
+                    isDeleted: false,
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    content: true,
+                    wordCount: true,
+                    chapterNumber: true,
+                },
+                orderBy: {
+                    chapterNumber: 'asc',
+                },
+            });
+        }
+        else {
+            chapters = await this.prisma.chapter.findMany({
+                where: {
+                    novelId: dto.novelId,
+                    isDeleted: false,
+                },
+                select: {
+                    id: true,
+                    title: true,
+                    content: true,
+                    wordCount: true,
+                    chapterNumber: true,
+                },
+                orderBy: {
+                    chapterNumber: 'desc',
+                },
+                take: 5,
+            });
+        }
+        const generatedSuggestions = await this.generateSuggestionsForNovel(novel, chapters, dto.dimensions, dto.count || 5);
+        const savedSuggestions = await Promise.all(generatedSuggestions.map(suggestion => this.prisma.writingSuggestion.create({
+            data: {
+                novelId: dto.novelId,
+                userId,
+                suggestionType: client_1.SuggestionType.AUTO,
+                dimension: suggestion.dimension,
+                title: suggestion.title,
+                content: suggestion.content,
+                priority: suggestion.priority,
+                context: suggestion.context,
+                aiModel: 'analysis-engine-v1',
             },
-            context_world: {
-                summary: '世界观上下文记忆示例',
-                value: {
-                    type: 'world_context',
-                    location: '魔法学院',
-                    description: '大陆最权威的魔法教育机构，坐落在圣山之巅，建筑宏伟，充满魔法气息',
-                    atmosphere: '庄严神圣，但又充满活力和希望',
-                    important_npcs: [
-                        {
-                            name: '梅林教授',
-                            role: '魔法基础理论教师',
-                            personality: '慈祥睿智，对学生要求严格但关爱有加'
+        })));
+        return {
+            success: true,
+            data: {
+                generated: savedSuggestions.length,
+                suggestions: savedSuggestions.map(s => this.formatSuggestion(s)),
+            },
+        };
+    }
+    async getSuggestions(userId, novelId, query) {
+        await this.validateNovelAccess(userId, novelId);
+        const where = {
+            novelId,
+            userId,
+        };
+        if (query.suggestionType) {
+            where.suggestionType = query.suggestionType;
+        }
+        if (query.dimension) {
+            where.dimension = query.dimension;
+        }
+        if (query.onlyPending) {
+            where.isAdopted = false;
+        }
+        if (query.minPriority !== undefined) {
+            where.priority = {
+                gte: query.minPriority,
+            };
+        }
+        const page = query.page || 1;
+        const pageSize = query.pageSize || 20;
+        const skip = (page - 1) * pageSize;
+        const [suggestions, total] = await Promise.all([
+            this.prisma.writingSuggestion.findMany({
+                where,
+                skip,
+                take: pageSize,
+                orderBy: [
+                    { priority: 'desc' },
+                    { createdAt: 'desc' },
+                ],
+                include: {
+                    chapter: {
+                        select: {
+                            id: true,
+                            title: true,
+                            chapterNumber: true,
                         },
-                        {
-                            name: '院长',
-                            role: '学院最高管理者',
-                            mystery: '传说中的大魔法师，很少露面'
-                        }
-                    ],
-                    rules_and_customs: [
-                        '学院内禁止私斗',
-                        '每周进行魔法测试',
-                        '优秀学生可获得特殊指导'
-                    ],
-                    secrets: '学院地下隐藏着古代魔法遗迹'
-                }
+                    },
+                },
+            }),
+            this.prisma.writingSuggestion.count({ where }),
+        ]);
+        return {
+            success: true,
+            data: {
+                items: suggestions.map(s => this.formatSuggestion(s)),
+                pagination: {
+                    page,
+                    pageSize,
+                    total,
+                    totalPages: Math.ceil(total / pageSize),
+                },
+            },
+        };
+    }
+    async getSuggestion(userId, suggestionId) {
+        const suggestion = await this.prisma.writingSuggestion.findUnique({
+            where: { id: suggestionId },
+            include: {
+                novel: {
+                    select: {
+                        id: true,
+                        title: true,
+                        userId: true,
+                    },
+                },
+                chapter: {
+                    select: {
+                        id: true,
+                        title: true,
+                        chapterNumber: true,
+                    },
+                },
+            },
+        });
+        if (!suggestion) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '建议不存在',
+                error: 'SUGGESTION_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        if (suggestion.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权访问此建议',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
+        return {
+            success: true,
+            data: this.formatSuggestion(suggestion),
+        };
+    }
+    async adoptSuggestion(userId, dto) {
+        const suggestion = await this.prisma.writingSuggestion.findUnique({
+            where: { id: dto.suggestionId },
+            include: {
+                novel: {
+                    select: {
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (!suggestion) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '建议不存在',
+                error: 'SUGGESTION_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        if (suggestion.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权操作此建议',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
+        const updated = await this.prisma.writingSuggestion.update({
+            where: { id: dto.suggestionId },
+            data: {
+                isAdopted: true,
+                adoptedAt: new Date(),
+                feedback: dto.feedback,
+                rating: dto.rating,
+            },
+        });
+        return {
+            success: true,
+            data: this.formatSuggestion(updated),
+            message: '建议已采纳',
+        };
+    }
+    async rateSuggestion(userId, dto) {
+        const suggestion = await this.prisma.writingSuggestion.findUnique({
+            where: { id: dto.suggestionId },
+            include: {
+                novel: {
+                    select: {
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (!suggestion) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '建议不存在',
+                error: 'SUGGESTION_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        if (suggestion.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权操作此建议',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
+        const updated = await this.prisma.writingSuggestion.update({
+            where: { id: dto.suggestionId },
+            data: {
+                rating: dto.rating,
+                feedback: dto.feedback,
+            },
+        });
+        return {
+            success: true,
+            data: this.formatSuggestion(updated),
+            message: '评价已保存',
+        };
+    }
+    async deleteSuggestion(userId, suggestionId) {
+        const suggestion = await this.prisma.writingSuggestion.findUnique({
+            where: { id: suggestionId },
+            include: {
+                novel: {
+                    select: {
+                        userId: true,
+                    },
+                },
+            },
+        });
+        if (!suggestion) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '建议不存在',
+                error: 'SUGGESTION_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        if (suggestion.novel.userId !== userId) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.FORBIDDEN,
+                message: '无权删除此建议',
+                error: 'FORBIDDEN',
+            }, common_1.HttpStatus.FORBIDDEN);
+        }
+        await this.prisma.writingSuggestion.delete({
+            where: { id: suggestionId },
+        });
+        return {
+            success: true,
+            message: '建议已删除',
+        };
+    }
+    async bulkDeleteSuggestions(userId, novelId, suggestionIds) {
+        await this.validateNovelAccess(userId, novelId);
+        const result = await this.prisma.writingSuggestion.deleteMany({
+            where: {
+                id: { in: suggestionIds },
+                novelId,
+                userId,
+            },
+        });
+        return {
+            success: true,
+            data: {
+                deleted: result.count,
+            },
+            message: `成功删除${result.count}条建议`,
+        };
+    }
+    async getSuggestionStats(userId, novelId) {
+        await this.validateNovelAccess(userId, novelId);
+        const [total, adopted, byDimension, avgRating] = await Promise.all([
+            this.prisma.writingSuggestion.count({
+                where: { novelId, userId },
+            }),
+            this.prisma.writingSuggestion.count({
+                where: { novelId, userId, isAdopted: true },
+            }),
+            this.prisma.writingSuggestion.groupBy({
+                by: ['dimension'],
+                where: { novelId, userId },
+                _count: true,
+            }),
+            this.prisma.writingSuggestion.aggregate({
+                where: { novelId, userId, rating: { not: null } },
+                _avg: {
+                    rating: true,
+                },
+            }),
+        ]);
+        return {
+            success: true,
+            data: {
+                total,
+                adopted,
+                pending: total - adopted,
+                adoptionRate: total > 0 ? ((adopted / total) * 100).toFixed(2) + '%' : '0%',
+                byDimension: byDimension.reduce((acc, item) => {
+                    acc[item.dimension] = item._count;
+                    return acc;
+                }, {}),
+                averageRating: avgRating._avg.rating || 0,
+            },
+        };
+    }
+    async validateNovelAccess(userId, novelId) {
+        const novel = await this.prisma.novel.findFirst({
+            where: {
+                id: novelId,
+                userId,
+            },
+        });
+        if (!novel) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '小说不存在或无权访问',
+                error: 'NOVEL_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        return novel;
+    }
+    async validateChapterAccess(userId, chapterId, novelId) {
+        const chapter = await this.prisma.chapter.findFirst({
+            where: {
+                id: chapterId,
+                novelId,
+                novel: {
+                    userId,
+                },
+            },
+        });
+        if (!chapter) {
+            throw new common_1.HttpException({
+                statusCode: common_1.HttpStatus.NOT_FOUND,
+                message: '章节不存在或无权访问',
+                error: 'CHAPTER_NOT_FOUND',
+            }, common_1.HttpStatus.NOT_FOUND);
+        }
+        return chapter;
+    }
+    async generateSuggestionsForNovel(novel, chapters, dimensions, count) {
+        const suggestions = [];
+        for (const dimension of dimensions) {
+            const dimensionSuggestions = await this.generateSuggestionsByDimension(novel, chapters, dimension);
+            suggestions.push(...dimensionSuggestions);
+            if (suggestions.length >= count) {
+                break;
             }
         }
-    }),
-    (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsObject)(),
-    __metadata("design:type", Object)
-], CreateMemoryDto.prototype, "content", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: '记忆重要性权重(0.0-1.0，越高越重要)',
-        example: 0.8,
-        minimum: 0,
-        maximum: 1,
-        default: 0.5
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
-    (0, class_validator_1.Max)(1),
-    __metadata("design:type", Number)
-], CreateMemoryDto.prototype, "importance", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: 'AI处理此记忆消耗的Token数量',
-        example: 150,
-        minimum: 0,
-        default: 0
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsNumber)(),
-    (0, class_validator_1.Min)(0),
-    __metadata("design:type", Number)
-], CreateMemoryDto.prototype, "tokenCost", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: '相关章节范围',
-        example: '1-5',
-        examples: {
-            single: { value: '3', summary: '单个章节' },
-            range: { value: '1-5', summary: '章节范围' },
-            multiple: { value: '1,3,5', summary: '多个章节' }
+        return suggestions.slice(0, count);
+    }
+    async generateSuggestionsByDimension(novel, chapters, dimension) {
+        const suggestions = [];
+        switch (dimension) {
+            case client_1.SuggestionDimension.PLOT:
+                suggestions.push({
+                    dimension,
+                    title: '加强故事主线',
+                    content: '建议在当前章节中明确故事的核心冲突，增强主线的吸引力。可以考虑引入一个关键的转折点或揭示重要信息。',
+                    priority: 80,
+                    context: {
+                        分析范围: `前${chapters.length}章`,
+                        当前字数: novel.wordCount,
+                    },
+                });
+                break;
+            case client_1.SuggestionDimension.CHARACTER:
+                suggestions.push({
+                    dimension,
+                    title: '深化角色塑造',
+                    content: '主要角色的性格特征可以更加立体。建议通过具体的行为、对话和内心独白来展现角色的复杂性，避免脸谱化。',
+                    priority: 75,
+                    context: {
+                        建议章节: chapters.map(c => c.title).join('、'),
+                    },
+                });
+                break;
+            case client_1.SuggestionDimension.PACING:
+                suggestions.push({
+                    dimension,
+                    title: '调整叙事节奏',
+                    content: '当前章节的叙事节奏可能略显平缓。建议在关键情节点加快节奏，在情感场景适当放慢，形成张弛有度的节奏感。',
+                    priority: 70,
+                    context: {
+                        分析章节数: chapters.length,
+                    },
+                });
+                break;
+            case client_1.SuggestionDimension.DIALOGUE:
+                suggestions.push({
+                    dimension,
+                    title: '优化对话质量',
+                    content: '对话可以更加生动自然。建议每个角色的说话方式都要有各自的特点，避免所有角色用同一种语气说话。',
+                    priority: 65,
+                    context: {},
+                });
+                break;
+            case client_1.SuggestionDimension.SCENE:
+                suggestions.push({
+                    dimension,
+                    title: '丰富场景描写',
+                    content: '场景描写可以更具画面感。建议运用五感描写（视觉、听觉、触觉、嗅觉、味觉）来增强场景的真实性和代入感。',
+                    priority: 60,
+                    context: {},
+                });
+                break;
+            default:
+                suggestions.push({
+                    dimension,
+                    title: `${dimension}相关建议`,
+                    content: '建议关注这个维度的表现，可以进一步优化和提升。',
+                    priority: 50,
+                    context: {},
+                });
         }
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateMemoryDto.prototype, "chapterRange", void 0);
+        return suggestions;
+    }
+    formatSuggestion(suggestion) {
+        return {
+            id: suggestion.id,
+            novelId: suggestion.novelId,
+            chapterId: suggestion.chapterId,
+            userId: suggestion.userId,
+            suggestionType: suggestion.suggestionType,
+            dimension: suggestion.dimension,
+            title: suggestion.title,
+            content: suggestion.content,
+            priority: suggestion.priority,
+            context: suggestion.context,
+            aiModel: suggestion.aiModel,
+            isAdopted: suggestion.isAdopted,
+            adoptedAt: suggestion.adoptedAt,
+            feedback: suggestion.feedback,
+            rating: suggestion.rating,
+            chapter: suggestion.chapter,
+            createdAt: suggestion.createdAt,
+            updatedAt: suggestion.updatedAt,
+        };
+    }
+};
+exports.SuggestionService = SuggestionService;
+exports.SuggestionService = SuggestionService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], SuggestionService);
 
 
 /***/ }),
-/* 31 */
+/* 36 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BulkSuggestionDto = exports.RateSuggestionDto = exports.AdoptSuggestionDto = exports.QuerySuggestionsDto = exports.GenerateSuggestionsDto = exports.CreateSuggestionDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
+const class_transformer_1 = __webpack_require__(32);
+class CreateSuggestionDto {
+}
+exports.CreateSuggestionDto = CreateSuggestionDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说ID不能为空' }),
+    __metadata("design:type", String)
+], CreateSuggestionDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节ID（可选，为空表示针对整部小说）',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '章节ID必须是字符串' }),
+    __metadata("design:type", String)
+], CreateSuggestionDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议类型',
+        enum: client_1.SuggestionType,
+        example: 'REQUESTED'
+    }),
+    (0, class_validator_1.IsEnum)(client_1.SuggestionType, { message: '建议类型无效' }),
+    __metadata("design:type", typeof (_a = typeof client_1.SuggestionType !== "undefined" && client_1.SuggestionType) === "function" ? _a : Object)
+], CreateSuggestionDto.prototype, "suggestionType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议维度',
+        enum: client_1.SuggestionDimension,
+        example: 'PLOT'
+    }),
+    (0, class_validator_1.IsEnum)(client_1.SuggestionDimension, { message: '建议维度无效' }),
+    __metadata("design:type", typeof (_b = typeof client_1.SuggestionDimension !== "undefined" && client_1.SuggestionDimension) === "function" ? _b : Object)
+], CreateSuggestionDto.prototype, "dimension", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议标题',
+        example: '加强主线剧情冲突'
+    }),
+    (0, class_validator_1.IsString)({ message: '标题必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '标题不能为空' }),
+    __metadata("design:type", String)
+], CreateSuggestionDto.prototype, "title", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议内容',
+        example: '当前剧情发展较为平缓，建议在第5章引入更强烈的冲突...'
+    }),
+    (0, class_validator_1.IsString)({ message: '内容必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '内容不能为空' }),
+    __metadata("design:type", String)
+], CreateSuggestionDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '优先级（0-100）',
+        example: 75,
+        minimum: 0,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '优先级必须是数字' }),
+    (0, class_validator_1.Min)(0, { message: '优先级不能小于0' }),
+    (0, class_validator_1.Max)(100, { message: '优先级不能大于100' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], CreateSuggestionDto.prototype, "priority", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '上下文信息（JSON格式）',
+        example: {
+            章节范围: '1-5',
+            相关角色: ['主角', '反派']
+        }
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)({ message: '上下文必须是对象' }),
+    __metadata("design:type", typeof (_c = typeof Record !== "undefined" && Record) === "function" ? _c : Object)
+], CreateSuggestionDto.prototype, "context", void 0);
+class GenerateSuggestionsDto {
+}
+exports.GenerateSuggestionsDto = GenerateSuggestionsDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说ID不能为空' }),
+    __metadata("design:type", String)
+], GenerateSuggestionsDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节ID列表（为空则分析整部小说）',
+        example: ['cm111', 'cm222']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)({ message: '章节ID必须是数组' }),
+    (0, class_validator_1.IsString)({ each: true, message: '每个章节ID必须是字符串' }),
+    __metadata("design:type", Array)
+], GenerateSuggestionsDto.prototype, "chapterIds", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议维度列表',
+        enum: client_1.SuggestionDimension,
+        isArray: true,
+        example: ['PLOT', 'CHARACTER', 'PACING']
+    }),
+    (0, class_validator_1.IsArray)({ message: '建议维度必须是数组' }),
+    (0, class_validator_1.IsEnum)(client_1.SuggestionDimension, { each: true, message: '建议维度无效' }),
+    __metadata("design:type", Array)
+], GenerateSuggestionsDto.prototype, "dimensions", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '生成建议数量',
+        example: 5,
+        minimum: 1,
+        maximum: 20
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '数量必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '数量不能小于1' }),
+    (0, class_validator_1.Max)(20, { message: '数量不能大于20' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], GenerateSuggestionsDto.prototype, "count", void 0);
+class QuerySuggestionsDto {
+    constructor() {
+        this.page = 1;
+        this.pageSize = 20;
+    }
+}
+exports.QuerySuggestionsDto = QuerySuggestionsDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '建议类型筛选',
+        enum: client_1.SuggestionType
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.SuggestionType, { message: '建议类型无效' }),
+    __metadata("design:type", typeof (_d = typeof client_1.SuggestionType !== "undefined" && client_1.SuggestionType) === "function" ? _d : Object)
+], QuerySuggestionsDto.prototype, "suggestionType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '建议维度筛选',
+        enum: client_1.SuggestionDimension
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.SuggestionDimension, { message: '建议维度无效' }),
+    __metadata("design:type", typeof (_e = typeof client_1.SuggestionDimension !== "undefined" && client_1.SuggestionDimension) === "function" ? _e : Object)
+], QuerySuggestionsDto.prototype, "dimension", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否只显示未采纳的建议',
+        example: true
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)({ message: '必须是布尔值' }),
+    (0, class_transformer_1.Type)(() => Boolean),
+    __metadata("design:type", Boolean)
+], QuerySuggestionsDto.prototype, "onlyPending", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '最小优先级',
+        minimum: 0,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '优先级必须是数字' }),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QuerySuggestionsDto.prototype, "minPriority", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '页码',
+        example: 1,
+        minimum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '页码必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '页码不能小于1' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QuerySuggestionsDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '每页数量',
+        example: 20,
+        minimum: 1,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '每页数量必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '每页数量不能小于1' }),
+    (0, class_validator_1.Max)(100, { message: '每页数量不能大于100' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QuerySuggestionsDto.prototype, "pageSize", void 0);
+class AdoptSuggestionDto {
+}
+exports.AdoptSuggestionDto = AdoptSuggestionDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '建议ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '建议ID不能为空' }),
+    __metadata("design:type", String)
+], AdoptSuggestionDto.prototype, "suggestionId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '用户反馈',
+        example: '这个建议很有帮助，已经按照建议修改了剧情'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '反馈必须是字符串' }),
+    __metadata("design:type", String)
+], AdoptSuggestionDto.prototype, "feedback", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '用户评分（1-5星）',
+        example: 5,
+        minimum: 1,
+        maximum: 5
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '评分必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '评分不能小于1' }),
+    (0, class_validator_1.Max)(5, { message: '评分不能大于5' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], AdoptSuggestionDto.prototype, "rating", void 0);
+class RateSuggestionDto {
+}
+exports.RateSuggestionDto = RateSuggestionDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '建议ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '建议ID不能为空' }),
+    __metadata("design:type", String)
+], RateSuggestionDto.prototype, "suggestionId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '评分（1-5星）',
+        example: 4,
+        minimum: 1,
+        maximum: 5
+    }),
+    (0, class_validator_1.IsNumber)({}, { message: '评分必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '评分不能小于1' }),
+    (0, class_validator_1.Max)(5, { message: '评分不能大于5' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], RateSuggestionDto.prototype, "rating", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '评价反馈',
+        example: '建议很有针对性，但实施难度较大'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)({ message: '反馈必须是字符串' }),
+    __metadata("design:type", String)
+], RateSuggestionDto.prototype, "feedback", void 0);
+class BulkSuggestionDto {
+}
+exports.BulkSuggestionDto = BulkSuggestionDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '建议ID列表',
+        example: ['cm111', 'cm222', 'cm333']
+    }),
+    (0, class_validator_1.IsArray)({ message: '建议ID必须是数组' }),
+    (0, class_validator_1.IsString)({ each: true, message: '每个建议ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '建议ID列表不能为空' }),
+    __metadata("design:type", Array)
+], BulkSuggestionDto.prototype, "suggestionIds", void 0);
+
+
+/***/ }),
+/* 37 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2402,26 +4400,24 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MaterialModule = void 0;
+exports.CharacterModule = void 0;
 const common_1 = __webpack_require__(3);
-const material_controller_1 = __webpack_require__(32);
-const material_service_1 = __webpack_require__(33);
-const database_1 = __webpack_require__(9);
-let MaterialModule = class MaterialModule {
+const character_controller_1 = __webpack_require__(38);
+const character_service_1 = __webpack_require__(39);
+let CharacterModule = class CharacterModule {
 };
-exports.MaterialModule = MaterialModule;
-exports.MaterialModule = MaterialModule = __decorate([
+exports.CharacterModule = CharacterModule;
+exports.CharacterModule = CharacterModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_1.DatabaseModule],
-        controllers: [material_controller_1.MaterialController],
-        providers: [material_service_1.MaterialService],
-        exports: [material_service_1.MaterialService],
+        controllers: [character_controller_1.CharacterController],
+        providers: [character_service_1.CharacterService],
+        exports: [character_service_1.CharacterService],
     })
-], MaterialModule);
+], CharacterModule);
 
 
 /***/ }),
-/* 32 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2439,123 +4435,1444 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CharacterController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const guards_1 = __webpack_require__(16);
+const character_service_1 = __webpack_require__(39);
+const character_dto_1 = __webpack_require__(40);
+let CharacterController = class CharacterController {
+    constructor(characterService) {
+        this.characterService = characterService;
+    }
+    async createCharacter(req, dto) {
+        return this.characterService.createCharacter(req.user.id, dto);
+    }
+    async getCharacters(req, novelId, query) {
+        return this.characterService.getCharacters(req.user.id, novelId, query);
+    }
+    async getCharacter(req, id) {
+        return this.characterService.getCharacter(req.user.id, id);
+    }
+    async updateCharacter(req, id, dto) {
+        return this.characterService.updateCharacter(req.user.id, id, dto);
+    }
+    async deleteCharacter(req, id) {
+        return this.characterService.deleteCharacter(req.user.id, id);
+    }
+};
+exports.CharacterController = CharacterController;
+__decorate([
+    (0, common_1.Post)('characters'),
+    (0, swagger_1.ApiOperation)({ summary: '创建角色' }),
+    (0, swagger_1.ApiBody)({ type: character_dto_1.CreateCharacterDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '创建成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof character_dto_1.CreateCharacterDto !== "undefined" && character_dto_1.CreateCharacterDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], CharacterController.prototype, "createCharacter", null);
+__decorate([
+    (0, common_1.Get)('characters/novel/:novelId'),
+    (0, swagger_1.ApiOperation)({ summary: '获取小说角色列表' }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __param(2, (0, common_1.Query)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_c = typeof character_dto_1.QueryCharactersDto !== "undefined" && character_dto_1.QueryCharactersDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], CharacterController.prototype, "getCharacters", null);
+__decorate([
+    (0, common_1.Get)('characters/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '获取角色详情' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '角色ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CharacterController.prototype, "getCharacter", null);
+__decorate([
+    (0, common_1.Put)('characters/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '更新角色' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '角色ID' }),
+    (0, swagger_1.ApiBody)({ type: character_dto_1.UpdateCharacterDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_d = typeof character_dto_1.UpdateCharacterDto !== "undefined" && character_dto_1.UpdateCharacterDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], CharacterController.prototype, "updateCharacter", null);
+__decorate([
+    (0, common_1.Delete)('characters/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '删除角色' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '角色ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], CharacterController.prototype, "deleteCharacter", null);
+exports.CharacterController = CharacterController = __decorate([
+    (0, swagger_1.ApiTags)('角色管理'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof character_service_1.CharacterService !== "undefined" && character_service_1.CharacterService) === "function" ? _a : Object])
+], CharacterController);
+
+
+/***/ }),
+/* 39 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CharacterService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let CharacterService = class CharacterService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async createCharacter(userId, dto) {
+        await this.validateNovelAccess(userId, dto.novelId);
+        const character = await this.prisma.character.create({
+            data: {
+                novelId: dto.novelId,
+                name: dto.name,
+                aliases: dto.aliases,
+                role: dto.role,
+                importance: dto.importance || 50,
+                age: dto.age,
+                gender: dto.gender,
+                occupation: dto.occupation,
+                appearance: dto.appearance,
+                personality: dto.personality,
+                traits: dto.traits,
+                strengths: dto.strengths,
+                weaknesses: dto.weaknesses,
+                background: dto.background,
+                motivation: dto.motivation,
+                arc: dto.arc,
+                abilities: dto.abilities,
+                equipment: dto.equipment,
+                customFields: dto.customFields,
+            },
+        });
+        return { success: true, data: character };
+    }
+    async getCharacters(userId, novelId, query) {
+        await this.validateNovelAccess(userId, novelId);
+        const where = { novelId };
+        if (query.role)
+            where.role = query.role;
+        if (query.minImportance !== undefined)
+            where.importance = { gte: query.minImportance };
+        if (query.keyword) {
+            where.OR = [
+                { name: { contains: query.keyword } },
+            ];
+        }
+        const page = query.page || 1;
+        const pageSize = query.pageSize || 20;
+        const skip = (page - 1) * pageSize;
+        const [characters, total] = await Promise.all([
+            this.prisma.character.findMany({
+                where,
+                skip,
+                take: pageSize,
+                orderBy: [{ importance: 'desc' }, { createdAt: 'desc' }],
+            }),
+            this.prisma.character.count({ where }),
+        ]);
+        return {
+            success: true,
+            data: {
+                items: characters,
+                pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+            },
+        };
+    }
+    async getCharacter(userId, characterId) {
+        const character = await this.prisma.character.findUnique({
+            where: { id: characterId },
+            include: { novel: { select: { userId: true } } },
+        });
+        if (!character || character.novel.userId !== userId) {
+            throw new common_1.HttpException('角色不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        return { success: true, data: character };
+    }
+    async updateCharacter(userId, characterId, dto) {
+        const existing = await this.prisma.character.findUnique({
+            where: { id: characterId },
+            include: { novel: { select: { userId: true } } },
+        });
+        if (!existing || existing.novel.userId !== userId) {
+            throw new common_1.HttpException('角色不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        const character = await this.prisma.character.update({
+            where: { id: characterId },
+            data: {
+                name: dto.name,
+                aliases: dto.aliases,
+                role: dto.role,
+                importance: dto.importance,
+                age: dto.age,
+                gender: dto.gender,
+                occupation: dto.occupation,
+                appearance: dto.appearance,
+                personality: dto.personality,
+                traits: dto.traits,
+                strengths: dto.strengths,
+                weaknesses: dto.weaknesses,
+                background: dto.background,
+                motivation: dto.motivation,
+                arc: dto.arc,
+                abilities: dto.abilities,
+                equipment: dto.equipment,
+                customFields: dto.customFields,
+            },
+        });
+        return { success: true, data: character };
+    }
+    async deleteCharacter(userId, characterId) {
+        const existing = await this.prisma.character.findUnique({
+            where: { id: characterId },
+            include: { novel: { select: { userId: true } } },
+        });
+        if (!existing || existing.novel.userId !== userId) {
+            throw new common_1.HttpException('角色不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        await this.prisma.character.delete({ where: { id: characterId } });
+        return { success: true, message: '角色已删除' };
+    }
+    async validateNovelAccess(userId, novelId) {
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.HttpException('小说不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        return novel;
+    }
+};
+exports.CharacterService = CharacterService;
+exports.CharacterService = CharacterService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], CharacterService);
+
+
+/***/ }),
+/* 40 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.QueryCharactersDto = exports.UpdateCharacterDto = exports.CreateCharacterDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
+const class_transformer_1 = __webpack_require__(32);
+class CreateCharacterDto {
+}
+exports.CreateCharacterDto = CreateCharacterDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说ID不能为空' }),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '角色名称',
+        example: '张三'
+    }),
+    (0, class_validator_1.IsString)({ message: '角色名称必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '角色名称不能为空' }),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '别名/称号列表',
+        example: ['小三', '三哥']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)({ message: '别名必须是数组' }),
+    (0, class_validator_1.IsString)({ each: true, message: '每个别名必须是字符串' }),
+    __metadata("design:type", Array)
+], CreateCharacterDto.prototype, "aliases", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '角色定位',
+        enum: client_1.CharacterRole,
+        example: 'PROTAGONIST'
+    }),
+    (0, class_validator_1.IsEnum)(client_1.CharacterRole, { message: '角色定位无效' }),
+    __metadata("design:type", typeof (_a = typeof client_1.CharacterRole !== "undefined" && client_1.CharacterRole) === "function" ? _a : Object)
+], CreateCharacterDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '重要性评分（0-100）',
+        example: 90,
+        minimum: 0,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '重要性必须是数字' }),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], CreateCharacterDto.prototype, "importance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '年龄',
+        example: '25岁'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "age", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '性别',
+        example: '男'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "gender", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '职业',
+        example: '剑客'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "occupation", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '外貌描写',
+        example: '身材高大，剑眉星目...'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "appearance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '性格描写',
+        example: '沉稳冷静，深思熟虑...'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "personality", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '性格特质标签',
+        example: ['勇敢', '智慧', '正义']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreateCharacterDto.prototype, "traits", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '优点列表',
+        example: ['忠诚', '坚韧']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreateCharacterDto.prototype, "strengths", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '缺点列表',
+        example: ['固执', '过于理想化']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreateCharacterDto.prototype, "weaknesses", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '背景故事'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "background", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '动机目标'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "motivation", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '角色弧光'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateCharacterDto.prototype, "arc", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '能力/技能',
+        example: ['剑术', '轻功']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreateCharacterDto.prototype, "abilities", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '装备/道具',
+        example: ['青锋剑', '护心镜']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CreateCharacterDto.prototype, "equipment", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '自定义字段'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_b = typeof Record !== "undefined" && Record) === "function" ? _b : Object)
+], CreateCharacterDto.prototype, "customFields", void 0);
+class UpdateCharacterDto {
+}
+exports.UpdateCharacterDto = UpdateCharacterDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '角色名称'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '别名/称号列表'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdateCharacterDto.prototype, "aliases", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '角色定位',
+        enum: client_1.CharacterRole
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.CharacterRole),
+    __metadata("design:type", typeof (_c = typeof client_1.CharacterRole !== "undefined" && client_1.CharacterRole) === "function" ? _c : Object)
+], UpdateCharacterDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '重要性评分（0-100）',
+        minimum: 0,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], UpdateCharacterDto.prototype, "importance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '年龄' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "age", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '性别' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "gender", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '职业' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "occupation", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '外貌描写' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "appearance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '性格描写' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "personality", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '性格特质标签' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdateCharacterDto.prototype, "traits", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '优点列表' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdateCharacterDto.prototype, "strengths", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '缺点列表' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdateCharacterDto.prototype, "weaknesses", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '背景故事' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "background", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '动机目标' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "motivation", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '角色弧光' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateCharacterDto.prototype, "arc", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '能力/技能' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdateCharacterDto.prototype, "abilities", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '装备/道具' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], UpdateCharacterDto.prototype, "equipment", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '自定义字段' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_d = typeof Record !== "undefined" && Record) === "function" ? _d : Object)
+], UpdateCharacterDto.prototype, "customFields", void 0);
+class QueryCharactersDto {
+    constructor() {
+        this.page = 1;
+        this.pageSize = 20;
+    }
+}
+exports.QueryCharactersDto = QueryCharactersDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '角色定位筛选',
+        enum: client_1.CharacterRole
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.CharacterRole),
+    __metadata("design:type", typeof (_e = typeof client_1.CharacterRole !== "undefined" && client_1.CharacterRole) === "function" ? _e : Object)
+], QueryCharactersDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '关键词搜索（搜索名称、别名）'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryCharactersDto.prototype, "keyword", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '最小重要性',
+        minimum: 0,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryCharactersDto.prototype, "minImportance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '页码',
+        example: 1,
+        minimum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryCharactersDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '每页数量',
+        example: 20,
+        minimum: 1,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryCharactersDto.prototype, "pageSize", void 0);
+
+
+/***/ }),
+/* 41 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WorldModule = void 0;
+const common_1 = __webpack_require__(3);
+const world_controller_1 = __webpack_require__(42);
+const world_service_1 = __webpack_require__(43);
+let WorldModule = class WorldModule {
+};
+exports.WorldModule = WorldModule;
+exports.WorldModule = WorldModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [world_controller_1.WorldController],
+        providers: [world_service_1.WorldService],
+        exports: [world_service_1.WorldService],
+    })
+], WorldModule);
+
+
+/***/ }),
+/* 42 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WorldController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const guards_1 = __webpack_require__(16);
+const world_service_1 = __webpack_require__(43);
+const world_dto_1 = __webpack_require__(44);
+let WorldController = class WorldController {
+    constructor(worldService) {
+        this.worldService = worldService;
+    }
+    async createWorldSetting(req, dto) {
+        return this.worldService.createWorldSetting(req.user.id, dto);
+    }
+    async getWorldSettings(req, novelId, query) {
+        return this.worldService.getWorldSettings(req.user.id, novelId, query);
+    }
+    async getWorldSetting(req, id) {
+        return this.worldService.getWorldSetting(req.user.id, id);
+    }
+    async updateWorldSetting(req, id, dto) {
+        return this.worldService.updateWorldSetting(req.user.id, id, dto);
+    }
+    async deleteWorldSetting(req, id) {
+        return this.worldService.deleteWorldSetting(req.user.id, id);
+    }
+};
+exports.WorldController = WorldController;
+__decorate([
+    (0, common_1.Post)('world-settings'),
+    (0, swagger_1.ApiOperation)({ summary: '创建世界观设定' }),
+    (0, swagger_1.ApiBody)({ type: world_dto_1.CreateWorldSettingDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '创建成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof world_dto_1.CreateWorldSettingDto !== "undefined" && world_dto_1.CreateWorldSettingDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], WorldController.prototype, "createWorldSetting", null);
+__decorate([
+    (0, common_1.Get)('world-settings/novel/:novelId'),
+    (0, swagger_1.ApiOperation)({ summary: '获取小说世界观设定列表' }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __param(2, (0, common_1.Query)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_c = typeof world_dto_1.QueryWorldSettingsDto !== "undefined" && world_dto_1.QueryWorldSettingsDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], WorldController.prototype, "getWorldSettings", null);
+__decorate([
+    (0, common_1.Get)('world-settings/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '获取世界观设定详情' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '设定ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], WorldController.prototype, "getWorldSetting", null);
+__decorate([
+    (0, common_1.Put)('world-settings/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '更新世界观设定' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '设定ID' }),
+    (0, swagger_1.ApiBody)({ type: world_dto_1.UpdateWorldSettingDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_d = typeof world_dto_1.UpdateWorldSettingDto !== "undefined" && world_dto_1.UpdateWorldSettingDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], WorldController.prototype, "updateWorldSetting", null);
+__decorate([
+    (0, common_1.Delete)('world-settings/:id'),
+    (0, swagger_1.ApiOperation)({ summary: '删除世界观设定' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '设定ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], WorldController.prototype, "deleteWorldSetting", null);
+exports.WorldController = WorldController = __decorate([
+    (0, swagger_1.ApiTags)('世界观管理'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof world_service_1.WorldService !== "undefined" && world_service_1.WorldService) === "function" ? _a : Object])
+], WorldController);
+
+
+/***/ }),
+/* 43 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WorldService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let WorldService = class WorldService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async createWorldSetting(userId, dto) {
+        await this.validateNovelAccess(userId, dto.novelId);
+        const setting = await this.prisma.worldSetting.create({
+            data: {
+                novelId: dto.novelId,
+                category: dto.category,
+                name: dto.name,
+                description: dto.description,
+                details: dto.details,
+                location: dto.location,
+                coordinates: dto.coordinates,
+                leadership: dto.leadership,
+                members: dto.members,
+                power: dto.power,
+                tags: dto.tags,
+                references: dto.references,
+                customFields: dto.customFields,
+            },
+        });
+        return { success: true, data: setting };
+    }
+    async getWorldSettings(userId, novelId, query) {
+        await this.validateNovelAccess(userId, novelId);
+        const where = { novelId };
+        if (query.category)
+            where.category = query.category;
+        if (query.keyword) {
+            where.OR = [
+                { name: { contains: query.keyword } },
+                { description: { contains: query.keyword } },
+            ];
+        }
+        const page = query.page || 1;
+        const pageSize = query.pageSize || 20;
+        const skip = (page - 1) * pageSize;
+        const [settings, total] = await Promise.all([
+            this.prisma.worldSetting.findMany({
+                where,
+                skip,
+                take: pageSize,
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.worldSetting.count({ where }),
+        ]);
+        return {
+            success: true,
+            data: {
+                items: settings,
+                pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+            },
+        };
+    }
+    async getWorldSetting(userId, settingId) {
+        const setting = await this.prisma.worldSetting.findUnique({
+            where: { id: settingId },
+            include: { novel: { select: { userId: true } } },
+        });
+        if (!setting || setting.novel.userId !== userId) {
+            throw new common_1.HttpException('世界观设定不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        return { success: true, data: setting };
+    }
+    async updateWorldSetting(userId, settingId, dto) {
+        const existing = await this.prisma.worldSetting.findUnique({
+            where: { id: settingId },
+            include: { novel: { select: { userId: true } } },
+        });
+        if (!existing || existing.novel.userId !== userId) {
+            throw new common_1.HttpException('世界观设定不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        const setting = await this.prisma.worldSetting.update({
+            where: { id: settingId },
+            data: {
+                category: dto.category,
+                name: dto.name,
+                description: dto.description,
+                details: dto.details,
+                location: dto.location,
+                coordinates: dto.coordinates,
+                leadership: dto.leadership,
+                members: dto.members,
+                power: dto.power,
+                tags: dto.tags,
+                references: dto.references,
+                customFields: dto.customFields,
+            },
+        });
+        return { success: true, data: setting };
+    }
+    async deleteWorldSetting(userId, settingId) {
+        const existing = await this.prisma.worldSetting.findUnique({
+            where: { id: settingId },
+            include: { novel: { select: { userId: true } } },
+        });
+        if (!existing || existing.novel.userId !== userId) {
+            throw new common_1.HttpException('世界观设定不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        await this.prisma.worldSetting.delete({ where: { id: settingId } });
+        return { success: true, message: '世界观设定已删除' };
+    }
+    async validateNovelAccess(userId, novelId) {
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.HttpException('小说不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        return novel;
+    }
+};
+exports.WorldService = WorldService;
+exports.WorldService = WorldService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], WorldService);
+
+
+/***/ }),
+/* 44 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.QueryWorldSettingsDto = exports.UpdateWorldSettingDto = exports.CreateWorldSettingDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
+const class_transformer_1 = __webpack_require__(32);
+class CreateWorldSettingDto {
+}
+exports.CreateWorldSettingDto = CreateWorldSettingDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说ID不能为空' }),
+    __metadata("design:type", String)
+], CreateWorldSettingDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '世界观类别',
+        enum: client_1.WorldCategory,
+        example: 'LOCATION'
+    }),
+    (0, class_validator_1.IsEnum)(client_1.WorldCategory, { message: '世界观类别无效' }),
+    __metadata("design:type", typeof (_a = typeof client_1.WorldCategory !== "undefined" && client_1.WorldCategory) === "function" ? _a : Object)
+], CreateWorldSettingDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '名称',
+        example: '长安城'
+    }),
+    (0, class_validator_1.IsString)({ message: '名称必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '名称不能为空' }),
+    __metadata("design:type", String)
+], CreateWorldSettingDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '描述'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateWorldSettingDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '详细设定（结构化数据）',
+        example: {
+            '气候': '四季分明',
+            '人口': '百万',
+            '特色': '繁华的都城'
+        }
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_b = typeof Record !== "undefined" && Record) === "function" ? _b : Object)
+], CreateWorldSettingDto.prototype, "details", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '位置信息（针对地点类）'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateWorldSettingDto.prototype, "location", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '坐标/位置关系'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_c = typeof Record !== "undefined" && Record) === "function" ? _c : Object)
+], CreateWorldSettingDto.prototype, "coordinates", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '领导层（针对组织/势力类）'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateWorldSettingDto.prototype, "leadership", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '成员信息'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_d = typeof Record !== "undefined" && Record) === "function" ? _d : Object)
+], CreateWorldSettingDto.prototype, "members", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '势力强度（0-100）',
+        minimum: 0,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], CreateWorldSettingDto.prototype, "power", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '标签'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_e = typeof Record !== "undefined" && Record) === "function" ? _e : Object)
+], CreateWorldSettingDto.prototype, "tags", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '相关引用'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_f = typeof Record !== "undefined" && Record) === "function" ? _f : Object)
+], CreateWorldSettingDto.prototype, "references", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '自定义字段'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_g = typeof Record !== "undefined" && Record) === "function" ? _g : Object)
+], CreateWorldSettingDto.prototype, "customFields", void 0);
+class UpdateWorldSettingDto {
+}
+exports.UpdateWorldSettingDto = UpdateWorldSettingDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '世界观类别',
+        enum: client_1.WorldCategory
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.WorldCategory),
+    __metadata("design:type", typeof (_h = typeof client_1.WorldCategory !== "undefined" && client_1.WorldCategory) === "function" ? _h : Object)
+], UpdateWorldSettingDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '名称' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateWorldSettingDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '描述' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateWorldSettingDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '详细设定' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_j = typeof Record !== "undefined" && Record) === "function" ? _j : Object)
+], UpdateWorldSettingDto.prototype, "details", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '位置信息' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateWorldSettingDto.prototype, "location", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '坐标' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_k = typeof Record !== "undefined" && Record) === "function" ? _k : Object)
+], UpdateWorldSettingDto.prototype, "coordinates", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '领导层' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateWorldSettingDto.prototype, "leadership", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '成员信息' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_l = typeof Record !== "undefined" && Record) === "function" ? _l : Object)
+], UpdateWorldSettingDto.prototype, "members", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '势力强度' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], UpdateWorldSettingDto.prototype, "power", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '标签' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_m = typeof Record !== "undefined" && Record) === "function" ? _m : Object)
+], UpdateWorldSettingDto.prototype, "tags", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '相关引用' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_o = typeof Record !== "undefined" && Record) === "function" ? _o : Object)
+], UpdateWorldSettingDto.prototype, "references", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '自定义字段' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_p = typeof Record !== "undefined" && Record) === "function" ? _p : Object)
+], UpdateWorldSettingDto.prototype, "customFields", void 0);
+class QueryWorldSettingsDto {
+    constructor() {
+        this.page = 1;
+        this.pageSize = 20;
+    }
+}
+exports.QueryWorldSettingsDto = QueryWorldSettingsDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '类别筛选',
+        enum: client_1.WorldCategory
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.WorldCategory),
+    __metadata("design:type", typeof (_q = typeof client_1.WorldCategory !== "undefined" && client_1.WorldCategory) === "function" ? _q : Object)
+], QueryWorldSettingsDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '关键词搜索'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryWorldSettingsDto.prototype, "keyword", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '页码',
+        example: 1,
+        minimum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryWorldSettingsDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '每页数量',
+        example: 20,
+        minimum: 1,
+        maximum: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], QueryWorldSettingsDto.prototype, "pageSize", void 0);
+
+
+/***/ }),
+/* 45 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MaterialModule = void 0;
+const common_1 = __webpack_require__(3);
+const material_controller_1 = __webpack_require__(46);
+const material_service_1 = __webpack_require__(47);
+const database_1 = __webpack_require__(9);
+const guards_1 = __webpack_require__(16);
+let MaterialModule = class MaterialModule {
+};
+exports.MaterialModule = MaterialModule;
+exports.MaterialModule = MaterialModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        controllers: [material_controller_1.MaterialController],
+        providers: [material_service_1.MaterialService, guards_1.JwtAuthGuard],
+        exports: [material_service_1.MaterialService],
+    })
+], MaterialModule);
+
+
+/***/ }),
+/* 46 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MaterialController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const material_service_1 = __webpack_require__(33);
-const material_dto_1 = __webpack_require__(34);
 const guards_1 = __webpack_require__(16);
+const material_service_1 = __webpack_require__(47);
+const material_dto_1 = __webpack_require__(48);
 let MaterialController = class MaterialController {
     constructor(materialService) {
         this.materialService = materialService;
     }
-    async create(req, dto) {
-        return this.materialService.create(req.user.userId, dto);
+    async createMaterial(req, dto) {
+        return this.materialService.createMaterial(req.user.id, dto);
     }
-    async findAll(req, query) {
-        return this.materialService.findAll(req.user.userId, query);
+    async getMaterials(req, query) {
+        return this.materialService.getMaterials(req.user.id, query);
     }
-    async getCategories(req) {
-        return this.materialService.getCategories(req.user.userId);
+    async getMaterial(req, id) {
+        return this.materialService.getMaterial(req.user.id, id);
     }
-    async getTags(req) {
-        return this.materialService.getTags(req.user.userId);
+    async updateMaterial(req, id, dto) {
+        return this.materialService.updateMaterial(req.user.id, id, dto);
     }
-    async getStats(req) {
-        return this.materialService.getStats(req.user.userId);
+    async deleteMaterial(req, id) {
+        return this.materialService.deleteMaterial(req.user.id, id);
     }
-    async findOne(req, id) {
-        return this.materialService.findOne(req.user.userId, id);
+    async getMaterialStats(req) {
+        return this.materialService.getMaterialStats(req.user.id);
     }
-    async update(req, id, dto) {
-        return this.materialService.update(req.user.userId, id, dto);
+    async batchDeleteMaterials(req, dto) {
+        return this.materialService.batchDeleteMaterials(req.user.id, dto);
     }
-    async remove(req, id) {
-        return this.materialService.remove(req.user.userId, id);
+    async batchUpdateCategory(req, dto) {
+        return this.materialService.batchUpdateCategory(req.user.id, dto);
+    }
+    async addMaterialReference(req, id, dto) {
+        return this.materialService.addMaterialReference(req.user.id, id, dto);
+    }
+    async getMaterialReferences(req, id) {
+        return this.materialService.getMaterialReferences(req.user.id, id);
+    }
+    async deleteMaterialReference(req, referenceId) {
+        return this.materialService.deleteMaterialReference(req.user.id, referenceId);
+    }
+    async getStorageQuota(req) {
+        return this.materialService.getStorageQuota(req.user.id);
     }
 };
 exports.MaterialController = MaterialController;
 __decorate([
-    (0, common_1.Post)(),
+    (0, common_1.Post)('materials'),
     (0, swagger_1.ApiOperation)({ summary: '创建素材' }),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.CreateMaterialDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '创建成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, typeof (_b = typeof material_dto_1.CreateMaterialDto !== "undefined" && material_dto_1.CreateMaterialDto) === "function" ? _b : Object]),
     __metadata("design:returntype", Promise)
-], MaterialController.prototype, "create", null);
+], MaterialController.prototype, "createMaterial", null);
 __decorate([
-    (0, common_1.Get)(),
+    (0, common_1.Get)('materials'),
     (0, swagger_1.ApiOperation)({ summary: '获取素材列表' }),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)()),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_c = typeof material_dto_1.QueryMaterialDto !== "undefined" && material_dto_1.QueryMaterialDto) === "function" ? _c : Object]),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof material_dto_1.QueryMaterialsDto !== "undefined" && material_dto_1.QueryMaterialsDto) === "function" ? _c : Object]),
     __metadata("design:returntype", Promise)
-], MaterialController.prototype, "findAll", null);
+], MaterialController.prototype, "getMaterials", null);
 __decorate([
-    (0, common_1.Get)('categories'),
-    (0, swagger_1.ApiOperation)({ summary: '获取素材分类列表' }),
-    __param(0, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "getCategories", null);
-__decorate([
-    (0, common_1.Get)('tags'),
-    (0, swagger_1.ApiOperation)({ summary: '获取素材标签列表' }),
-    __param(0, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "getTags", null);
-__decorate([
-    (0, common_1.Get)('stats'),
-    (0, swagger_1.ApiOperation)({ summary: '获取素材统计' }),
-    __param(0, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "getStats", null);
-__decorate([
-    (0, common_1.Get)(':id'),
+    (0, common_1.Get)('materials/:id'),
     (0, swagger_1.ApiOperation)({ summary: '获取素材详情' }),
-    __param(0, (0, common_1.Req)()),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
-], MaterialController.prototype, "findOne", null);
+], MaterialController.prototype, "getMaterial", null);
 __decorate([
-    (0, common_1.Put)(':id'),
+    (0, common_1.Put)('materials/:id'),
     (0, swagger_1.ApiOperation)({ summary: '更新素材' }),
-    __param(0, (0, common_1.Req)()),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.UpdateMaterialDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)()),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String, typeof (_d = typeof material_dto_1.UpdateMaterialDto !== "undefined" && material_dto_1.UpdateMaterialDto) === "function" ? _d : Object]),
     __metadata("design:returntype", Promise)
-], MaterialController.prototype, "update", null);
+], MaterialController.prototype, "updateMaterial", null);
 __decorate([
-    (0, common_1.Delete)(':id'),
+    (0, common_1.Delete)('materials/:id'),
     (0, swagger_1.ApiOperation)({ summary: '删除素材' }),
-    __param(0, (0, common_1.Req)()),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
-], MaterialController.prototype, "remove", null);
+], MaterialController.prototype, "deleteMaterial", null);
+__decorate([
+    (0, common_1.Get)('materials/stats/summary'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材统计' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getMaterialStats", null);
+__decorate([
+    (0, common_1.Post)('materials/batch-delete'),
+    (0, swagger_1.ApiOperation)({ summary: '批量删除素材' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.BatchDeleteMaterialsDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '批量删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_e = typeof material_dto_1.BatchDeleteMaterialsDto !== "undefined" && material_dto_1.BatchDeleteMaterialsDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "batchDeleteMaterials", null);
+__decorate([
+    (0, common_1.Post)('materials/batch-update-category'),
+    (0, swagger_1.ApiOperation)({ summary: '批量更新素材分类' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.BatchUpdateCategoryDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '批量更新成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_f = typeof material_dto_1.BatchUpdateCategoryDto !== "undefined" && material_dto_1.BatchUpdateCategoryDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "batchUpdateCategory", null);
+__decorate([
+    (0, common_1.Post)('materials/:id/references'),
+    (0, swagger_1.ApiOperation)({ summary: '添加素材引用记录' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.AddMaterialReferenceDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '添加成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_g = typeof material_dto_1.AddMaterialReferenceDto !== "undefined" && material_dto_1.AddMaterialReferenceDto) === "function" ? _g : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "addMaterialReference", null);
+__decorate([
+    (0, common_1.Get)('materials/:id/references'),
+    (0, swagger_1.ApiOperation)({ summary: '获取素材引用列表' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getMaterialReferences", null);
+__decorate([
+    (0, common_1.Delete)('materials/references/:referenceId'),
+    (0, swagger_1.ApiOperation)({ summary: '删除素材引用记录' }),
+    (0, swagger_1.ApiParam)({ name: 'referenceId', description: '引用记录ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('referenceId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "deleteMaterialReference", null);
+__decorate([
+    (0, common_1.Get)('materials/storage/quota'),
+    (0, swagger_1.ApiOperation)({ summary: '获取存储配额信息' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getStorageQuota", null);
 exports.MaterialController = MaterialController = __decorate([
     (0, swagger_1.ApiTags)('素材管理'),
-    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
     (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
-    (0, common_1.Controller)('materials'),
     __metadata("design:paramtypes", [typeof (_a = typeof material_service_1.MaterialService !== "undefined" && material_service_1.MaterialService) === "function" ? _a : Object])
 ], MaterialController);
 
 
 /***/ }),
-/* 33 */
+/* 47 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2577,7 +5894,7 @@ let MaterialService = class MaterialService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async create(userId, dto) {
+    async createMaterial(userId, dto) {
         const material = await this.prisma.material.create({
             data: {
                 userId,
@@ -2587,145 +5904,280 @@ let MaterialService = class MaterialService {
                 fileUrl: dto.fileUrl,
                 fileSize: dto.fileSize,
                 description: dto.description,
-                tags: dto.tags || [],
+                tags: dto.tags,
             },
         });
-        return material;
+        await this.updateStorageQuota(userId, dto.fileSize || 0, 1);
+        return { success: true, data: material };
     }
-    async findAll(userId, query) {
-        const { type, category, keyword, tags, page = 1, pageSize = 20 } = query;
-        const where = {
-            userId,
-            ...(type && { type }),
-            ...(category && { category }),
-            ...(keyword && {
-                OR: [
-                    { name: { contains: keyword } },
-                    { description: { contains: keyword } },
-                ],
-            }),
-        };
-        const [allItems, total] = await Promise.all([
+    async getMaterials(userId, query) {
+        const where = { userId };
+        if (query.type)
+            where.type = query.type;
+        if (query.category)
+            where.category = query.category;
+        if (query.keyword) {
+            where.OR = [
+                { name: { contains: query.keyword } },
+                { description: { contains: query.keyword } },
+            ];
+        }
+        const page = query.page || 1;
+        const pageSize = query.pageSize || 20;
+        const skip = (page - 1) * pageSize;
+        const [materials, total] = await Promise.all([
             this.prisma.material.findMany({
                 where,
-                skip: (page - 1) * pageSize,
-                take: pageSize * 2,
+                skip,
+                take: pageSize,
                 orderBy: { createdAt: 'desc' },
             }),
             this.prisma.material.count({ where }),
         ]);
-        let items = allItems;
-        let filteredTotal = total;
-        if (tags) {
-            const tagArray = tags.split(',').map(t => t.trim());
-            items = allItems.filter(item => {
-                if (!item.tags || !Array.isArray(item.tags))
-                    return false;
-                return tagArray.some(tag => item.tags.includes(tag));
-            });
-            items = items.slice(0, pageSize);
-            filteredTotal = items.length;
-        }
         return {
-            items,
-            total: filteredTotal,
-            page,
-            pageSize,
-            totalPages: Math.ceil(filteredTotal / pageSize),
+            success: true,
+            data: {
+                items: materials,
+                pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+            },
         };
     }
-    async findOne(userId, id) {
+    async getMaterial(userId, materialId) {
         const material = await this.prisma.material.findUnique({
-            where: { id },
+            where: { id: materialId },
         });
-        if (!material) {
-            throw new common_1.NotFoundException('素材不存在');
+        if (!material || material.userId !== userId) {
+            throw new common_1.HttpException('素材不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
         }
-        if (material.userId !== userId) {
-            throw new common_1.ForbiddenException('无权访问此素材');
-        }
-        await this.prisma.material.update({
-            where: { id },
-            data: { usageCount: { increment: 1 } },
-        });
-        return material;
+        return { success: true, data: material };
     }
-    async update(userId, id, dto) {
-        const material = await this.prisma.material.findUnique({
-            where: { id },
+    async updateMaterial(userId, materialId, dto) {
+        const existing = await this.prisma.material.findUnique({
+            where: { id: materialId },
         });
-        if (!material) {
-            throw new common_1.NotFoundException('素材不存在');
+        if (!existing || existing.userId !== userId) {
+            throw new common_1.HttpException('素材不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
         }
-        if (material.userId !== userId) {
-            throw new common_1.ForbiddenException('无权修改此素材');
-        }
-        const updated = await this.prisma.material.update({
-            where: { id },
+        const material = await this.prisma.material.update({
+            where: { id: materialId },
             data: {
-                ...(dto.name && { name: dto.name }),
-                ...(dto.category !== undefined && { category: dto.category }),
-                ...(dto.description !== undefined && { description: dto.description }),
-                ...(dto.tags !== undefined && { tags: dto.tags }),
+                name: dto.name,
+                type: dto.type,
+                category: dto.category,
+                fileUrl: dto.fileUrl,
+                fileSize: dto.fileSize,
+                description: dto.description,
+                tags: dto.tags,
             },
         });
-        return updated;
+        return { success: true, data: material };
     }
-    async remove(userId, id) {
-        const material = await this.prisma.material.findUnique({
-            where: { id },
+    async deleteMaterial(userId, materialId) {
+        const existing = await this.prisma.material.findUnique({
+            where: { id: materialId },
         });
-        if (!material) {
-            throw new common_1.NotFoundException('素材不存在');
+        if (!existing || existing.userId !== userId) {
+            throw new common_1.HttpException('素材不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
         }
-        if (material.userId !== userId) {
-            throw new common_1.ForbiddenException('无权删除此素材');
-        }
-        await this.prisma.material.delete({
-            where: { id },
-        });
-        return { message: '删除成功' };
+        await this.prisma.material.delete({ where: { id: materialId } });
+        await this.updateStorageQuota(userId, -(existing.fileSize || 0), -1);
+        return { success: true, message: '素材已删除' };
     }
-    async getCategories(userId) {
-        const materials = await this.prisma.material.findMany({
-            where: { userId },
-            select: { category: true },
-            distinct: ['category'],
-        });
-        const categories = materials
-            .map((m) => m.category)
-            .filter((c) => c !== null && c !== '');
-        return categories;
-    }
-    async getTags(userId) {
-        const materials = await this.prisma.material.findMany({
-            where: { userId },
-            select: { tags: true },
-        });
-        const tagsSet = new Set();
-        materials.forEach((m) => {
-            if (Array.isArray(m.tags)) {
-                m.tags.forEach((tag) => tagsSet.add(tag));
-            }
-        });
-        return Array.from(tagsSet);
-    }
-    async getStats(userId) {
-        const stats = await this.prisma.material.groupBy({
-            by: ['type'],
-            where: { userId },
-            _count: { id: true },
-            _sum: { fileSize: true },
-        });
-        const total = await this.prisma.material.count({ where: { userId } });
+    async getMaterialStats(userId) {
+        const [total, byType, totalSize] = await Promise.all([
+            this.prisma.material.count({ where: { userId } }),
+            this.prisma.material.groupBy({
+                by: ['type'],
+                where: { userId },
+                _count: true,
+            }),
+            this.prisma.material.aggregate({
+                where: { userId },
+                _sum: { fileSize: true },
+            }),
+        ]);
         return {
-            total,
-            byType: stats.map((s) => ({
-                type: s.type,
-                count: s._count.id,
-                totalSize: s._sum.fileSize || 0,
-            })),
+            success: true,
+            data: {
+                total,
+                byType: byType.reduce((acc, item) => {
+                    acc[item.type] = item._count;
+                    return acc;
+                }, {}),
+                totalSize: totalSize._sum.fileSize || 0,
+            },
         };
+    }
+    async batchDeleteMaterials(userId, dto) {
+        const materials = await this.prisma.material.findMany({
+            where: {
+                id: { in: dto.materialIds },
+                userId,
+            },
+        });
+        if (materials.length !== dto.materialIds.length) {
+            throw new common_1.HttpException('部分素材不存在或无权访问', common_1.HttpStatus.BAD_REQUEST);
+        }
+        const result = await this.prisma.material.deleteMany({
+            where: {
+                id: { in: dto.materialIds },
+                userId,
+            },
+        });
+        const totalSize = materials.reduce((sum, m) => sum + (m.fileSize || 0), 0);
+        await this.updateStorageQuota(userId, -totalSize, -materials.length);
+        return {
+            success: true,
+            message: `成功删除${result.count}个素材`,
+            data: { deletedCount: result.count },
+        };
+    }
+    async batchUpdateCategory(userId, dto) {
+        const count = await this.prisma.material.count({
+            where: {
+                id: { in: dto.materialIds },
+                userId,
+            },
+        });
+        if (count !== dto.materialIds.length) {
+            throw new common_1.HttpException('部分素材不存在或无权访问', common_1.HttpStatus.BAD_REQUEST);
+        }
+        const result = await this.prisma.material.updateMany({
+            where: {
+                id: { in: dto.materialIds },
+                userId,
+            },
+            data: {
+                category: dto.category,
+            },
+        });
+        return {
+            success: true,
+            message: `成功更新${result.count}个素材的分类`,
+            data: { updatedCount: result.count },
+        };
+    }
+    async addMaterialReference(userId, materialId, dto) {
+        const material = await this.prisma.material.findUnique({
+            where: { id: materialId },
+        });
+        if (!material || material.userId !== userId) {
+            throw new common_1.HttpException('素材不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        const reference = await this.prisma.materialReference.create({
+            data: {
+                materialId,
+                chapterId: dto.chapterId,
+                novelId: dto.novelId,
+                userId,
+                context: dto.context,
+                position: dto.position,
+            },
+        });
+        await this.prisma.material.update({
+            where: { id: materialId },
+            data: {
+                usageCount: {
+                    increment: 1,
+                },
+            },
+        });
+        return { success: true, data: reference };
+    }
+    async getMaterialReferences(userId, materialId) {
+        const material = await this.prisma.material.findUnique({
+            where: { id: materialId },
+        });
+        if (!material || material.userId !== userId) {
+            throw new common_1.HttpException('素材不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        const references = await this.prisma.materialReference.findMany({
+            where: { materialId, userId },
+            orderBy: { createdAt: 'desc' },
+        });
+        return { success: true, data: references };
+    }
+    async deleteMaterialReference(userId, referenceId) {
+        const reference = await this.prisma.materialReference.findUnique({
+            where: { id: referenceId },
+        });
+        if (!reference || reference.userId !== userId) {
+            throw new common_1.HttpException('引用记录不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        await this.prisma.materialReference.delete({
+            where: { id: referenceId },
+        });
+        await this.prisma.material.update({
+            where: { id: reference.materialId },
+            data: {
+                usageCount: {
+                    decrement: 1,
+                },
+            },
+        });
+        return { success: true, message: '引用记录已删除' };
+    }
+    async getStorageQuota(userId) {
+        let quota = await this.prisma.userStorageQuota.findUnique({
+            where: { userId },
+        });
+        if (!quota) {
+            quota = await this.prisma.userStorageQuota.create({
+                data: {
+                    userId,
+                    totalQuota: 1073741824,
+                    usedSpace: 0,
+                    materialCount: 0,
+                },
+            });
+        }
+        const stats = await this.prisma.material.aggregate({
+            where: { userId },
+            _sum: { fileSize: true },
+            _count: true,
+        });
+        const actualUsedSpace = stats._sum.fileSize || 0;
+        const actualMaterialCount = stats._count;
+        if (quota.usedSpace !== actualUsedSpace || quota.materialCount !== actualMaterialCount) {
+            quota = await this.prisma.userStorageQuota.update({
+                where: { userId },
+                data: {
+                    usedSpace: actualUsedSpace,
+                    materialCount: actualMaterialCount,
+                },
+            });
+        }
+        return {
+            success: true,
+            data: {
+                ...quota,
+                usagePercentage: ((Number(quota.usedSpace) / Number(quota.totalQuota)) * 100).toFixed(2),
+                remainingSpace: Number(quota.totalQuota) - Number(quota.usedSpace),
+            },
+        };
+    }
+    async updateStorageQuota(userId, sizeDelta, countDelta) {
+        const quota = await this.prisma.userStorageQuota.findUnique({
+            where: { userId },
+        });
+        if (!quota) {
+            await this.prisma.userStorageQuota.create({
+                data: {
+                    userId,
+                    usedSpace: Math.max(0, sizeDelta),
+                    materialCount: Math.max(0, countDelta),
+                },
+            });
+        }
+        else {
+            await this.prisma.userStorageQuota.update({
+                where: { userId },
+                data: {
+                    usedSpace: Math.max(0, Number(quota.usedSpace) + sizeDelta),
+                    materialCount: Math.max(0, quota.materialCount + countDelta),
+                },
+            });
+        }
     }
 };
 exports.MaterialService = MaterialService;
@@ -2736,7 +6188,7 @@ exports.MaterialService = MaterialService = __decorate([
 
 
 /***/ }),
-/* 34 */
+/* 48 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2749,60 +6201,75 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.QueryMaterialDto = exports.UpdateMaterialDto = exports.CreateMaterialDto = exports.MaterialType = void 0;
+exports.AddMaterialReferenceDto = exports.BatchUpdateCategoryDto = exports.BatchDeleteMaterialsDto = exports.QueryMaterialsDto = exports.UpdateMaterialDto = exports.CreateMaterialDto = void 0;
 const class_validator_1 = __webpack_require__(20);
-const class_transformer_1 = __webpack_require__(35);
 const swagger_1 = __webpack_require__(4);
-var MaterialType;
-(function (MaterialType) {
-    MaterialType["IMAGE"] = "IMAGE";
-    MaterialType["DOCUMENT"] = "DOCUMENT";
-    MaterialType["AUDIO"] = "AUDIO";
-    MaterialType["VIDEO"] = "VIDEO";
-    MaterialType["TEXT"] = "TEXT";
-})(MaterialType || (exports.MaterialType = MaterialType = {}));
+const client_1 = __webpack_require__(12);
+const class_transformer_1 = __webpack_require__(32);
 class CreateMaterialDto {
 }
 exports.CreateMaterialDto = CreateMaterialDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '素材名称', maxLength: 200 }),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(200),
+    (0, swagger_1.ApiProperty)({
+        description: '素材名称',
+        example: '主角立绘.png'
+    }),
+    (0, class_validator_1.IsString)({ message: '名称必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '名称不能为空' }),
     __metadata("design:type", String)
 ], CreateMaterialDto.prototype, "name", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '素材类型', enum: MaterialType }),
-    (0, class_validator_1.IsEnum)(MaterialType),
-    __metadata("design:type", String)
+    (0, swagger_1.ApiProperty)({
+        description: '素材类型',
+        enum: client_1.MaterialType,
+        example: 'IMAGE'
+    }),
+    (0, class_validator_1.IsEnum)(client_1.MaterialType, { message: '素材类型无效' }),
+    __metadata("design:type", typeof (_a = typeof client_1.MaterialType !== "undefined" && client_1.MaterialType) === "function" ? _a : Object)
 ], CreateMaterialDto.prototype, "type", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '分类', required: false, maxLength: 50 }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '分类',
+        example: '角色设定'
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(50),
     __metadata("design:type", String)
 ], CreateMaterialDto.prototype, "category", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '文件URL', required: false }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '文件URL',
+        example: 'https://example.com/file.png'
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateMaterialDto.prototype, "fileUrl", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '文件大小(字节)', required: false }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '文件大小（字节）',
+        example: 102400
+    }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_transformer_1.Type)(() => Number),
     __metadata("design:type", Number)
 ], CreateMaterialDto.prototype, "fileSize", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '描述', required: false }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '描述'
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateMaterialDto.prototype, "description", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '标签', required: false, type: [String] }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '标签列表',
+        example: ['角色', '主角', '设定']
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsArray)(),
     __metadata("design:type", Array)
@@ -2811,86 +6278,753 @@ class UpdateMaterialDto {
 }
 exports.UpdateMaterialDto = UpdateMaterialDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '素材名称', required: false }),
+    (0, swagger_1.ApiPropertyOptional)({ description: '素材名称' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(200),
     __metadata("design:type", String)
 ], UpdateMaterialDto.prototype, "name", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '分类', required: false }),
+    (0, swagger_1.ApiPropertyOptional)({ description: '素材类型', enum: client_1.MaterialType }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(client_1.MaterialType),
+    __metadata("design:type", typeof (_b = typeof client_1.MaterialType !== "undefined" && client_1.MaterialType) === "function" ? _b : Object)
+], UpdateMaterialDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '分类' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(50),
     __metadata("design:type", String)
 ], UpdateMaterialDto.prototype, "category", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '描述', required: false }),
+    (0, swagger_1.ApiPropertyOptional)({ description: '文件URL' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateMaterialDto.prototype, "fileUrl", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '文件大小' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], UpdateMaterialDto.prototype, "fileSize", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '描述' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateMaterialDto.prototype, "description", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '标签', required: false, type: [String] }),
+    (0, swagger_1.ApiPropertyOptional)({ description: '标签列表' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsArray)(),
     __metadata("design:type", Array)
 ], UpdateMaterialDto.prototype, "tags", void 0);
-class QueryMaterialDto {
+class QueryMaterialsDto {
     constructor() {
         this.page = 1;
         this.pageSize = 20;
     }
 }
-exports.QueryMaterialDto = QueryMaterialDto;
+exports.QueryMaterialsDto = QueryMaterialsDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '素材类型', required: false, enum: MaterialType }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '素材类型筛选',
+        enum: client_1.MaterialType
+    }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsEnum)(MaterialType),
-    __metadata("design:type", String)
-], QueryMaterialDto.prototype, "type", void 0);
+    (0, class_validator_1.IsEnum)(client_1.MaterialType),
+    __metadata("design:type", typeof (_c = typeof client_1.MaterialType !== "undefined" && client_1.MaterialType) === "function" ? _c : Object)
+], QueryMaterialsDto.prototype, "type", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '分类', required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], QueryMaterialDto.prototype, "category", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '搜索关键词', required: false }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], QueryMaterialDto.prototype, "keyword", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '标签(逗号分隔)', required: false }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '分类筛选'
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
-], QueryMaterialDto.prototype, "tags", void 0);
+], QueryMaterialsDto.prototype, "category", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '页码', required: false, default: 1 }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '关键词搜索'
+    }),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryMaterialsDto.prototype, "keyword", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '标签筛选（逗号分隔）',
+        example: '角色,主角'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], QueryMaterialsDto.prototype, "tags", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '页码',
+        example: 1,
+        minimum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
     (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
-], QueryMaterialDto.prototype, "page", void 0);
+], QueryMaterialsDto.prototype, "page", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '每页数量', required: false, default: 20 }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '每页数量',
+        example: 20,
+        minimum: 1,
+        maximum: 100
+    }),
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
     (0, class_transformer_1.Type)(() => Number),
-    (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
-], QueryMaterialDto.prototype, "pageSize", void 0);
+], QueryMaterialsDto.prototype, "pageSize", void 0);
+class BatchDeleteMaterialsDto {
+}
+exports.BatchDeleteMaterialsDto = BatchDeleteMaterialsDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '素材ID列表',
+        example: ['id1', 'id2', 'id3']
+    }),
+    (0, class_validator_1.IsArray)({ message: 'materialIds必须是数组' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'materialIds不能为空' }),
+    __metadata("design:type", Array)
+], BatchDeleteMaterialsDto.prototype, "materialIds", void 0);
+class BatchUpdateCategoryDto {
+}
+exports.BatchUpdateCategoryDto = BatchUpdateCategoryDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '素材ID列表',
+        example: ['id1', 'id2']
+    }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Array)
+], BatchUpdateCategoryDto.prototype, "materialIds", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '新分类',
+        example: '角色设定'
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], BatchUpdateCategoryDto.prototype, "category", void 0);
+class AddMaterialReferenceDto {
+}
+exports.AddMaterialReferenceDto = AddMaterialReferenceDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '章节ID',
+        example: 'chapter_xxx'
+    }),
+    (0, class_validator_1.IsString)({ message: '章节ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '章节ID不能为空' }),
+    __metadata("design:type", String)
+], AddMaterialReferenceDto.prototype, "chapterId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'novel_xxx'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说ID不能为空' }),
+    __metadata("design:type", String)
+], AddMaterialReferenceDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '引用上下文',
+        example: '在第三章中描述主角外貌时使用'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AddMaterialReferenceDto.prototype, "context", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '在章节中的位置',
+        example: 100
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], AddMaterialReferenceDto.prototype, "position", void 0);
 
 
 /***/ }),
-/* 35 */
-/***/ ((module) => {
+/* 49 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
-module.exports = require("class-transformer");
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MigrationModule = void 0;
+const common_1 = __webpack_require__(3);
+const migration_controller_1 = __webpack_require__(50);
+const migration_service_1 = __webpack_require__(51);
+const database_1 = __webpack_require__(9);
+const guards_1 = __webpack_require__(16);
+let MigrationModule = class MigrationModule {
+};
+exports.MigrationModule = MigrationModule;
+exports.MigrationModule = MigrationModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        controllers: [migration_controller_1.MigrationController],
+        providers: [migration_service_1.MigrationService, guards_1.JwtAuthGuard],
+        exports: [migration_service_1.MigrationService],
+    })
+], MigrationModule);
+
 
 /***/ }),
-/* 36 */
+/* 50 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MigrationController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const guards_1 = __webpack_require__(16);
+const migration_service_1 = __webpack_require__(51);
+const migration_dto_1 = __webpack_require__(52);
+let MigrationController = class MigrationController {
+    constructor(migrationService) {
+        this.migrationService = migrationService;
+    }
+    async startMigration(req, dto) {
+        return this.migrationService.startMigration(req.user.id, dto);
+    }
+    async batchImportNovels(req, dto) {
+        return this.migrationService.batchImportNovels(req.user.id, dto);
+    }
+    async validateData(req, dto) {
+        return this.migrationService.validateMigrationData(req.user.id, dto);
+    }
+    async getMigrationHistory(req) {
+        return this.migrationService.getMigrationHistory(req.user.id);
+    }
+    async getMigrationDetail(req, id) {
+        return this.migrationService.getMigrationDetail(req.user.id, id);
+    }
+    async rollbackMigration(req, id) {
+        return this.migrationService.rollbackMigration(req.user.id, id);
+    }
+};
+exports.MigrationController = MigrationController;
+__decorate([
+    (0, common_1.Post)('migrations/start'),
+    (0, swagger_1.ApiOperation)({
+        summary: '开始数据迁移',
+        description: '从本地数据迁移到云端'
+    }),
+    (0, swagger_1.ApiBody)({ type: migration_dto_1.StartMigrationDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '迁移开始' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof migration_dto_1.StartMigrationDto !== "undefined" && migration_dto_1.StartMigrationDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", Promise)
+], MigrationController.prototype, "startMigration", null);
+__decorate([
+    (0, common_1.Post)('migrations/batch-import-novels'),
+    (0, swagger_1.ApiOperation)({
+        summary: '批量导入小说',
+        description: '一次性导入多部小说及其章节'
+    }),
+    (0, swagger_1.ApiBody)({ type: migration_dto_1.BatchImportNovelsDto }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '导入成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof migration_dto_1.BatchImportNovelsDto !== "undefined" && migration_dto_1.BatchImportNovelsDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], MigrationController.prototype, "batchImportNovels", null);
+__decorate([
+    (0, common_1.Post)('migrations/validate'),
+    (0, swagger_1.ApiOperation)({
+        summary: '验证迁移数据',
+        description: '在迁移前验证数据格式和完整性'
+    }),
+    (0, swagger_1.ApiBody)({ type: migration_dto_1.ValidateMigrationDataDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '验证完成' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof migration_dto_1.ValidateMigrationDataDto !== "undefined" && migration_dto_1.ValidateMigrationDataDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], MigrationController.prototype, "validateData", null);
+__decorate([
+    (0, common_1.Get)('migrations/history'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取迁移历史',
+        description: '查看历史迁移记录'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MigrationController.prototype, "getMigrationHistory", null);
+__decorate([
+    (0, common_1.Get)('migrations/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取迁移详情',
+        description: '查看单次迁移的详细信息'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '迁移ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MigrationController.prototype, "getMigrationDetail", null);
+__decorate([
+    (0, common_1.Post)('migrations/:id/rollback'),
+    (0, swagger_1.ApiOperation)({
+        summary: '回滚迁移',
+        description: '回滚指定的迁移操作'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '迁移ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '回滚成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MigrationController.prototype, "rollbackMigration", null);
+exports.MigrationController = MigrationController = __decorate([
+    (0, swagger_1.ApiTags)('数据迁移'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
+    (0, common_1.UseGuards)(guards_1.JwtAuthGuard),
+    __metadata("design:paramtypes", [typeof (_a = typeof migration_service_1.MigrationService !== "undefined" && migration_service_1.MigrationService) === "function" ? _a : Object])
+], MigrationController);
+
+
+/***/ }),
+/* 51 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MigrationService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+const client_1 = __webpack_require__(12);
+let MigrationService = class MigrationService {
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async startMigration(userId, dto) {
+        const migration = await this.prisma.dataMigration.create({
+            data: {
+                userId,
+                migrationType: dto.migrationType,
+                status: client_1.MigrationStatus.PENDING,
+                sourceData: dto.sourceData,
+                metadata: dto.metadata,
+                startedAt: new Date(),
+            },
+        });
+        try {
+            const result = await this.processMigration(userId, migration.id, dto);
+            return { success: true, data: { migrationId: migration.id, ...result } };
+        }
+        catch (error) {
+            await this.prisma.dataMigration.update({
+                where: { id: migration.id },
+                data: {
+                    status: client_1.MigrationStatus.FAILED,
+                    errorLog: { error: error.message },
+                    completedAt: new Date(),
+                },
+            });
+            throw error;
+        }
+    }
+    async processMigration(userId, migrationId, dto) {
+        let totalItems = 0;
+        let successItems = 0;
+        let failedItems = 0;
+        const errors = [];
+        await this.prisma.dataMigration.update({
+            where: { id: migrationId },
+            data: { status: client_1.MigrationStatus.PROCESSING },
+        });
+        try {
+            switch (dto.migrationType) {
+                case client_1.MigrationType.NOVELS:
+                case client_1.MigrationType.FULL:
+                    const novelResult = await this.migrateNovels(userId, dto.sourceData);
+                    totalItems += novelResult.total;
+                    successItems += novelResult.success;
+                    failedItems += novelResult.failed;
+                    errors.push(...novelResult.errors);
+                    break;
+                case client_1.MigrationType.MATERIALS:
+                    const materialResult = await this.migrateMaterials(userId, dto.sourceData);
+                    totalItems += materialResult.total;
+                    successItems += materialResult.success;
+                    failedItems += materialResult.failed;
+                    errors.push(...materialResult.errors);
+                    break;
+                default:
+                    throw new common_1.HttpException('不支持的迁移类型', common_1.HttpStatus.BAD_REQUEST);
+            }
+            await this.prisma.dataMigration.update({
+                where: { id: migrationId },
+                data: {
+                    status: client_1.MigrationStatus.COMPLETED,
+                    totalItems,
+                    processedItems: totalItems,
+                    successItems,
+                    failedItems,
+                    errorLog: errors.length > 0 ? errors : undefined,
+                    completedAt: new Date(),
+                },
+            });
+            return { totalItems, successItems, failedItems, errors };
+        }
+        catch (error) {
+            throw error;
+        }
+    }
+    async migrateNovels(userId, sourceData) {
+        const novels = sourceData.novels || [];
+        let success = 0;
+        let failed = 0;
+        const errors = [];
+        for (const novelData of novels) {
+            try {
+                const novel = await this.prisma.novel.create({
+                    data: {
+                        userId,
+                        title: novelData.title || '未命名小说',
+                        description: novelData.description,
+                        genre: novelData.genre,
+                        status: novelData.status || 'DRAFT',
+                        wordCount: novelData.wordCount || 0,
+                        chapterCount: novelData.chapters?.length || 0,
+                    },
+                });
+                if (novelData.chapters && novelData.chapters.length > 0) {
+                    for (let i = 0; i < novelData.chapters.length; i++) {
+                        const chapterData = novelData.chapters[i];
+                        await this.prisma.chapter.create({
+                            data: {
+                                novelId: novel.id,
+                                title: chapterData.title || `第${i + 1}章`,
+                                content: chapterData.content || '',
+                                chapterNumber: chapterData.chapterNumber || i + 1,
+                                wordCount: chapterData.content?.length || 0,
+                                status: chapterData.status || 'DRAFT',
+                            },
+                        });
+                    }
+                }
+                success++;
+            }
+            catch (error) {
+                failed++;
+                errors.push({ novel: novelData.title, error: error.message });
+            }
+        }
+        return { total: novels.length, success, failed, errors };
+    }
+    async migrateMaterials(userId, sourceData) {
+        const materials = sourceData.materials || [];
+        let success = 0;
+        let failed = 0;
+        const errors = [];
+        for (const materialData of materials) {
+            try {
+                await this.prisma.material.create({
+                    data: {
+                        userId,
+                        name: materialData.name,
+                        type: materialData.type || 'TEXT',
+                        category: materialData.category,
+                        fileUrl: materialData.fileUrl,
+                        fileSize: materialData.fileSize,
+                        description: materialData.description,
+                        tags: materialData.tags,
+                    },
+                });
+                success++;
+            }
+            catch (error) {
+                failed++;
+                errors.push({ material: materialData.name, error: error.message });
+            }
+        }
+        return { total: materials.length, success, failed, errors };
+    }
+    async batchImportNovels(userId, dto) {
+        const results = [];
+        let successCount = 0;
+        let failedCount = 0;
+        for (const novelData of dto.novels) {
+            try {
+                const novel = await this.prisma.novel.create({
+                    data: {
+                        userId,
+                        title: novelData.title,
+                        description: novelData.description,
+                        genre: novelData.genre,
+                        status: 'DRAFT',
+                        chapterCount: novelData.chapters?.length || 0,
+                    },
+                });
+                if (novelData.chapters && novelData.chapters.length > 0) {
+                    for (let i = 0; i < novelData.chapters.length; i++) {
+                        const chapterData = novelData.chapters[i];
+                        await this.prisma.chapter.create({
+                            data: {
+                                novelId: novel.id,
+                                title: chapterData.title,
+                                content: chapterData.content,
+                                chapterNumber: chapterData.chapterNumber || i + 1,
+                                wordCount: chapterData.content.length,
+                                status: 'DRAFT',
+                            },
+                        });
+                    }
+                }
+                results.push({ title: novelData.title, status: 'success', novelId: novel.id });
+                successCount++;
+            }
+            catch (error) {
+                results.push({ title: novelData.title, status: 'failed', error: error.message });
+                failedCount++;
+            }
+        }
+        return {
+            success: true,
+            data: { results, successCount, failedCount, total: dto.novels.length },
+        };
+    }
+    async validateMigrationData(userId, dto) {
+        const errors = [];
+        let isValid = true;
+        switch (dto.migrationType) {
+            case client_1.MigrationType.NOVELS:
+                if (!dto.data.novels || !Array.isArray(dto.data.novels)) {
+                    errors.push({ field: 'novels', message: '小说数据必须是数组' });
+                    isValid = false;
+                }
+                else {
+                    dto.data.novels.forEach((novel, index) => {
+                        if (!novel.title) {
+                            errors.push({ index, field: 'title', message: '小说标题不能为空' });
+                            isValid = false;
+                        }
+                    });
+                }
+                break;
+            case client_1.MigrationType.MATERIALS:
+                if (!dto.data.materials || !Array.isArray(dto.data.materials)) {
+                    errors.push({ field: 'materials', message: '素材数据必须是数组' });
+                    isValid = false;
+                }
+                break;
+            default:
+                errors.push({ message: '不支持的迁移类型' });
+                isValid = false;
+        }
+        return { success: true, data: { isValid, errors } };
+    }
+    async getMigrationHistory(userId) {
+        const migrations = await this.prisma.dataMigration.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+        });
+        return { success: true, data: migrations };
+    }
+    async getMigrationDetail(userId, migrationId) {
+        const migration = await this.prisma.dataMigration.findUnique({
+            where: { id: migrationId },
+        });
+        if (!migration || migration.userId !== userId) {
+            throw new common_1.HttpException('迁移记录不存在', common_1.HttpStatus.NOT_FOUND);
+        }
+        return { success: true, data: migration };
+    }
+    async rollbackMigration(userId, migrationId) {
+        const migration = await this.prisma.dataMigration.findUnique({
+            where: { id: migrationId },
+        });
+        if (!migration || migration.userId !== userId) {
+            throw new common_1.HttpException('迁移记录不存在', common_1.HttpStatus.NOT_FOUND);
+        }
+        if (migration.status !== client_1.MigrationStatus.COMPLETED) {
+            throw new common_1.HttpException('只能回滚已完成的迁移', common_1.HttpStatus.BAD_REQUEST);
+        }
+        await this.prisma.dataMigration.update({
+            where: { id: migrationId },
+            data: { status: client_1.MigrationStatus.ROLLED_BACK },
+        });
+        return { success: true, message: '迁移已回滚' };
+    }
+};
+exports.MigrationService = MigrationService;
+exports.MigrationService = MigrationService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], MigrationService);
+
+
+/***/ }),
+/* 52 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e, _f;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RollbackMigrationDto = exports.ValidateMigrationDataDto = exports.BatchImportNovelsDto = exports.StartMigrationDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const client_1 = __webpack_require__(12);
+class StartMigrationDto {
+}
+exports.StartMigrationDto = StartMigrationDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '迁移类型',
+        enum: client_1.MigrationType,
+        example: 'NOVELS'
+    }),
+    (0, class_validator_1.IsEnum)(client_1.MigrationType, { message: '迁移类型无效' }),
+    __metadata("design:type", typeof (_a = typeof client_1.MigrationType !== "undefined" && client_1.MigrationType) === "function" ? _a : Object)
+], StartMigrationDto.prototype, "migrationType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '源数据',
+        example: {
+            novels: [
+                { title: '测试小说', description: '测试描述', chapters: [] }
+            ]
+        }
+    }),
+    (0, class_validator_1.IsNotEmpty)({ message: '源数据不能为空' }),
+    (0, class_validator_1.IsObject)({ message: '源数据必须是对象' }),
+    __metadata("design:type", typeof (_b = typeof Record !== "undefined" && Record) === "function" ? _b : Object)
+], StartMigrationDto.prototype, "sourceData", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '元数据',
+        example: { source: 'localStorage', version: '1.0' }
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_c = typeof Record !== "undefined" && Record) === "function" ? _c : Object)
+], StartMigrationDto.prototype, "metadata", void 0);
+class BatchImportNovelsDto {
+}
+exports.BatchImportNovelsDto = BatchImportNovelsDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说数据列表',
+        example: [
+            {
+                title: '小说标题',
+                description: '小说简介',
+                genre: '玄幻',
+                chapters: [
+                    { title: '第一章', content: '章节内容' }
+                ]
+            }
+        ]
+    }),
+    (0, class_validator_1.IsArray)({ message: '小说数据必须是数组' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '小说数据不能为空' }),
+    __metadata("design:type", typeof (_d = typeof Array !== "undefined" && Array) === "function" ? _d : Object)
+], BatchImportNovelsDto.prototype, "novels", void 0);
+class ValidateMigrationDataDto {
+}
+exports.ValidateMigrationDataDto = ValidateMigrationDataDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '迁移类型',
+        enum: client_1.MigrationType
+    }),
+    (0, class_validator_1.IsEnum)(client_1.MigrationType),
+    __metadata("design:type", typeof (_e = typeof client_1.MigrationType !== "undefined" && client_1.MigrationType) === "function" ? _e : Object)
+], ValidateMigrationDataDto.prototype, "migrationType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '待验证数据'
+    }),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_f = typeof Record !== "undefined" && Record) === "function" ? _f : Object)
+], ValidateMigrationDataDto.prototype, "data", void 0);
+class RollbackMigrationDto {
+}
+exports.RollbackMigrationDto = RollbackMigrationDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '迁移ID'
+    }),
+    (0, class_validator_1.IsNotEmpty)({ message: '迁移ID不能为空' }),
+    __metadata("design:type", String)
+], RollbackMigrationDto.prototype, "migrationId", void 0);
+
+
+/***/ }),
+/* 53 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2903,8 +7037,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PromptModule = void 0;
 const common_1 = __webpack_require__(3);
-const prompt_controller_1 = __webpack_require__(37);
-const prompt_service_1 = __webpack_require__(38);
+const prompt_controller_1 = __webpack_require__(54);
+const prompt_service_1 = __webpack_require__(55);
 const database_1 = __webpack_require__(9);
 let PromptModule = class PromptModule {
 };
@@ -2920,7 +7054,7 @@ exports.PromptModule = PromptModule = __decorate([
 
 
 /***/ }),
-/* 37 */
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2941,8 +7075,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PromptController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const prompt_service_1 = __webpack_require__(38);
-const prompt_dto_1 = __webpack_require__(39);
+const prompt_service_1 = __webpack_require__(55);
+const prompt_dto_1 = __webpack_require__(56);
 const guards_1 = __webpack_require__(16);
 let PromptController = class PromptController {
     constructor(promptService) {
@@ -3091,7 +7225,7 @@ exports.PromptController = PromptController = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3359,7 +7493,7 @@ exports.PromptService = PromptService = __decorate([
 
 
 /***/ }),
-/* 39 */
+/* 56 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3494,7 +7628,7 @@ __decorate([
 
 
 /***/ }),
-/* 40 */
+/* 57 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3507,8 +7641,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CollaborationModule = void 0;
 const common_1 = __webpack_require__(3);
-const collaboration_controller_1 = __webpack_require__(41);
-const collaboration_service_1 = __webpack_require__(42);
+const collaboration_controller_1 = __webpack_require__(58);
+const collaboration_service_1 = __webpack_require__(59);
 const database_1 = __webpack_require__(9);
 let CollaborationModule = class CollaborationModule {
 };
@@ -3524,7 +7658,7 @@ exports.CollaborationModule = CollaborationModule = __decorate([
 
 
 /***/ }),
-/* 41 */
+/* 58 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3545,9 +7679,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CollaborationController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const collaboration_service_1 = __webpack_require__(42);
-const collaboration_dto_1 = __webpack_require__(43);
-const common_2 = __webpack_require__(44);
+const collaboration_service_1 = __webpack_require__(59);
+const collaboration_dto_1 = __webpack_require__(60);
+const common_2 = __webpack_require__(61);
 let CollaborationController = class CollaborationController {
     constructor(collaborationService) {
         this.collaborationService = collaborationService;
@@ -3693,7 +7827,7 @@ exports.CollaborationController = CollaborationController = __decorate([
 
 
 /***/ }),
-/* 42 */
+/* 59 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3711,7 +7845,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CollaborationService = void 0;
 const common_1 = __webpack_require__(3);
 const database_1 = __webpack_require__(9);
-const collaboration_dto_1 = __webpack_require__(43);
+const collaboration_dto_1 = __webpack_require__(60);
 let CollaborationService = class CollaborationService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -3976,7 +8110,7 @@ exports.CollaborationService = CollaborationService = __decorate([
 
 
 /***/ }),
-/* 43 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4082,7 +8216,7 @@ __decorate([
 
 
 /***/ }),
-/* 44 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4101,16 +8235,16 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(45), exports);
+__exportStar(__webpack_require__(62), exports);
 __exportStar(__webpack_require__(16), exports);
-__exportStar(__webpack_require__(48), exports);
-__exportStar(__webpack_require__(49), exports);
-__exportStar(__webpack_require__(50), exports);
-__exportStar(__webpack_require__(51), exports);
+__exportStar(__webpack_require__(65), exports);
+__exportStar(__webpack_require__(66), exports);
+__exportStar(__webpack_require__(67), exports);
+__exportStar(__webpack_require__(68), exports);
 
 
 /***/ }),
-/* 45 */
+/* 62 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4129,12 +8263,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(46), exports);
-__exportStar(__webpack_require__(47), exports);
+__exportStar(__webpack_require__(63), exports);
+__exportStar(__webpack_require__(64), exports);
 
 
 /***/ }),
-/* 46 */
+/* 63 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -4152,7 +8286,7 @@ exports.TenantId = (0, common_1.createParamDecorator)((data, ctx) => {
 
 
 /***/ }),
-/* 47 */
+/* 64 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
@@ -4171,7 +8305,7 @@ exports.CurrentUser = (0, common_1.createParamDecorator)((data, ctx) => {
 
 
 /***/ }),
-/* 48 */
+/* 65 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4179,7 +8313,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 /***/ }),
-/* 49 */
+/* 66 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4187,7 +8321,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 /***/ }),
-/* 50 */
+/* 67 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4195,7 +8329,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 /***/ }),
-/* 51 */
+/* 68 */
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -4203,7 +8337,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 
 
 /***/ }),
-/* 52 */
+/* 69 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4216,8 +8350,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VersionModule = void 0;
 const common_1 = __webpack_require__(3);
-const version_controller_1 = __webpack_require__(53);
-const version_service_1 = __webpack_require__(54);
+const version_controller_1 = __webpack_require__(70);
+const version_service_1 = __webpack_require__(71);
 const database_1 = __webpack_require__(9);
 let VersionModule = class VersionModule {
 };
@@ -4233,7 +8367,7 @@ exports.VersionModule = VersionModule = __decorate([
 
 
 /***/ }),
-/* 53 */
+/* 70 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4254,106 +8388,358 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VersionController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const version_service_1 = __webpack_require__(54);
-const version_dto_1 = __webpack_require__(55);
-const common_2 = __webpack_require__(44);
+const version_service_1 = __webpack_require__(71);
+const version_dto_1 = __webpack_require__(72);
+const common_2 = __webpack_require__(61);
 let VersionController = class VersionController {
     constructor(versionService) {
         this.versionService = versionService;
     }
-    async createVersion(dto) {
+    async createVersion(req, dto) {
+        dto.userId = req.user.id;
         return this.versionService.createVersion(dto);
     }
-    async getChapterVersionHistory(chapterId, limit) {
+    async getChapterVersionHistory(chapterId, limit, req) {
         return this.versionService.getChapterVersionHistory(chapterId, limit ? parseInt(limit.toString()) : 50);
     }
-    async getVersion(chapterId, versionNumber) {
+    async getVersion(chapterId, versionNumber, req) {
         return this.versionService.getVersion(chapterId, parseInt(versionNumber));
     }
-    async compareVersions(dto) {
+    async compareVersions(req, dto) {
         return this.versionService.compareVersions(dto);
     }
-    async restoreVersion(dto) {
+    async restoreVersion(req, dto) {
+        dto.userId = req.user.id;
         return this.versionService.restoreVersion(dto);
     }
-    async cleanupOldVersions(chapterId, keepCount) {
+    async cleanupOldVersions(chapterId, keepCount, req) {
         return this.versionService.cleanupOldVersions(chapterId, keepCount ? parseInt(keepCount.toString()) : 100);
     }
-    async getVersionStats(chapterId) {
+    async getVersionStats(chapterId, req) {
         return this.versionService.getVersionStats(chapterId);
     }
 };
 exports.VersionController = VersionController;
 __decorate([
-    (0, common_1.Post)(),
-    (0, swagger_1.ApiOperation)({ summary: '创建章节版本快照' }),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.Post)('versions'),
+    (0, swagger_1.ApiOperation)({
+        summary: '创建章节版本快照',
+        description: '为章节创建一个版本快照，用于后续回滚或对比'
+    }),
+    (0, swagger_1.ApiBody)({ type: version_dto_1.CreateVersionDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '版本创建成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string', example: 'cm1234567890' },
+                        versionNumber: { type: 'number', example: 1 },
+                        title: { type: 'string', example: '第一章：开端' },
+                        wordCount: { type: 'number', example: 2500 },
+                        changeLog: { type: 'string', example: '修改了角色对话' },
+                        createdAt: { type: 'string', format: 'date-time' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_b = typeof version_dto_1.CreateVersionDto !== "undefined" && version_dto_1.CreateVersionDto) === "function" ? _b : Object]),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof version_dto_1.CreateVersionDto !== "undefined" && version_dto_1.CreateVersionDto) === "function" ? _b : Object]),
     __metadata("design:returntype", Promise)
 ], VersionController.prototype, "createVersion", null);
 __decorate([
-    (0, common_1.Get)('chapter/:chapterId/history'),
-    (0, swagger_1.ApiOperation)({ summary: '获取章节版本历史' }),
+    (0, common_1.Get)('versions/chapter/:chapterId/history'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取章节版本历史',
+        description: '获取指定章节的所有版本历史记录'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'chapterId', description: '章节ID' }),
+    (0, swagger_1.ApiQuery)({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: '限制返回的版本数量',
+        example: 50
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            versionNumber: { type: 'number' },
+                            title: { type: 'string' },
+                            wordCount: { type: 'number' },
+                            changeLog: { type: 'string' },
+                            createdAt: { type: 'string', format: 'date-time' },
+                            user: {
+                                type: 'object',
+                                properties: {
+                                    id: { type: 'string' },
+                                    email: { type: 'string' },
+                                    profile: {
+                                        type: 'object',
+                                        properties: {
+                                            nickname: { type: 'string' },
+                                            avatar: { type: 'string' }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
     __param(0, (0, common_1.Param)('chapterId')),
     __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Number]),
+    __metadata("design:paramtypes", [String, Number, Object]),
     __metadata("design:returntype", Promise)
 ], VersionController.prototype, "getChapterVersionHistory", null);
 __decorate([
-    (0, common_1.Get)('chapter/:chapterId/version/:versionNumber'),
-    (0, swagger_1.ApiOperation)({ summary: '获取特定版本' }),
+    (0, common_1.Get)('versions/chapter/:chapterId/version/:versionNumber'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取特定版本',
+        description: '获取指定版本号的完整版本内容'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'chapterId', description: '章节ID' }),
+    (0, swagger_1.ApiParam)({ name: 'versionNumber', description: '版本号' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '版本不存在' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
     __param(0, (0, common_1.Param)('chapterId')),
     __param(1, (0, common_1.Param)('versionNumber')),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], VersionController.prototype, "getVersion", null);
 __decorate([
-    (0, common_1.Post)('compare'),
-    (0, swagger_1.ApiOperation)({ summary: '对比两个版本' }),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.Post)('versions/compare'),
+    (0, swagger_1.ApiOperation)({
+        summary: '对比两个版本',
+        description: '对比两个版本之间的差异，包括内容、字数等'
+    }),
+    (0, swagger_1.ApiBody)({ type: version_dto_1.CompareVersionsDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '对比成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        version1: {
+                            type: 'object',
+                            properties: {
+                                versionNumber: { type: 'number' },
+                                title: { type: 'string' },
+                                wordCount: { type: 'number' },
+                                createdAt: { type: 'string', format: 'date-time' }
+                            }
+                        },
+                        version2: {
+                            type: 'object',
+                            properties: {
+                                versionNumber: { type: 'number' },
+                                title: { type: 'string' },
+                                wordCount: { type: 'number' },
+                                createdAt: { type: 'string', format: 'date-time' }
+                            }
+                        },
+                        diff: {
+                            type: 'object',
+                            properties: {
+                                wordCountDiff: { type: 'number', example: 500 },
+                                contentLengthDiff: { type: 'number', example: 1500 },
+                                titleChanged: { type: 'boolean', example: false }
+                            }
+                        },
+                        content1: { type: 'string' },
+                        content2: { type: 'string' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '版本不存在' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_c = typeof version_dto_1.CompareVersionsDto !== "undefined" && version_dto_1.CompareVersionsDto) === "function" ? _c : Object]),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof version_dto_1.CompareVersionsDto !== "undefined" && version_dto_1.CompareVersionsDto) === "function" ? _c : Object]),
     __metadata("design:returntype", Promise)
 ], VersionController.prototype, "compareVersions", null);
 __decorate([
-    (0, common_1.Post)('restore'),
-    (0, swagger_1.ApiOperation)({ summary: '回滚到指定版本' }),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.Post)('versions/restore'),
+    (0, swagger_1.ApiOperation)({
+        summary: '回滚到指定版本',
+        description: '将章节内容回滚到指定的历史版本，并创建新的版本记录'
+    }),
+    (0, swagger_1.ApiBody)({ type: version_dto_1.RestoreVersionDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '回滚成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        chapter: {
+                            type: 'object',
+                            description: '更新后的章节'
+                        },
+                        newVersion: {
+                            type: 'object',
+                            description: '回滚操作创建的新版本'
+                        },
+                        restoredFrom: {
+                            type: 'object',
+                            description: '回滚的源版本'
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '版本不存在' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_d = typeof version_dto_1.RestoreVersionDto !== "undefined" && version_dto_1.RestoreVersionDto) === "function" ? _d : Object]),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof version_dto_1.RestoreVersionDto !== "undefined" && version_dto_1.RestoreVersionDto) === "function" ? _d : Object]),
     __metadata("design:returntype", Promise)
 ], VersionController.prototype, "restoreVersion", null);
 __decorate([
-    (0, common_1.Delete)('chapter/:chapterId/cleanup'),
-    (0, swagger_1.ApiOperation)({ summary: '清理旧版本' }),
+    (0, common_1.Delete)('versions/chapter/:chapterId/cleanup'),
+    (0, swagger_1.ApiOperation)({
+        summary: '清理旧版本',
+        description: '清理章节的旧版本记录，保留指定数量的最新版本'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'chapterId', description: '章节ID' }),
+    (0, swagger_1.ApiQuery)({
+        name: 'keepCount',
+        required: false,
+        type: Number,
+        description: '保留的版本数量',
+        example: 100
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '清理成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        deleted: { type: 'number', example: 10 },
+                        message: { type: 'string', example: '清理了 10 个旧版本' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Param)('chapterId')),
     __param(1, (0, common_1.Query)('keepCount')),
+    __param(2, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Number]),
+    __metadata("design:paramtypes", [String, Number, Object]),
     __metadata("design:returntype", Promise)
 ], VersionController.prototype, "cleanupOldVersions", null);
 __decorate([
-    (0, common_1.Get)('chapter/:chapterId/stats'),
-    (0, swagger_1.ApiOperation)({ summary: '获取版本统计信息' }),
+    (0, common_1.Get)('versions/chapter/:chapterId/stats'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取版本统计信息',
+        description: '获取章节的版本数量、字数变化等统计信息'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'chapterId', description: '章节ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        totalVersions: { type: 'number', example: 15 },
+                        firstVersion: {
+                            type: 'object',
+                            properties: {
+                                versionNumber: { type: 'number', example: 1 },
+                                createdAt: { type: 'string', format: 'date-time' },
+                                wordCount: { type: 'number', example: 2000 }
+                            }
+                        },
+                        latestVersion: {
+                            type: 'object',
+                            properties: {
+                                versionNumber: { type: 'number', example: 15 },
+                                createdAt: { type: 'string', format: 'date-time' },
+                                wordCount: { type: 'number', example: 2500 }
+                            }
+                        },
+                        totalWordCountChange: { type: 'number', example: 500 }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
     __param(0, (0, common_1.Param)('chapterId')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], VersionController.prototype, "getVersionStats", null);
 exports.VersionController = VersionController = __decorate([
-    (0, swagger_1.ApiTags)('Version Control'),
-    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiTags)('章节版本控制'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
     (0, common_1.UseGuards)(common_2.JwtAuthGuard),
-    (0, common_1.Controller)('versions'),
+    (0, common_1.Controller)(),
     __metadata("design:paramtypes", [typeof (_a = typeof version_service_1.VersionService !== "undefined" && version_service_1.VersionService) === "function" ? _a : Object])
 ], VersionController);
 
 
 /***/ }),
-/* 54 */
+/* 71 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4565,7 +8951,7 @@ exports.VersionService = VersionService = __decorate([
 
 
 /***/ }),
-/* 55 */
+/* 72 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4581,56 +8967,102 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RestoreVersionDto = exports.CompareVersionsDto = exports.CreateVersionDto = void 0;
 const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const class_transformer_1 = __webpack_require__(32);
 class CreateVersionDto {
 }
 exports.CreateVersionDto = CreateVersionDto;
 __decorate([
-    (0, class_validator_1.IsString)(),
+    (0, swagger_1.ApiProperty)({
+        description: '章节ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '章节ID必须是字符串' }),
     __metadata("design:type", String)
 ], CreateVersionDto.prototype, "chapterId", void 0);
 __decorate([
-    (0, class_validator_1.IsString)(),
+    (0, swagger_1.ApiProperty)({
+        description: '用户ID',
+        example: 'cm0987654321'
+    }),
+    (0, class_validator_1.IsString)({ message: '用户ID必须是字符串' }),
     __metadata("design:type", String)
 ], CreateVersionDto.prototype, "userId", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '版本变更说明',
+        example: '修改了角色对话，调整了故事节奏',
+        maxLength: 500
+    }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsString)({ message: '变更说明必须是字符串' }),
+    (0, class_validator_1.MaxLength)(500, { message: '变更说明不能超过500个字符' }),
     __metadata("design:type", String)
 ], CreateVersionDto.prototype, "changeLog", void 0);
 class CompareVersionsDto {
 }
 exports.CompareVersionsDto = CompareVersionsDto;
 __decorate([
-    (0, class_validator_1.IsString)(),
+    (0, swagger_1.ApiProperty)({
+        description: '章节ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '章节ID必须是字符串' }),
     __metadata("design:type", String)
 ], CompareVersionsDto.prototype, "chapterId", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, swagger_1.ApiProperty)({
+        description: '第一个版本号',
+        example: 1,
+        minimum: 1
+    }),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)({ message: '版本号必须是整数' }),
     __metadata("design:type", Number)
 ], CompareVersionsDto.prototype, "version1", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, swagger_1.ApiProperty)({
+        description: '第二个版本号',
+        example: 2,
+        minimum: 1
+    }),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)({ message: '版本号必须是整数' }),
     __metadata("design:type", Number)
 ], CompareVersionsDto.prototype, "version2", void 0);
 class RestoreVersionDto {
 }
 exports.RestoreVersionDto = RestoreVersionDto;
 __decorate([
-    (0, class_validator_1.IsString)(),
+    (0, swagger_1.ApiProperty)({
+        description: '章节ID',
+        example: 'cm1234567890'
+    }),
+    (0, class_validator_1.IsString)({ message: '章节ID必须是字符串' }),
     __metadata("design:type", String)
 ], RestoreVersionDto.prototype, "chapterId", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, swagger_1.ApiProperty)({
+        description: '要回滚到的版本号',
+        example: 5,
+        minimum: 1
+    }),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)({ message: '版本号必须是整数' }),
     __metadata("design:type", Number)
 ], RestoreVersionDto.prototype, "versionNumber", void 0);
 __decorate([
-    (0, class_validator_1.IsString)(),
+    (0, swagger_1.ApiProperty)({
+        description: '用户ID',
+        example: 'cm0987654321'
+    }),
+    (0, class_validator_1.IsString)({ message: '用户ID必须是字符串' }),
     __metadata("design:type", String)
 ], RestoreVersionDto.prototype, "userId", void 0);
 
 
 /***/ }),
-/* 56 */
+/* 73 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4643,8 +9075,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentModule = void 0;
 const common_1 = __webpack_require__(3);
-const comment_controller_1 = __webpack_require__(57);
-const comment_service_1 = __webpack_require__(58);
+const comment_controller_1 = __webpack_require__(74);
+const comment_service_1 = __webpack_require__(75);
 const database_1 = __webpack_require__(9);
 let CommentModule = class CommentModule {
 };
@@ -4660,7 +9092,7 @@ exports.CommentModule = CommentModule = __decorate([
 
 
 /***/ }),
-/* 57 */
+/* 74 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4681,9 +9113,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const comment_service_1 = __webpack_require__(58);
-const comment_dto_1 = __webpack_require__(59);
-const common_2 = __webpack_require__(44);
+const comment_service_1 = __webpack_require__(75);
+const comment_dto_1 = __webpack_require__(76);
+const common_2 = __webpack_require__(61);
 let CommentController = class CommentController {
     constructor(commentService) {
         this.commentService = commentService;
@@ -4801,7 +9233,7 @@ exports.CommentController = CommentController = __decorate([
 
 
 /***/ }),
-/* 58 */
+/* 75 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4819,7 +9251,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentService = void 0;
 const common_1 = __webpack_require__(3);
 const database_1 = __webpack_require__(9);
-const comment_dto_1 = __webpack_require__(59);
+const comment_dto_1 = __webpack_require__(76);
 let CommentService = class CommentService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -5064,7 +9496,7 @@ exports.CommentService = CommentService = __decorate([
 
 
 /***/ }),
-/* 59 */
+/* 76 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5144,7 +9576,7 @@ __decorate([
 
 
 /***/ }),
-/* 60 */
+/* 77 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5157,8 +9589,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(3);
-const health_controller_1 = __webpack_require__(61);
-const health_service_1 = __webpack_require__(62);
+const health_controller_1 = __webpack_require__(78);
+const health_service_1 = __webpack_require__(79);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -5171,7 +9603,7 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 61 */
+/* 78 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5188,7 +9620,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(3);
-const health_service_1 = __webpack_require__(62);
+const health_service_1 = __webpack_require__(79);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -5211,7 +9643,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 62 */
+/* 79 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5242,7 +9674,7 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 63 */
+/* 80 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5261,7 +9693,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
 const passport_1 = __webpack_require__(8);
-const passport_jwt_1 = __webpack_require__(64);
+const passport_jwt_1 = __webpack_require__(81);
 const database_1 = __webpack_require__(9);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, prisma) {
@@ -5314,13 +9746,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 64 */
+/* 81 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 65 */
+/* 82 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5383,7 +9815,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = __decorate([
 
 
 /***/ }),
-/* 66 */
+/* 83 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5396,7 +9828,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(67);
+const operators_1 = __webpack_require__(84);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -5419,7 +9851,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 67 */
+/* 84 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -5464,8 +9896,8 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(65);
-const response_interceptor_1 = __webpack_require__(66);
+const all_exceptions_filter_1 = __webpack_require__(82);
+const response_interceptor_1 = __webpack_require__(83);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.useGlobalPipes(new common_1.ValidationPipe({

@@ -1,16 +1,20 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '@app/database';
-import { CreateMaterialDto, UpdateMaterialDto, QueryMaterialDto } from '../../dto/material.dto';
 import { Prisma } from '@prisma/client';
+import {
+  CreateMaterialDto,
+  UpdateMaterialDto,
+  QueryMaterialsDto,
+  BatchDeleteMaterialsDto,
+  BatchUpdateCategoryDto,
+  AddMaterialReferenceDto,
+} from '../../dto/material.dto';
 
 @Injectable()
 export class MaterialService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * 创建素材
-   */
-  async create(userId: string, dto: CreateMaterialDto) {
+  async createMaterial(userId: string, dto: CreateMaterialDto) {
     const material = await this.prisma.material.create({
       data: {
         userId,
@@ -20,199 +24,345 @@ export class MaterialService {
         fileUrl: dto.fileUrl,
         fileSize: dto.fileSize,
         description: dto.description,
-        tags: dto.tags || [],
+        tags: dto.tags as Prisma.JsonArray | undefined,
       },
     });
 
-    return material;
+    // 更新存储配额
+    await this.updateStorageQuota(userId, dto.fileSize || 0, 1);
+
+    return { success: true, data: material };
   }
 
-  /**
-   * 查询用户素材列表
-   */
-  async findAll(userId: string, query: QueryMaterialDto) {
-    const { type, category, keyword, tags, page = 1, pageSize = 20 } = query;
+  async getMaterials(userId: string, query: QueryMaterialsDto) {
+    const where: Prisma.MaterialWhereInput = { userId };
+    
+    if (query.type) where.type = query.type;
+    if (query.category) where.category = query.category;
+    if (query.keyword) {
+      where.OR = [
+        { name: { contains: query.keyword } },
+        { description: { contains: query.keyword } },
+      ];
+    }
 
-    const where: Prisma.MaterialWhereInput = {
-      userId,
-      ...(type && { type }),
-      ...(category && { category }),
-      ...(keyword && {
-        OR: [
-          { name: { contains: keyword } },
-          { description: { contains: keyword } },
-        ],
-      }),
-    };
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 20;
+    const skip = (page - 1) * pageSize;
 
-    // 先查询数据
-    const [allItems, total] = await Promise.all([
+    const [materials, total] = await Promise.all([
       this.prisma.material.findMany({
         where,
-        skip: (page - 1) * pageSize,
-        take: pageSize * 2, // 获取更多数据用于过滤
+        skip,
+        take: pageSize,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.material.count({ where }),
     ]);
 
-    // 如果有tags筛选，在内存中过滤
-    let items = allItems;
-    let filteredTotal = total;
-    
-    if (tags) {
-      const tagArray = tags.split(',').map(t => t.trim());
-      items = allItems.filter(item => {
-        if (!item.tags || !Array.isArray(item.tags)) return false;
-        return tagArray.some(tag => (item.tags as string[]).includes(tag));
-      });
-      // 限制返回数量
-      items = items.slice(0, pageSize);
-      filteredTotal = items.length;
-    }
-
     return {
-      items,
-      total: filteredTotal,
-      page,
-      pageSize,
-      totalPages: Math.ceil(filteredTotal / pageSize),
+      success: true,
+      data: {
+        items: materials,
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      },
     };
   }
 
-  /**
-   * 获取素材详情
-   */
-  async findOne(userId: string, id: string) {
+  async getMaterial(userId: string, materialId: string) {
     const material = await this.prisma.material.findUnique({
-      where: { id },
+      where: { id: materialId },
     });
 
-    if (!material) {
-      throw new NotFoundException('素材不存在');
+    if (!material || material.userId !== userId) {
+      throw new HttpException('素材不存在或无权访问', HttpStatus.NOT_FOUND);
     }
 
-    if (material.userId !== userId) {
-      throw new ForbiddenException('无权访问此素材');
-    }
-
-    // 增加使用次数
-    await this.prisma.material.update({
-      where: { id },
-      data: { usageCount: { increment: 1 } },
-    });
-
-    return material;
+    return { success: true, data: material };
   }
 
-  /**
-   * 更新素材
-   */
-  async update(userId: string, id: string, dto: UpdateMaterialDto) {
-    const material = await this.prisma.material.findUnique({
-      where: { id },
+  async updateMaterial(userId: string, materialId: string, dto: UpdateMaterialDto) {
+    const existing = await this.prisma.material.findUnique({
+      where: { id: materialId },
     });
 
-    if (!material) {
-      throw new NotFoundException('素材不存在');
+    if (!existing || existing.userId !== userId) {
+      throw new HttpException('素材不存在或无权访问', HttpStatus.NOT_FOUND);
     }
 
-    if (material.userId !== userId) {
-      throw new ForbiddenException('无权修改此素材');
-    }
-
-    const updated = await this.prisma.material.update({
-      where: { id },
+    const material = await this.prisma.material.update({
+      where: { id: materialId },
       data: {
-        ...(dto.name && { name: dto.name }),
-        ...(dto.category !== undefined && { category: dto.category }),
-        ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.tags !== undefined && { tags: dto.tags }),
+        name: dto.name,
+        type: dto.type,
+        category: dto.category,
+        fileUrl: dto.fileUrl,
+        fileSize: dto.fileSize,
+        description: dto.description,
+        tags: dto.tags as Prisma.JsonArray | undefined,
       },
     });
 
-    return updated;
+    return { success: true, data: material };
   }
 
-  /**
-   * 删除素材
-   */
-  async remove(userId: string, id: string) {
-    const material = await this.prisma.material.findUnique({
-      where: { id },
+  async deleteMaterial(userId: string, materialId: string) {
+    const existing = await this.prisma.material.findUnique({
+      where: { id: materialId },
     });
 
-    if (!material) {
-      throw new NotFoundException('素材不存在');
+    if (!existing || existing.userId !== userId) {
+      throw new HttpException('素材不存在或无权访问', HttpStatus.NOT_FOUND);
     }
 
-    if (material.userId !== userId) {
-      throw new ForbiddenException('无权删除此素材');
-    }
+    await this.prisma.material.delete({ where: { id: materialId } });
 
-    await this.prisma.material.delete({
-      where: { id },
-    });
+    // 更新存储配额
+    await this.updateStorageQuota(userId, -(existing.fileSize || 0), -1);
 
-    return { message: '删除成功' };
+    return { success: true, message: '素材已删除' };
   }
 
-  /**
-   * 获取素材分类列表
-   */
-  async getCategories(userId: string) {
-    const materials = await this.prisma.material.findMany({
-      where: { userId },
-      select: { category: true },
-      distinct: ['category'],
-    });
-
-    const categories = materials
-      .map((m) => m.category)
-      .filter((c) => c !== null && c !== '');
-
-    return categories;
-  }
-
-  /**
-   * 获取素材标签列表
-   */
-  async getTags(userId: string) {
-    const materials = await this.prisma.material.findMany({
-      where: { userId },
-      select: { tags: true },
-    });
-
-    const tagsSet = new Set<string>();
-    materials.forEach((m) => {
-      if (Array.isArray(m.tags)) {
-        (m.tags as string[]).forEach((tag) => tagsSet.add(tag));
-      }
-    });
-
-    return Array.from(tagsSet);
-  }
-
-  /**
-   * 获取素材统计信息
-   */
-  async getStats(userId: string) {
-    const stats = await this.prisma.material.groupBy({
-      by: ['type'],
-      where: { userId },
-      _count: { id: true },
-      _sum: { fileSize: true },
-    });
-
-    const total = await this.prisma.material.count({ where: { userId } });
+  async getMaterialStats(userId: string) {
+    const [total, byType, totalSize] = await Promise.all([
+      this.prisma.material.count({ where: { userId } }),
+      this.prisma.material.groupBy({
+        by: ['type'],
+        where: { userId },
+        _count: true,
+      }),
+      this.prisma.material.aggregate({
+        where: { userId },
+        _sum: { fileSize: true },
+      }),
+    ]);
 
     return {
-      total,
-      byType: stats.map((s) => ({
-        type: s.type,
-        count: s._count.id,
-        totalSize: s._sum.fileSize || 0,
-      })),
+      success: true,
+      data: {
+        total,
+        byType: byType.reduce((acc, item) => {
+          acc[item.type] = item._count;
+          return acc;
+        }, {}),
+        totalSize: totalSize._sum.fileSize || 0,
+      },
     };
+  }
+
+  // ===== 批量操作 =====
+  async batchDeleteMaterials(userId: string, dto: BatchDeleteMaterialsDto) {
+    // 验证所有素材都属于当前用户
+    const materials = await this.prisma.material.findMany({
+      where: {
+        id: { in: dto.materialIds },
+        userId,
+      },
+    });
+
+    if (materials.length !== dto.materialIds.length) {
+      throw new HttpException('部分素材不存在或无权访问', HttpStatus.BAD_REQUEST);
+    }
+
+    // 批量删除
+    const result = await this.prisma.material.deleteMany({
+      where: {
+        id: { in: dto.materialIds },
+        userId,
+      },
+    });
+
+    // 更新存储配额
+    const totalSize = materials.reduce((sum, m) => sum + (m.fileSize || 0), 0);
+    await this.updateStorageQuota(userId, -totalSize, -materials.length);
+
+    return {
+      success: true,
+      message: `成功删除${result.count}个素材`,
+      data: { deletedCount: result.count },
+    };
+  }
+
+  async batchUpdateCategory(userId: string, dto: BatchUpdateCategoryDto) {
+    // 验证所有素材都属于当前用户
+    const count = await this.prisma.material.count({
+      where: {
+        id: { in: dto.materialIds },
+        userId,
+      },
+    });
+
+    if (count !== dto.materialIds.length) {
+      throw new HttpException('部分素材不存在或无权访问', HttpStatus.BAD_REQUEST);
+    }
+
+    // 批量更新分类
+    const result = await this.prisma.material.updateMany({
+      where: {
+        id: { in: dto.materialIds },
+        userId,
+      },
+      data: {
+        category: dto.category,
+      },
+    });
+
+    return {
+      success: true,
+      message: `成功更新${result.count}个素材的分类`,
+      data: { updatedCount: result.count },
+    };
+  }
+
+  // ===== 素材引用追踪 =====
+  async addMaterialReference(userId: string, materialId: string, dto: AddMaterialReferenceDto) {
+    // 验证素材存在且属于当前用户
+    const material = await this.prisma.material.findUnique({
+      where: { id: materialId },
+    });
+
+    if (!material || material.userId !== userId) {
+      throw new HttpException('素材不存在或无权访问', HttpStatus.NOT_FOUND);
+    }
+
+    // 创建引用记录
+    const reference = await this.prisma.materialReference.create({
+      data: {
+        materialId,
+        chapterId: dto.chapterId,
+        novelId: dto.novelId,
+        userId,
+        context: dto.context,
+        position: dto.position,
+      },
+    });
+
+    // 更新素材使用次数
+    await this.prisma.material.update({
+      where: { id: materialId },
+      data: {
+        usageCount: {
+          increment: 1,
+        },
+      },
+    });
+
+    return { success: true, data: reference };
+  }
+
+  async getMaterialReferences(userId: string, materialId: string) {
+    const material = await this.prisma.material.findUnique({
+      where: { id: materialId },
+    });
+
+    if (!material || material.userId !== userId) {
+      throw new HttpException('素材不存在或无权访问', HttpStatus.NOT_FOUND);
+    }
+
+    const references = await this.prisma.materialReference.findMany({
+      where: { materialId, userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { success: true, data: references };
+  }
+
+  async deleteMaterialReference(userId: string, referenceId: string) {
+    const reference = await this.prisma.materialReference.findUnique({
+      where: { id: referenceId },
+    });
+
+    if (!reference || reference.userId !== userId) {
+      throw new HttpException('引用记录不存在或无权访问', HttpStatus.NOT_FOUND);
+    }
+
+    await this.prisma.materialReference.delete({
+      where: { id: referenceId },
+    });
+
+    // 减少素材使用次数
+    await this.prisma.material.update({
+      where: { id: reference.materialId },
+      data: {
+        usageCount: {
+          decrement: 1,
+        },
+      },
+    });
+
+    return { success: true, message: '引用记录已删除' };
+  }
+
+  // ===== 存储配额管理 =====
+  async getStorageQuota(userId: string) {
+    let quota = await this.prisma.userStorageQuota.findUnique({
+      where: { userId },
+    });
+
+    // 如果不存在，创建默认配额
+    if (!quota) {
+      quota = await this.prisma.userStorageQuota.create({
+        data: {
+          userId,
+          totalQuota: 1073741824, // 1GB
+          usedSpace: 0,
+          materialCount: 0,
+        },
+      });
+    }
+
+    // 实时计算当前使用量
+    const stats = await this.prisma.material.aggregate({
+      where: { userId },
+      _sum: { fileSize: true },
+      _count: true,
+    });
+
+    const actualUsedSpace = BigInt(stats._sum.fileSize || 0);
+    const actualMaterialCount = stats._count;
+
+    // 更新配额记录
+    if (quota.usedSpace !== actualUsedSpace || quota.materialCount !== actualMaterialCount) {
+      quota = await this.prisma.userStorageQuota.update({
+        where: { userId },
+        data: {
+          usedSpace: actualUsedSpace,
+          materialCount: actualMaterialCount,
+        },
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        ...quota,
+        usagePercentage: ((Number(quota.usedSpace) / Number(quota.totalQuota)) * 100).toFixed(2),
+        remainingSpace: Number(quota.totalQuota) - Number(quota.usedSpace),
+      },
+    };
+  }
+
+  private async updateStorageQuota(userId: string, sizeDelta: number, countDelta: number) {
+    const quota = await this.prisma.userStorageQuota.findUnique({
+      where: { userId },
+    });
+
+    if (!quota) {
+      await this.prisma.userStorageQuota.create({
+        data: {
+          userId,
+          usedSpace: Math.max(0, sizeDelta),
+          materialCount: Math.max(0, countDelta),
+        },
+      });
+    } else {
+      await this.prisma.userStorageQuota.update({
+        where: { userId },
+        data: {
+          usedSpace: Math.max(0, Number(quota.usedSpace) + sizeDelta),
+          materialCount: Math.max(0, quota.materialCount + countDelta),
+        },
+      });
+    }
   }
 }

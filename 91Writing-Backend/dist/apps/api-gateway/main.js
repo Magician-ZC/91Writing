@@ -283,14 +283,17 @@ let AuthService = AuthService_1 = class AuthService {
         const cleanHeaders = this.cleanHeaders(headers);
         this.logger.log(`代理请求: ${method} ${targetUrl} (原始URL: ${url})`);
         try {
-            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request({
+            const requestConfig = {
                 method: method,
                 url: targetUrl,
                 headers: cleanHeaders,
-                data: body,
                 timeout: 30000,
                 validateStatus: () => true,
-            }));
+            };
+            if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
+                requestConfig.data = body;
+            }
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request(requestConfig));
             return response;
         }
         catch (error) {
@@ -782,12 +785,15 @@ let PaymentService = class PaymentService {
     }
     async forwardRequest(path, method, data, headers) {
         try {
-            const response = await (0, axios_1.default)({
+            const requestConfig = {
                 method,
                 url: `${this.paymentServiceUrl}${path}`,
-                data,
                 headers,
-            });
+            };
+            if (method !== 'GET' && method !== 'DELETE' && data !== undefined) {
+                requestConfig.data = data;
+            }
+            const response = await (0, axios_1.default)(requestConfig);
             return response.data;
         }
         catch (error) {
@@ -959,14 +965,17 @@ let AdminService = AdminService_1 = class AdminService {
         const cleanHeaders = this.cleanHeaders(headers);
         this.logger.log(`代理请求: ${method} ${targetUrl} (原始URL: ${url})`);
         try {
-            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request({
+            const requestConfig = {
                 method: method,
                 url: targetUrl,
                 headers: cleanHeaders,
-                data: body,
                 timeout: 30000,
                 validateStatus: () => true,
-            }));
+            };
+            if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
+                requestConfig.data = body;
+            }
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request(requestConfig));
             return response;
         }
         catch (error) {
@@ -1197,16 +1206,19 @@ let NovelService = class NovelService {
     async proxyRequest(path, method, headers, body, query) {
         const url = `${this.novelServiceUrl}${path}`;
         try {
-            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request({
+            const requestConfig = {
                 url,
                 method,
                 headers: {
                     ...headers,
                     host: undefined,
                 },
-                data: body,
                 params: query,
-            }));
+            };
+            if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
+                requestConfig.data = body;
+            }
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request(requestConfig));
             return response.data;
         }
         catch (error) {
@@ -1368,14 +1380,17 @@ let UsersService = UsersService_1 = class UsersService {
         const cleanHeaders = this.cleanHeaders(headers);
         this.logger.log(`代理请求: ${method} ${targetUrl} (原始URL: ${url})`);
         try {
-            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request({
+            const requestConfig = {
                 method: method,
                 url: targetUrl,
                 headers: cleanHeaders,
-                data: body,
                 timeout: 30000,
                 validateStatus: () => true,
-            }));
+            };
+            if (method !== 'GET' && method !== 'DELETE' && body !== undefined) {
+                requestConfig.data = body;
+            }
+            const response = await (0, rxjs_1.firstValueFrom)(this.httpService.request(requestConfig));
             return response;
         }
         catch (error) {

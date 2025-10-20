@@ -2129,66 +2129,188 @@ let UserAIConfigController = class UserAIConfigController {
         this.aiConfigService = aiConfigService;
     }
     async getAvailableConfigs(req) {
-        return this.aiConfigService.getAvailableConfigs(req.user.userId);
+        return this.aiConfigService.getAvailableConfigs(req.user.id);
     }
     async getUserConfigs(req) {
-        return this.aiConfigService.getUserConfigs(req.user.userId);
+        return this.aiConfigService.getUserConfigs(req.user.id);
     }
     async createConfig(req, dto) {
-        return this.aiConfigService.createConfig(req.user.userId, dto);
+        return this.aiConfigService.createConfig(req.user.id, dto);
     }
     async updateConfig(req, id, dto) {
-        return this.aiConfigService.updateConfig(req.user.userId, id, dto);
+        return this.aiConfigService.updateConfig(req.user.id, id, dto);
     }
     async deleteConfig(req, id) {
-        await this.aiConfigService.deleteConfig(req.user.userId, id);
+        await this.aiConfigService.deleteConfig(req.user.id, id);
         return { message: '配置已删除' };
     }
     async setDefaultConfig(req, id) {
-        await this.aiConfigService.setDefaultConfig(req.user.userId, id);
+        await this.aiConfigService.setDefaultConfig(req.user.id, id);
         return { message: '默认配置已设置' };
     }
 };
 exports.UserAIConfigController = UserAIConfigController;
 __decorate([
-    (0, common_1.Get)('available'),
-    (0, swagger_1.ApiOperation)({ summary: '获取可用的AI配置（全局+自定义）' }),
+    (0, common_1.Get)('ai-config/available'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取可用的AI配置',
+        description: '获取用户可用的所有AI配置，包括系统全局配置和用户自定义配置'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        system: {
+                            type: 'array',
+                            description: '系统全局配置',
+                            items: { type: 'object' }
+                        },
+                        user: {
+                            type: 'array',
+                            description: '用户自定义配置',
+                            items: { type: 'object' }
+                        },
+                        default: { type: 'string', example: 'system:1', description: '默认配置ID' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
 ], UserAIConfigController.prototype, "getAvailableConfigs", null);
 __decorate([
-    (0, common_1.Get)('custom'),
-    (0, swagger_1.ApiOperation)({ summary: '获取用户自定义配置列表' }),
+    (0, common_1.Get)('ai-config/custom'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取用户自定义配置列表',
+        description: '获取当前用户创建的所有自定义AI配置'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '获取成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            id: { type: 'string' },
+                            name: { type: 'string', example: '我的OpenAI配置' },
+                            provider: { type: 'string', example: 'OPENAI' },
+                            model: { type: 'string', example: 'gpt-4' },
+                            apiUrl: { type: 'string' },
+                            enabled: { type: 'boolean' },
+                            isDefault: { type: 'boolean' },
+                            parameters: { type: 'object' },
+                            createdAt: { type: 'string', format: 'date-time' }
+                        }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
     __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
 ], UserAIConfigController.prototype, "getUserConfigs", null);
 __decorate([
-    (0, common_1.Post)('custom'),
-    (0, swagger_1.ApiOperation)({ summary: '创建用户自定义配置' }),
+    (0, common_1.Post)('ai-config/custom'),
+    (0, swagger_1.ApiOperation)({
+        summary: '创建用户自定义配置',
+        description: '创建新的AI配置，可以配置自己的API Key和参数'
+    }),
+    (0, swagger_1.ApiBody)({ type: ai_config_dto_1.CreateUserAIConfigDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: '创建成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'string' },
+                        name: { type: 'string' },
+                        provider: { type: 'string' },
+                        model: { type: 'string' },
+                        enabled: { type: 'boolean' },
+                        isDefault: { type: 'boolean' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
     __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, typeof (_d = typeof ai_config_dto_1.CreateUserAIConfigDto !== "undefined" && ai_config_dto_1.CreateUserAIConfigDto) === "function" ? _d : Object]),
     __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
 ], UserAIConfigController.prototype, "createConfig", null);
 __decorate([
-    (0, common_1.Put)('custom/:id'),
-    (0, swagger_1.ApiOperation)({ summary: '更新用户自定义配置' }),
+    (0, common_1.Put)('ai-config/custom/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '更新用户自定义配置',
+        description: '更新已有的自定义AI配置'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '配置ID' }),
+    (0, swagger_1.ApiBody)({ type: ai_config_dto_1.UpdateUserAIConfigDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '更新成功'
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '参数验证失败' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '配置不存在' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)()),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String, typeof (_f = typeof ai_config_dto_1.UpdateUserAIConfigDto !== "undefined" && ai_config_dto_1.UpdateUserAIConfigDto) === "function" ? _f : Object]),
     __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
 ], UserAIConfigController.prototype, "updateConfig", null);
 __decorate([
-    (0, common_1.Delete)('custom/:id'),
-    (0, swagger_1.ApiOperation)({ summary: '删除用户自定义配置' }),
+    (0, common_1.Delete)('ai-config/custom/:id'),
+    (0, swagger_1.ApiOperation)({
+        summary: '删除用户自定义配置',
+        description: '删除指定的自定义AI配置'
+    }),
     (0, swagger_1.ApiParam)({ name: 'id', description: '配置ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '删除成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        message: { type: 'string', example: '配置已删除' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '配置不存在' }),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
@@ -2197,9 +2319,30 @@ __decorate([
     __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
 ], UserAIConfigController.prototype, "deleteConfig", null);
 __decorate([
-    (0, common_1.Post)('custom/:id/set-default'),
-    (0, swagger_1.ApiOperation)({ summary: '设置默认配置' }),
+    (0, common_1.Post)('ai-config/custom/:id/set-default'),
+    (0, swagger_1.ApiOperation)({
+        summary: '设置默认配置',
+        description: '将指定的配置设置为默认AI配置'
+    }),
     (0, swagger_1.ApiParam)({ name: 'id', description: '配置ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '设置成功',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                data: {
+                    type: 'object',
+                    properties: {
+                        message: { type: 'string', example: '默认配置已设置' }
+                    }
+                }
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: '未授权访问' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '配置不存在' }),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Param)('id')),
@@ -2208,9 +2351,9 @@ __decorate([
     __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
 ], UserAIConfigController.prototype, "setDefaultConfig", null);
 exports.UserAIConfigController = UserAIConfigController = __decorate([
-    (0, swagger_1.ApiTags)('用户-AI配置'),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.Controller)('ai-config'),
+    (0, swagger_1.ApiTags)('AI配置管理'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    (0, common_1.Controller)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [typeof (_a = typeof ai_config_service_1.UserAIConfigService !== "undefined" && ai_config_service_1.UserAIConfigService) === "function" ? _a : Object])
 ], UserAIConfigController);

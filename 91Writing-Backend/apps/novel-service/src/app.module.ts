@@ -10,6 +10,7 @@ import { SuggestionModule } from './modules/suggestion/suggestion.module';
 import { CharacterModule } from './modules/character/character.module';
 import { WorldModule } from './modules/world/world.module';
 import { MaterialModule } from './modules/material/material.module';
+import { MigrationModule } from './modules/migration/migration.module';
 import { PromptModule } from './modules/prompt/prompt.module';
 import { CollaborationModule } from './modules/collaboration/collaboration.module';
 import { VersionModule } from './modules/version/version.module';
@@ -51,6 +52,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     CharacterModule,
     WorldModule,
     MaterialModule,
+    MigrationModule,
     PromptModule,
     CollaborationModule,
     VersionModule,

@@ -382,7 +382,8 @@ model Material {
   usageCount  Int          @default(0) @map("usage_count")
 
   // 关联
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  references MaterialReference[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -392,6 +393,43 @@ model Material {
   @@index([category])
   @@index([type])
   @@map("materials")
+}
+
+// 素材引用记录表
+model MaterialReference {
+  id         String  @id @default(cuid())
+  materialId String  @map("material_id")
+  chapterId  String  @map("chapter_id")
+  novelId    String  @map("novel_id")
+  userId     String  @map("user_id")
+  context    String? @db.Text // 引用上下文
+  position   Int?    @default(0) // 在章节中的位置
+
+  // 关联
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([materialId])
+  @@index([chapterId])
+  @@index([novelId])
+  @@index([userId])
+  @@map("material_references")
+}
+
+// 用户存储配额表
+model UserStorageQuota {
+  userId        String @id @map("user_id")
+  totalQuota    BigInt @default(1073741824) @map("total_quota") // 总配额（字节）默认1GB
+  usedSpace     BigInt @default(0) @map("used_space") // 已使用空间
+  materialCount Int    @default(0) @map("material_count") // 素材数量
+
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_storage_quotas")
 }
 
 // 提示词表
@@ -945,4 +983,51 @@ enum WorldCategory {
   ITEM // 物品
   EVENT // 事件
   CUSTOM // 自定义
+}
+
+// ===== 数据迁移系统 =====
+// 数据迁移记录表
+model DataMigration {
+  id             String          @id @default(cuid())
+  userId         String          @map("user_id")
+  migrationType  MigrationType   @map("migration_type") // 迁移类型
+  status         MigrationStatus @default(PENDING) // 迁移状态
+  totalItems     Int             @default(0) @map("total_items") // 总条目数
+  processedItems Int             @default(0) @map("processed_items") // 已处理条目数
+  successItems   Int             @default(0) @map("success_items") // 成功条目数
+  failedItems    Int             @default(0) @map("failed_items") // 失败条目数
+  errorLog       Json? // 错误日志
+  sourceData     Json? // 源数据快照（用于回滚）
+  metadata       Json? // 元数据
+
+  // 时间戳
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([status])
+  @@index([createdAt])
+  @@map("data_migrations")
+}
+
+// 迁移类型枚举
+enum MigrationType {
+  NOVELS // 小说数据
+  CHAPTERS // 章节数据
+  MEMORIES // 记忆数据
+  CHARACTERS // 角色数据
+  WORLD_SETTINGS // 世界观数据
+  MATERIALS // 素材数据
+  FULL // 全量迁移
+}
+
+// 迁移状态枚举
+enum MigrationStatus {
+  PENDING // 待处理
+  PROCESSING // 处理中
+  COMPLETED // 已完成
+  FAILED // 失败
+  ROLLED_BACK // 已回滚
 }

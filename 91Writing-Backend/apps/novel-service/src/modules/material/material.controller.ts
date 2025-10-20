@@ -7,66 +7,146 @@ import {
   Body,
   Param,
   Query,
+  Request,
   UseGuards,
-  Req,
+  ValidationPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { MaterialService } from './material.service';
-import { CreateMaterialDto, UpdateMaterialDto, QueryMaterialDto } from '../../dto/material.dto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '@app/common/guards';
+import { MaterialService } from './material.service';
+import {
+  CreateMaterialDto,
+  UpdateMaterialDto,
+  QueryMaterialsDto,
+  BatchDeleteMaterialsDto,
+  BatchUpdateCategoryDto,
+  AddMaterialReferenceDto,
+} from '../../dto/material.dto';
 
 @ApiTags('素材管理')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
+@Controller()
 @UseGuards(JwtAuthGuard)
-@Controller('materials')
 export class MaterialController {
   constructor(private readonly materialService: MaterialService) {}
 
-  @Post()
+  @Post('materials')
   @ApiOperation({ summary: '创建素材' })
-  async create(@Req() req, @Body() dto: CreateMaterialDto) {
-    return this.materialService.create(req.user.userId, dto);
+  @ApiBody({ type: CreateMaterialDto })
+  @ApiResponse({ status: 201, description: '创建成功' })
+  async createMaterial(@Request() req, @Body(ValidationPipe) dto: CreateMaterialDto) {
+    return this.materialService.createMaterial(req.user.id, dto);
   }
 
-  @Get()
+  @Get('materials')
   @ApiOperation({ summary: '获取素材列表' })
-  async findAll(@Req() req, @Query() query: QueryMaterialDto) {
-    return this.materialService.findAll(req.user.userId, query);
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getMaterials(@Request() req, @Query(ValidationPipe) query: QueryMaterialsDto) {
+    return this.materialService.getMaterials(req.user.id, query);
   }
 
-  @Get('categories')
-  @ApiOperation({ summary: '获取素材分类列表' })
-  async getCategories(@Req() req) {
-    return this.materialService.getCategories(req.user.userId);
-  }
-
-  @Get('tags')
-  @ApiOperation({ summary: '获取素材标签列表' })
-  async getTags(@Req() req) {
-    return this.materialService.getTags(req.user.userId);
-  }
-
-  @Get('stats')
-  @ApiOperation({ summary: '获取素材统计' })
-  async getStats(@Req() req) {
-    return this.materialService.getStats(req.user.userId);
-  }
-
-  @Get(':id')
+  @Get('materials/:id')
   @ApiOperation({ summary: '获取素材详情' })
-  async findOne(@Req() req, @Param('id') id: string) {
-    return this.materialService.findOne(req.user.userId, id);
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getMaterial(@Request() req, @Param('id') id: string) {
+    return this.materialService.getMaterial(req.user.id, id);
   }
 
-  @Put(':id')
+  @Put('materials/:id')
   @ApiOperation({ summary: '更新素材' })
-  async update(@Req() req, @Param('id') id: string, @Body() dto: UpdateMaterialDto) {
-    return this.materialService.update(req.user.userId, id, dto);
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiBody({ type: UpdateMaterialDto })
+  @ApiResponse({ status: 200, description: '更新成功' })
+  @HttpCode(HttpStatus.OK)
+  async updateMaterial(
+    @Request() req,
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: UpdateMaterialDto,
+  ) {
+    return this.materialService.updateMaterial(req.user.id, id, dto);
   }
 
-  @Delete(':id')
+  @Delete('materials/:id')
   @ApiOperation({ summary: '删除素材' })
-  async remove(@Req() req, @Param('id') id: string) {
-    return this.materialService.remove(req.user.userId, id);
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  @HttpCode(HttpStatus.OK)
+  async deleteMaterial(@Request() req, @Param('id') id: string) {
+    return this.materialService.deleteMaterial(req.user.id, id);
+  }
+
+  @Get('materials/stats/summary')
+  @ApiOperation({ summary: '获取素材统计' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getMaterialStats(@Request() req) {
+    return this.materialService.getMaterialStats(req.user.id);
+  }
+
+  // ===== 批量操作 =====
+  @Post('materials/batch-delete')
+  @ApiOperation({ summary: '批量删除素材' })
+  @ApiBody({ type: BatchDeleteMaterialsDto })
+  @ApiResponse({ status: 200, description: '批量删除成功' })
+  @HttpCode(HttpStatus.OK)
+  async batchDeleteMaterials(@Request() req, @Body(ValidationPipe) dto: BatchDeleteMaterialsDto) {
+    return this.materialService.batchDeleteMaterials(req.user.id, dto);
+  }
+
+  @Post('materials/batch-update-category')
+  @ApiOperation({ summary: '批量更新素材分类' })
+  @ApiBody({ type: BatchUpdateCategoryDto })
+  @ApiResponse({ status: 200, description: '批量更新成功' })
+  @HttpCode(HttpStatus.OK)
+  async batchUpdateCategory(@Request() req, @Body(ValidationPipe) dto: BatchUpdateCategoryDto) {
+    return this.materialService.batchUpdateCategory(req.user.id, dto);
+  }
+
+  // ===== 素材引用追踪 =====
+  @Post('materials/:id/references')
+  @ApiOperation({ summary: '添加素材引用记录' })
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiBody({ type: AddMaterialReferenceDto })
+  @ApiResponse({ status: 201, description: '添加成功' })
+  async addMaterialReference(
+    @Request() req,
+    @Param('id') id: string,
+    @Body(ValidationPipe) dto: AddMaterialReferenceDto,
+  ) {
+    return this.materialService.addMaterialReference(req.user.id, id, dto);
+  }
+
+  @Get('materials/:id/references')
+  @ApiOperation({ summary: '获取素材引用列表' })
+  @ApiParam({ name: 'id', description: '素材ID' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getMaterialReferences(@Request() req, @Param('id') id: string) {
+    return this.materialService.getMaterialReferences(req.user.id, id);
+  }
+
+  @Delete('materials/references/:referenceId')
+  @ApiOperation({ summary: '删除素材引用记录' })
+  @ApiParam({ name: 'referenceId', description: '引用记录ID' })
+  @ApiResponse({ status: 200, description: '删除成功' })
+  @HttpCode(HttpStatus.OK)
+  async deleteMaterialReference(@Request() req, @Param('referenceId') referenceId: string) {
+    return this.materialService.deleteMaterialReference(req.user.id, referenceId);
+  }
+
+  // ===== 存储配额管理 =====
+  @Get('materials/storage/quota')
+  @ApiOperation({ summary: '获取存储配额信息' })
+  @ApiResponse({ status: 200, description: '获取成功' })
+  async getStorageQuota(@Request() req) {
+    return this.materialService.getStorageQuota(req.user.id);
   }
 }
