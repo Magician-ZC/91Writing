@@ -13,6 +13,10 @@ class UnifiedAIService {
     this.statusCache = null
     this.statusCacheTime = 0
     this.CACHE_DURATION = 30000 // 30秒缓存
+    
+    // 添加请求防抖
+    this.pendingRequests = new Map() // 存储进行中的请求
+    this.requestCount = 0 // 请求计数器，用于调试
   }
   
   /**
@@ -25,26 +29,105 @@ class UnifiedAIService {
    * @returns {Promise<{content: string, model: string, provider: string, tokensUsed: number}>}
    */
   async chat(messages, options = {}) {
+    // 请求计数器递增
+    this.requestCount++
+    const requestId = this.requestCount
+    
+    // 防止同时发起过多请求
+    if (this.requestCount > 50) {
+      console.error('❌ [UnifiedAI] 检测到异常请求循环，请求数:', this.requestCount)
+      this.requestCount = 0 // 重置计数器
+      throw new Error('检测到异常请求循环，已终止')
+    }
+    
     try {
       // 将消息数组转换为单个提示词（简化处理）
       const prompt = messages.map(m => m.content).join('\n')
       
-      // 直接使用apiService（它已经支持统一配置）
-      const content = await apiService.generateText(prompt, {
-        maxTokens: options.parameters?.maxTokens,
-        temperature: options.parameters?.temperature,
-        type: 'chat'
-      })
+      // 生成请求标识
+      const requestKey = `chat_${prompt.substring(0, 100)}`
       
-      // 返回统一格式
-      return {
-        content: content,
-        model: 'unified',
-        provider: 'UNIFIED',
-        tokensUsed: 0
+      // 检查是否有相同的请求正在进行
+      if (this.pendingRequests.has(requestKey)) {
+        console.warn('⚠️ [UnifiedAI] 检测到重复请求，等待现有请求完成...')
+        return await this.pendingRequests.get(requestKey)
       }
+      
+      console.log(`🌐 [UnifiedAI #${requestId}] 开始AI请求`)
+      console.log(`📤 [UnifiedAI #${requestId}] 提示词长度:`, prompt.length)
+      console.log(`⚙️ [UnifiedAI #${requestId}] 参数:`, options.parameters)
+      
+      // 创建请求Promise
+      const requestPromise = (async () => {
+        try {
+          // 获取默认AI配置
+          const config = await aiConfigService.getDefaultConfig()
+          
+          if (!config) {
+            throw new Error('未找到默认AI配置，请前往设置页面配置 AI 模型')
+          }
+          
+          console.log(`🔧 [UnifiedAI #${requestId}] 使用配置:`, config.name || config.provider)
+          
+          // 调用后端的通用AI对话接口（后端会使用用户配置的deepseek）
+          const AI_SERVICE_URL = 'http://localhost:3004'
+          const token = localStorage.getItem('auth-tokens') || sessionStorage.getItem('auth-tokens')
+          const tokens = token ? JSON.parse(token) : {}
+          
+          const response = await fetch(`${AI_SERVICE_URL}/assistant/general`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${tokens.accessToken || ''}`
+            },
+            body: JSON.stringify({
+              message: prompt,
+              aiConfigId: `${config.userId ? 'user' : 'system'}:${config.id}`,
+              parameters: {
+                temperature: options.parameters?.temperature || 0.7,
+                maxTokens: options.parameters?.maxTokens || 4000
+              }
+            })
+          })
+          
+          if (!response.ok) {
+            const errorText = await response.text()
+            console.error(`❌ [UnifiedAI #${requestId}] 后端错误:`, errorText)
+            let errorMessage = errorText
+            try {
+              const errorJson = JSON.parse(errorText)
+              errorMessage = errorJson.message || errorJson.error?.message || errorText
+            } catch (e) {}
+            throw new Error(errorMessage)
+          }
+          
+          const result = await response.json()
+          console.log(`📦 [UnifiedAI #${requestId}] 后端响应:`, result)
+          
+          // 提取内容
+          const content = result?.data?.content || result?.content || ''
+          
+          console.log(`✅ [UnifiedAI #${requestId}] AI响应成功，内容长度:`, content.length)
+          
+          // 返回统一格式
+          return {
+            content: content,
+            model: result?.data?.model || result?.model || config.model || 'unified',
+            provider: result?.data?.provider || result?.provider || config.provider || 'UNIFIED',
+            tokensUsed: result?.data?.tokensUsed || result?.tokensUsed || 0
+          }
+        } finally {
+          // 请求完成后从pending列表中移除
+          this.pendingRequests.delete(requestKey)
+        }
+      })()
+      
+      // 将请求加入pending列表
+      this.pendingRequests.set(requestKey, requestPromise)
+      
+      return await requestPromise
     } catch (error) {
-      console.error('AI调用失败:', error)
+      console.error(`❌ [UnifiedAI #${requestId}] AI调用失败:`, error)
       throw error
     }
   }
@@ -52,28 +135,83 @@ class UnifiedAIService {
   /**
    * 流式调用AI聊天
    * @param {Array} messages - 消息数组
-   * @param {Function} onChunk - 接收每个数据块的回调函数
+   * @param {Function} onChunk - 接收每个数据块的回调函数 (chunk, fullContent)
    * @param {Object} options - 调用选项
-   * @returns {Promise<void>}
+   * @returns {Promise<string>} 返回完整内容
    */
   async chatStream(messages, onChunk, options = {}) {
+    const requestId = ++this.requestCount
+    
     try {
       const prompt = messages.map(m => m.content).join('\n')
       
-      // 使用apiService的流式方法
-      const content = await apiService.generateTextStream(prompt, {
-        maxTokens: options.parameters?.maxTokens,
-        temperature: options.parameters?.temperature,
-        type: 'chat'
-      }, (chunk, fullContent) => {
-        if (onChunk) {
-          onChunk(chunk, fullContent)
-        }
+      console.log(`🌊 [UnifiedAI #${requestId}] 开始流式AI请求`)
+      console.log(`📤 [UnifiedAI #${requestId}] 提示词长度:`, prompt.length)
+      
+      // 获取配置
+      const config = await aiConfigService.getDefaultConfig()
+      
+      if (!config) {
+        throw new Error('未找到默认AI配置')
+      }
+      
+      console.log(`🔧 [UnifiedAI #${requestId}] 使用配置:`, config.name)
+      
+      // 调用后端的真正流式接口
+      const AI_SERVICE_URL = 'http://localhost:3004'
+      const token = localStorage.getItem('auth-tokens') || sessionStorage.getItem('auth-tokens')
+      const tokens = token ? JSON.parse(token) : {}
+      
+      const response = await fetch(`${AI_SERVICE_URL}/assistant/general/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokens.accessToken || ''}`
+        },
+        body: JSON.stringify({
+          message: prompt,
+          aiConfigId: `${config.userId ? 'user' : 'system'}:${config.id}`,
+          parameters: {
+            temperature: options.parameters?.temperature || 0.7,
+            maxTokens: options.parameters?.maxTokens || 4000
+          }
+        })
       })
       
-      return content
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`后端调用失败 (${response.status}): ${errorText}`)
+      }
+      
+      console.log(`📦 [UnifiedAI #${requestId}] 开始接收流式响应...`)
+      
+      // 真正的流式处理：逐块接收
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let fullContent = ''
+      
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          
+          const text = decoder.decode(value, { stream: true })
+          fullContent += text
+          
+          // 立即调用回调，实时推送
+          if (onChunk && text) {
+            onChunk(text, fullContent)
+          }
+        }
+      } finally {
+        reader.releaseLock()
+      }
+      
+      console.log(`✅ [UnifiedAI #${requestId}] 流式接收完成，总长度:`, fullContent.length)
+      
+      return fullContent
     } catch (error) {
-      console.error('流式AI调用失败:', error)
+      console.error(`❌ [UnifiedAI #${requestId}] 流式AI调用失败:`, error)
       throw error
     }
   }

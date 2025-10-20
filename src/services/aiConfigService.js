@@ -12,17 +12,23 @@ class AIConfigService {
    */
   async getAvailableConfigs() {
     try {
+      console.log('🔍 [AIConfig] 开始获取AI配置...')
       const response = await apiManager.getAvailableAIConfigs()
+      console.log('📦 [AIConfig] API响应:', response)
+      
       // 从响应中提取 data 字段
       const result = response?.data || response
-      // 确保返回的数据结构正确
-      return {
+      
+      const configs = {
         system: result?.system || [],
         user: result?.user || [],
         default: result?.default || ''
       }
+      
+      console.log('✅ [AIConfig] 配置获取成功, 系统配置:', configs.system.length, '用户配置:', configs.user.length)
+      return configs
     } catch (error) {
-      console.error('获取可用AI配置失败:', error)
+      console.error('❌ [AIConfig] 获取配置失败:', error)
       // 降级到localStorage
       return this.getFallbackConfigs()
     }
@@ -106,12 +112,14 @@ class AIConfigService {
   /**
    * 根据配置ID获取配置对象
    * @param {string} configId - 格式: "system:id" 或 "user:id"
+   * @param {Object} availableConfigs - 可选，已获取的配置列表（避免重复调用）
    * @returns {Promise<Object|null>}
    */
-  async getConfigById(configId) {
+  async getConfigById(configId, availableConfigs = null) {
     if (!configId) return null
 
-    const available = await this.getAvailableConfigs()
+    // 如果已经提供了配置列表，直接使用；否则获取
+    const available = availableConfigs || await this.getAvailableConfigs()
     const [type, id] = configId.split(':')
 
     if (type === 'system') {
@@ -130,7 +138,8 @@ class AIConfigService {
   async getDefaultConfig() {
     try {
       const available = await this.getAvailableConfigs()
-      return this.getConfigById(available.default)
+      // 传入已获取的配置列表，避免重复调用
+      return this.getConfigById(available.default, available)
     } catch (error) {
       console.error('获取默认配置失败:', error)
       return this.getFallbackDefaultConfig()

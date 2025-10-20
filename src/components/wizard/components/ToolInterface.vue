@@ -209,6 +209,7 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import {
   MagicStick,
   Check,
@@ -216,6 +217,8 @@ import {
   Refresh
 } from '@element-plus/icons-vue'
 import { toolIntegrationService } from '@/services/toolIntegrationService'
+
+const router = useRouter()
 
 // Props
 const props = defineProps({
@@ -230,7 +233,7 @@ const props = defineProps({
   wizardData: {
     type: Object,
     default: () => ({})
-  }
+  },
 })
 
 // Emits
@@ -243,6 +246,7 @@ const progress = ref(0)
 const progressText = ref('')
 const result = ref(null)
 const activeResultTab = ref('')
+const streamingContent = ref('') // 流式输出内容
 
 // 工具配置
 const toolConfigs = {
@@ -677,57 +681,100 @@ const executeTool = async () => {
     return
   }
   
-  executing.value = true
-  progress.value = 0
-  progressText.value = '准备执行工具...'
+  // 导入后台任务服务
+  const { backgroundTaskService } = await import('@/services/backgroundTaskService')
+  const { toolIntegrationService } = await import('@/services/toolIntegrationService')
   
-  let progressInterval = null
+  // 获取工具名称
+  const toolName = toolConfig.value.title || '工具'
+  
+  // 初始化工具集成服务
+  toolIntegrationService.init()
+  
+  // 创建后台任务
+  const taskId = backgroundTaskService.createTask({
+    name: `${toolName} - ${new Date().toLocaleTimeString()}`,
+    type: props.toolType,
+    executor: async (updateProgress) => {
+      updateProgress(5)
+      
+      // 先构建提示词
+      const prompt = await toolIntegrationService.buildToolPrompt(props.toolType, props.stepContext.id, toolParams)
+      
+      updateProgress(10)
+      
+      // 使用流式调用
+      const { unifiedAIService } = await import('@/services/unifiedAIService')
+      const content = await unifiedAIService.chatStream(
+        [{ role: 'user', content: prompt }],
+        (chunk, fullContent) => {
+          // 实时更新后台任务的流式内容
+          backgroundTaskService.appendStreamContent(taskId, chunk)
+        },
+        {
+          parameters: {
+            maxTokens: 4000,
+            temperature: 0.7
+          }
+        }
+      )
+      
+      updateProgress(95)
+      
+      // 整合结果
+      const integratedResult = await toolIntegrationService.integrateResult(
+        props.toolType, 
+        props.stepContext.id, 
+        content, 
+        toolParams
+      )
+      
+      updateProgress(100)
+      return integratedResult
+    },
+    onComplete: (toolResult) => {
+      ElMessage.success(`${toolName}执行完成！`)
+      // 更新界面显示结果
+      executing.value = false
+      result.value = formatResult(toolResult)
+      
+      // 发送结果给父组件
+      emit('tool-result', toolResult)
+    },
+    onError: (error) => {
+      ElMessage.error(`${toolName}执行失败: ${error.message}`)
+      executing.value = false
+    }
+  })
+  
+  // 标记正在执行
+  executing.value = true
+  
+  // 提示用户
+  ElMessage.success(`${toolName}已添加到后台任务，可在右下角查看实时进度`)
+  
+  // 立即关闭弹窗
+  emit('close')
+}
+
+// 流式执行工具
+const executeToolWithStreaming = async () => {
+  console.log('=== 开始执行工具 ===', props.toolType)
   
   try {
-    // 模拟进度更新
-    progressInterval = setInterval(() => {
-      if (progress.value < 90) {
-        progress.value += Math.random() * 15
-        updateProgressText()
-      }
-    }, 500)
-    
-    // 执行工具
-    const toolResult = await toolIntegrationService.executeAndIntegrateTool(
+    // 直接执行
+    console.log('调用 toolIntegrationService.executeAndIntegrateTool')
+    const result = await toolIntegrationService.executeAndIntegrateTool(
       props.toolType,
       props.stepContext.id,
       toolParams
     )
     
-    // 清除进度定时器（关键修复！）
-    if (progressInterval) {
-      clearInterval(progressInterval)
-      progressInterval = null
-    }
-    
-    progress.value = 100
-    progressText.value = '执行完成'
-    
-    // 处理结果
-    result.value = formatResult(toolResult)
-    
-    ElMessage.success('工具执行完成')
+    console.log('=== 工具执行完成 ===', result ? '有结果' : '无结果')
+    return result
   } catch (error) {
-    console.error('工具执行失败:', error)
-    ElMessage.error('工具执行失败：' + error.message)
-  } finally {
-    // 确保清除定时器（防止内存泄漏）
-    if (progressInterval) {
-      clearInterval(progressInterval)
-      progressInterval = null
-    }
-    
-    executing.value = false
-    // 延迟清除进度条，让用户看到100%
-    setTimeout(() => {
-      progress.value = 0
-      progressText.value = ''
-    }, 1000)
+    console.error('=== 工具执行失败 ===', error)
+    throw error
   }
 }
 

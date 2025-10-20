@@ -8,12 +8,16 @@
       :announcement="currentAnnouncement"
       @close="handleAnnouncementClose"
     />
+    
+    <!-- 后台任务面板 -->
+    <BackgroundTaskPanel />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
 import AnnouncementDialog from './components/AnnouncementDialog.vue'
+import BackgroundTaskPanel from './components/BackgroundTaskPanel.vue'
 import { 
   hasNewAnnouncement, 
   getLatestAnnouncement, 

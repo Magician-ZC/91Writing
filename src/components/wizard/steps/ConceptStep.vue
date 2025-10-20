@@ -213,17 +213,14 @@
           {{ isTavernMode ? '酒馆讨论生成脑洞' : '生成创意脑洞' }}
         </el-button>
         
-        <!-- 暂时移除类型分析功能，直到API配置完善
         <el-button 
           type="info" 
           @click="analyzeGenre"
-          :loading="analyzingGenre"
           icon="TrendCharts"
           :disabled="!localData.selectedGenre"
         >
           分析类型潜力
         </el-button>
-        -->
         
         <!-- 暂时移除市场分析功能
         <el-button 
@@ -849,16 +846,91 @@ const generateBrainstorm = async () => {
   // 注意：不要在这里设置 finally，因为 loading 状态由回调函数管理
 }
 
-// 暂时移除类型分析功能
-// const analyzeGenre = async () => {
-//   // 功能暂时禁用，等待API配置完善
-//   ElMessage.warning('类型分析功能暂时不可用，请先配置API')
-// }
+// 题材分析功能（使用后台任务 + 流式输出）
+const analyzeGenre = async () => {
+  if (!localData.selectedGenre) {
+    ElMessage.warning('请先选择题材类型')
+    return
+  }
+  
+  // 导入服务
+  const { backgroundTaskService } = await import('@/services/backgroundTaskService')
+  const { unifiedAIService } = await import('@/services/unifiedAIService')
+  
+  // 构建分析提示词
+  const prompt = `你是一位资深的题材分析专家，请对以下小说题材进行专业分析：
 
-// 暂时移除市场分析功能
-// const analyzeMarket = async () => {
-//   ElMessage.warning('市场分析功能暂时不可用，请先配置API')
-// }
+**题材类型**: ${localData.selectedGenre}
+**分析深度**: 详细分析
+
+请从以下维度进行分析：
+
+## 1. 题材特点
+- 这个题材的核心吸引力是什么？
+- 典型的故事元素和套路有哪些？
+- 读者最期待看到什么内容？
+
+## 2. 市场潜力
+- 当前市场热度和竞争情况
+- 目标受众群体画像
+- 商业价值和变现潜力
+
+## 3. 创作要点
+- 必须掌握的核心知识点
+- 常见的创作陷阱和避坑指南
+- 如何在同质化中脱颖而出
+
+## 4. 成功要素
+- 优秀作品的共同特征
+- 爆款作品的关键因素
+- 长期受欢迎的秘诀
+
+## 5. 创新建议
+- 可以尝试的创新方向
+- 跨类型融合的可能性
+- 未来发展趋势
+
+请提供详细、实用、可操作的分析结果。`
+  
+  // 创建后台任务
+  const taskId = backgroundTaskService.createTask({
+    name: `题材分析: ${localData.selectedGenre}`,
+    type: 'genre-analysis',
+    executor: async (updateProgress) => {
+      // 使用流式调用
+      let fullContent = ''
+      
+      await unifiedAIService.chatStream(
+        [{ role: 'user', content: prompt }],
+        (chunk, content) => {
+          // chunk是新增的内容，content是完整内容
+          fullContent = content
+          
+          // 追加流式内容到任务
+          backgroundTaskService.appendStreamContent(taskId, chunk)
+        },
+        {
+          parameters: {
+            maxTokens: 4000,
+            temperature: 0.7
+          }
+        }
+      )
+      
+      updateProgress(100)
+      return fullContent
+    },
+    onComplete: (result) => {
+      ElMessage.success('题材分析完成！')
+      console.log('题材分析结果:', result)
+    },
+    onError: (error) => {
+      ElMessage.error(`题材分析失败: ${error.message}`)
+    }
+  })
+  
+  ElMessage.info('题材分析已添加到后台任务队列，可在右下角查看实时进度')
+}
 
 // 监听数据变化
 watch(() => props.stepData, (newData) => {

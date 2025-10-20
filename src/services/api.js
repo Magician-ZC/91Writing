@@ -83,40 +83,36 @@ class APIService {
 
   // 生成文本内容
   async generateText(prompt, options = {}) {
-    // 优先使用新的统一AI服务
+    // 使用统一AI服务（直接调用配置的API）
     if (this.useUnifiedService) {
       try {
-        // 检查是否有可用配置
-        const status = await unifiedAIService.checkStatus()
-        if (status.available) {
-          // 估算token用于记录
-          const estimatedInputTokens = billingService.estimateTokens(prompt)
-          
-          const response = await unifiedAIService.chat([
-            { role: 'user', content: prompt }
-          ], {
-            parameters: {
-              maxTokens: options.maxTokens || this.config.maxTokens || 2000,
-              temperature: options.temperature || this.config.temperature || 0.7
-            }
-          })
-          
-          // 记录API调用
-          billingService.recordAPICall({
-            type: options.type || 'generation',
-            model: response.model || 'unified',
-            content: prompt,
-            response: response.content,
-            inputTokens: response.tokensUsed || estimatedInputTokens,
-            outputTokens: billingService.estimateTokens(response.content),
-            status: 'success'
-          })
-          
-          return response.content
-        }
+        const estimatedInputTokens = billingService.estimateTokens(prompt)
+        
+        // 直接调用 unifiedAIService，它会使用用户配置的 deepseek API
+        const response = await unifiedAIService.chat([
+          { role: 'user', content: prompt }
+        ], {
+          parameters: {
+            maxTokens: options.maxTokens || 4000,
+            temperature: options.temperature || 0.7
+          }
+        })
+        
+        // 记录API调用
+        billingService.recordAPICall({
+          type: options.type || 'generation',
+          model: response.model || 'unified',
+          content: prompt,
+          response: response.content,
+          inputTokens: response.tokensUsed || estimatedInputTokens,
+          outputTokens: billingService.estimateTokens(response.content),
+          status: 'success'
+        })
+        
+        return response.content
       } catch (error) {
-        console.warn('统一AI服务调用失败，降级到旧服务:', error.message)
-        // 降级到旧服务
+        console.error('统一AI服务调用失败:', error)
+        throw error // 不再降级，直接抛出错误
       }
     }
     
@@ -211,44 +207,38 @@ class APIService {
 
   // 流式生成文本内容
   async generateTextStream(prompt, options = {}, onChunk = null) {
-    console.log('开始流式生成，prompt:', prompt.substring(0, 100) + '...') // 调试日志
+    console.log('开始流式生成，prompt:', prompt.substring(0, 100) + '...')
     
-    // 优先使用新的统一AI服务
+    // 使用统一AI服务（真正的流式输出）
     if (this.useUnifiedService) {
       try {
-        const status = await unifiedAIService.checkStatus()
-        if (status.available) {
-          // 注意：当前unifiedAIService的chatStream未完全实现，降级使用普通chat
-          const response = await unifiedAIService.chat([
-            { role: 'user', content: prompt }
-          ], {
-            parameters: {
-              maxTokens: options.maxTokens || this.config.maxTokens || 2000,
-              temperature: options.temperature || this.config.temperature || 0.7
-            }
-          })
-          
-          // 模拟流式输出
-          if (onChunk) {
-            onChunk(response.content, response.content)
+        const estimatedInputTokens = billingService.estimateTokens(prompt)
+        
+        // 使用 unifiedAIService 的流式方法
+        const fullContent = await unifiedAIService.chatStream([
+          { role: 'user', content: prompt }
+        ], onChunk, {
+          parameters: {
+            maxTokens: options.maxTokens || 4000,
+            temperature: options.temperature || 0.7
           }
-          
-          // 记录API调用
-          billingService.recordAPICall({
-            type: options.type || 'generation',
-            model: response.model || 'unified',
-            content: prompt,
-            response: response.content,
-            inputTokens: response.tokensUsed || billingService.estimateTokens(prompt),
-            outputTokens: billingService.estimateTokens(response.content),
-            status: 'success'
-          })
-          
-          return response.content
-        }
+        })
+        
+        // 记录API调用
+        billingService.recordAPICall({
+          type: options.type || 'generation',
+          model: 'unified',
+          content: prompt,
+          response: fullContent,
+          inputTokens: estimatedInputTokens,
+          outputTokens: billingService.estimateTokens(fullContent),
+          status: 'success'
+        })
+        
+        return fullContent
       } catch (error) {
-        console.warn('统一AI服务流式调用失败，降级到旧服务:', error.message)
-        // 降级到旧服务
+        console.error('统一AI服务流式调用失败:', error)
+        throw error // 不再降级，直接抛出错误
       }
     }
     
@@ -401,14 +391,12 @@ class APIService {
     // 优先使用unifiedAIService的预设场景方法
     if (this.useUnifiedService) {
       try {
-        const status = await unifiedAIService.checkStatus()
-        if (status.available) {
-          const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
-          const keywordList = keywords ? `\n关键词：${keywords}` : ''
-          const idea = `${theme}${templateInfo}${keywordList}`
-          
-          return await unifiedAIService.generateOutline(idea)
-        }
+        // 直接调用，不需要每次都检查配置！
+        const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
+        const keywordList = keywords ? `\n关键词：${keywords}` : ''
+        const idea = `${theme}${templateInfo}${keywordList}`
+        
+        return await unifiedAIService.generateOutline(idea)
       } catch (error) {
         console.warn('统一AI服务生成大纲失败，降级:', error.message)
       }
@@ -438,18 +426,16 @@ class APIService {
     // 优先使用unifiedAIService
     if (this.useUnifiedService) {
       try {
-        const status = await unifiedAIService.checkStatus()
-        if (status.available) {
-          const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
-          const keywordList = keywords ? `\n关键词：${keywords}` : ''
-          const idea = `${theme}${templateInfo}${keywordList}`
-          
-          const result = await unifiedAIService.generateOutline(idea)
-          if (onChunk) {
-            onChunk(result, result)
-          }
-          return result
+        // 直接调用，不需要每次都检查配置！
+        const templateInfo = template ? `\n参考模板：${template.name} - ${template.description}` : ''
+        const keywordList = keywords ? `\n关键词：${keywords}` : ''
+        const idea = `${theme}${templateInfo}${keywordList}`
+        
+        const result = await unifiedAIService.generateOutline(idea)
+        if (onChunk) {
+          onChunk(result, result)
         }
+        return result
       } catch (error) {
         console.warn('统一AI服务流式生成大纲失败，降级:', error.message)
       }

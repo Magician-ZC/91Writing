@@ -19,10 +19,13 @@ export class DeepSeekProvider extends BaseAIProvider {
   constructor() {
     super();
     this.httpClient = axios.create({
-      timeout: 60000,
+      timeout: 60000, // 连接timeout 60秒
+      maxContentLength: Infinity, // 流式响应可能很大
+      maxBodyLength: Infinity,
       headers: {
         'Content-Type': 'application/json',
       },
+      validateStatus: (status) => status >= 200 && status < 300,
     });
   }
 
@@ -50,6 +53,9 @@ export class DeepSeekProvider extends BaseAIProvider {
         stream: false,
       };
 
+      console.log('[DEEPSEEK] 发送请求到:', `${config.apiUrl}/chat/completions`)
+      console.log('[DEEPSEEK] 请求参数:', { model: requestBody.model, max_tokens: requestBody.max_tokens })
+      
       const response = await this.httpClient.post(
         `${config.apiUrl}/chat/completions`,
         requestBody,
@@ -57,9 +63,12 @@ export class DeepSeekProvider extends BaseAIProvider {
           headers: {
             'Authorization': `Bearer ${config.apiKey}`,
           },
-          timeout: (parameters.timeout || 30) * 1000,
+          timeout: 60000, // 首次连接60秒足够，流式输出会持续接收
         },
-      );
+      )
+      
+      console.log('[DEEPSEEK] 响应状态:', response.status)
+      console.log('[DEEPSEEK] 内容长度:', response.data?.choices?.[0]?.message?.content?.length || 0);
 
       const data = response.data;
       const choice = data.choices[0];
@@ -103,6 +112,8 @@ export class DeepSeekProvider extends BaseAIProvider {
         stream: true,
       };
 
+      console.log('[DEEPSEEK] 发送流式请求到:', `${config.apiUrl}/chat/completions`)
+      
       const response = await this.httpClient.post(
         `${config.apiUrl}/chat/completions`,
         requestBody,
@@ -110,10 +121,12 @@ export class DeepSeekProvider extends BaseAIProvider {
           headers: {
             'Authorization': `Bearer ${config.apiKey}`,
           },
-          timeout: (parameters.timeout || 30) * 1000,
+          timeout: 0, // 流式请求不设timeout，持续接收数据
           responseType: 'stream',
         },
-      );
+      )
+      
+      console.log('[DEEPSEEK] 流式响应开始，逐字符接收...');
 
       // 处理流式响应
       for await (const chunk of response.data) {

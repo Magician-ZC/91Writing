@@ -38,8 +38,9 @@ export class AICallerService {
     @Inject('USER_SERVICE') private readonly userServiceClient: ClientProxy,
   ) {
     // 从环境变量读取加密密钥，如果没有则使用默认值（生产环境必须配置）
+    // ⚠️ 必须与 user-service 使用相同的环境变量名
     this.encryptionKey =
-      process.env.ENCRYPTION_KEY || '91writing-ai-config-encryption-key-32';
+      process.env.AI_CONFIG_ENCRYPTION_KEY || 'your-32-character-encryption-key!!';
     
     // 确保密钥长度为32字节
     if (Buffer.from(this.encryptionKey).length !== 32) {

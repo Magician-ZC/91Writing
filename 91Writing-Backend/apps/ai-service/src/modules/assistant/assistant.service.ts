@@ -1,12 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { InitializeSessionDto, ConversationDto, ConversationIntent } from '../../dto/conversation.dto';
+import { GeneralChatDto } from './dto/general-chat.dto';
+import { AICallerService } from '../../services/ai-caller.service';
+import { AIChatMessage } from '../../providers/base.provider';
 
 @Injectable()
 export class AssistantService {
   private activeSessions = new Map<string, any>();
   
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiCallerService: AICallerService,
+  ) {}
 
   /**
    * 初始化写作助手会话
@@ -620,6 +626,73 @@ export class AssistantService {
       });
     } catch (error) {
       console.error('Log AI usage error:', error);
+    }
+  }
+
+  /**
+   * 通用AI对话（不关联小说）
+   * 用于题材分析、创意生成等通用场景
+   */
+  async generalChat(userId: string, chatDto: GeneralChatDto) {
+    // 构建AI消息（使用正确的类型）
+    const messages: AIChatMessage[] = [
+      {
+        role: 'system',
+        content: '你是一位专业的小说创作助手，擅长题材分析、创意生成、写作指导等。'
+      },
+      {
+        role: 'user',
+        content: chatDto.message
+      }
+    ];
+
+    // 调用AI服务
+    const response = await this.aiCallerService.callAI({
+      userId,
+      messages,
+      configId: chatDto.aiConfigId,
+      parameters: {
+        temperature: chatDto.parameters?.temperature || 0.7,
+        maxTokens: chatDto.parameters?.maxTokens || 4000,
+      },
+    });
+
+    return {
+      content: response.content,
+      model: response.model,
+      provider: response.provider,
+      tokensUsed: response.totalTokens,
+    };
+  }
+
+  /**
+   * 通用AI对话（流式输出）
+   */
+  async *generalChatStream(userId: string, chatDto: any): AsyncIterableIterator<string> {
+    // 构建AI消息
+    const messages: AIChatMessage[] = [
+      {
+        role: 'system',
+        content: '你是一位专业的小说创作助手，擅长题材分析、创意生成、写作指导等。'
+      },
+      {
+        role: 'user',
+        content: chatDto.message
+      }
+    ];
+
+    // 调用AI服务的流式方法
+    for await (const chunk of this.aiCallerService.callAIStream({
+      userId,
+      messages,
+      configId: chatDto.aiConfigId,
+      parameters: {
+        temperature: chatDto.parameters?.temperature || 0.7,
+        maxTokens: chatDto.parameters?.maxTokens || 4000,
+      },
+      stream: true,
+    })) {
+      yield chunk;
     }
   }
 }

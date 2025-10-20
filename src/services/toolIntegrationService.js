@@ -106,9 +106,11 @@ class ToolIntegrationService {
   async executeAndIntegrateTool(toolType, stepId, toolParams) {
     // 添加执行锁，防止重复调用
     if (this.executing) {
+      console.warn('⚠️ [工具执行] 工具正在执行中，拒绝重复调用')
       throw new Error('工具正在执行中，请稍后再试')
     }
     
+    console.log('🔧 [工具执行] 开始执行:', toolType, '步骤:', stepId)
     this.executing = true
     
     try {
@@ -116,24 +118,30 @@ class ToolIntegrationService {
         throw new Error(`工具 ${toolType} 与步骤 ${stepId} 不兼容`)
       }
       
+      console.log('📝 [工具执行] 构建提示词...')
       // 构建工具专用的提示词
       const prompt = await this.buildToolPrompt(toolType, stepId, toolParams)
       
+      console.log('🤖 [工具执行] 调用AI工具...')
       // 调用工具
       const result = await this.callTool(toolType, prompt, toolParams)
       
+      console.log('🔄 [工具执行] 整合结果...')
       // 整合结果到向导数据
       const integratedResult = await this.integrateResult(toolType, stepId, result, toolParams)
       
+      console.log('💾 [工具执行] 记录使用历史...')
       // 记录工具使用历史
       this.wizardStore.addToolUsage(toolType, stepId, integratedResult)
       
+      console.log('✅ [工具执行] 执行完成')
       return integratedResult
     } catch (error) {
-      console.error(`执行工具 ${toolType} 失败:`, error)
+      console.error(`❌ [工具执行] 执行工具 ${toolType} 失败:`, error)
       throw error
     } finally {
       // 释放执行锁
+      console.log('🔓 [工具执行] 释放执行锁')
       this.executing = false
     }
   }
@@ -187,87 +195,84 @@ class ToolIntegrationService {
       this.init()
     }
     
-    // 移除调试日志，避免触发响应式系统
-    // console.log('callTool 被调用:', { toolType, prompt: prompt.substring(0, 100) + '...', params })
+    console.log('📞 [callTool] 工具类型:', toolType)
+    console.log('📝 [callTool] 提示词长度:', prompt.length, '字符')
     
+    // 直接使用统一AI服务，不需要每次都检查配置！
     try {
-      // 优先使用unifiedAIService的预设场景方法（仅调用一次，使用缓存）
-      const status = await unifiedAIService.checkStatus()
-      if (status.available) {
-        // console.log('使用统一AI服务调用工具:', toolType)
-        
-        // 根据工具类型选择最佳的AI服务方法
-        let result
-        switch (toolType) {
-          case 'brainstorm':
-          case 'outline':
-            // 使用大纲生成方法
-            result = await unifiedAIService.generateOutline(prompt)
-            break
-            
-          case 'character':
-            // 如果有角色信息，使用角色生成方法
-            if (params?.characterInfo) {
-              result = await unifiedAIService.generateCharacter(params.characterInfo)
-            } else {
-              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
-              result = result.content
-            }
-            break
-            
-          case 'opening':
-            // 使用续写方法
-            if (params?.context) {
-              result = await unifiedAIService.continueWriting(params.context)
-            } else {
-              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
-              result = result.content
-            }
-            break
-            
-          case 'synopsis':
-            // 使用内容润色方法
-            if (params?.rawContent) {
-              result = await unifiedAIService.polishContent(params.rawContent)
-            } else {
-              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
-              result = result.content
-            }
-            break
-            
-          case 'title':
-            // 使用标题生成方法
-            if (params?.content) {
-              const titles = await unifiedAIService.generateTitles(params.content, params.count || 5)
-              result = titles.join('\n')
-            } else {
-              result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
-              result = result.content
-            }
-            break
-            
-          default:
-            // 其他工具使用通用聊天接口
-            const response = await unifiedAIService.chat([{ role: 'user', content: prompt }])
-            result = response.content
-        }
-        
-        console.log('统一AI服务调用成功:', result ? result.substring(0, 100) + '...' : result)
-        return result
+      console.log('🤖 [callTool] 使用统一AI服务调用工具:', toolType)
+      
+      // 根据工具类型选择最佳的AI服务方法
+      let result
+      switch (toolType) {
+        case 'brainstorm':
+        case 'outline':
+          // 使用大纲生成方法
+          result = await unifiedAIService.generateOutline(prompt)
+          break
+          
+        case 'character':
+          // 如果有角色信息，使用角色生成方法
+          if (params?.characterInfo) {
+            result = await unifiedAIService.generateCharacter(params.characterInfo)
+          } else {
+            result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+            result = result.content
+          }
+          break
+          
+        case 'opening':
+          // 使用续写方法
+          if (params?.context) {
+            result = await unifiedAIService.continueWriting(params.context)
+          } else {
+            result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+            result = result.content
+          }
+          break
+          
+        case 'synopsis':
+          // 使用内容润色方法
+          if (params?.rawContent) {
+            result = await unifiedAIService.polishContent(params.rawContent)
+          } else {
+            result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+            result = result.content
+          }
+          break
+          
+        case 'title':
+          // 使用标题生成方法
+          if (params?.content) {
+            const titles = await unifiedAIService.generateTitles(params.content, params.count || 5)
+            result = titles.join('\n')
+          } else {
+            result = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+            result = result.content
+          }
+          break
+          
+        default:
+          // 其他工具使用通用聊天接口
+          const response = await unifiedAIService.chat([{ role: 'user', content: prompt }])
+          result = response.content
       }
-    } catch (error) {
-      console.warn('统一AI服务调用失败，降级到novelStore:', error.message)
-      // 降级到原来的方法
-    }
-    
-    // 降级方案：使用 novelStore 的 generateContent 方法
-    try {
-      const result = await this.novelStore.generateContent(prompt)
-      console.log('callTool 返回结果:', result ? result.substring(0, 100) + '...' : result)
+      
+      console.log('✅ [callTool] 统一AI服务调用成功，结果长度:', result ? result.length : 0)
       return result
     } catch (error) {
-      console.error('callTool 调用失败:', error)
-      throw error
+      console.error('❌ [callTool] 统一AI服务调用失败:', error)
+      
+      // 提供更有用的错误信息
+      let errorMessage = error.message || '未知错误'
+      
+      // 检查是否是配置问题
+      if (errorMessage.includes('API密钥') || errorMessage.includes('配置')) {
+        throw new Error('AI配置有误，请检查：\n1. 是否已在右上角配置 deepseek 模型\n2. 配置是否已保存并设为默认\n3. API密钥是否正确')
+      }
+      
+      // 其他错误直接抛出
+      throw new Error(`AI调用失败: ${errorMessage}`)
     }
   }
   
