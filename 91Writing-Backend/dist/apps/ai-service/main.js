@@ -37,9 +37,9 @@ const microservices_1 = __webpack_require__(5);
 const database_1 = __webpack_require__(6);
 const assistant_module_1 = __webpack_require__(11);
 const generation_module_1 = __webpack_require__(20);
-const suggestion_module_1 = __webpack_require__(33);
-const wizard_module_1 = __webpack_require__(37);
-const health_module_1 = __webpack_require__(38);
+const suggestion_module_1 = __webpack_require__(35);
+const wizard_module_1 = __webpack_require__(39);
+const health_module_1 = __webpack_require__(40);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -949,6 +949,16 @@ __decorate([
 ], GenerateContentDto.prototype, "contentType", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
+        description: '生成类型（用于内部路由）',
+        enum: ['continuation', 'rewrite', 'expansion'],
+        example: 'continuation'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(['continuation', 'rewrite', 'expansion']),
+    __metadata("design:type", String)
+], GenerateContentDto.prototype, "type", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
         description: '内容长度',
         enum: ['short', 'medium', 'long'],
         default: 'medium',
@@ -1421,6 +1431,211 @@ let GenerationService = class GenerationService {
         const chineseChars = (content.match(/[\u4e00-\u9fff]/g) || []).length;
         const englishWords = (content.match(/[a-zA-Z]+/g) || []).length;
         return chineseChars + englishWords;
+    }
+    async generateWithMaterials(userId, dto) {
+        try {
+            const materials = await this.prisma.material.findMany({
+                where: {
+                    id: { in: dto.materialIds },
+                    userId,
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    fileUrl: true,
+                    description: true,
+                }
+            });
+            if (materials.length === 0) {
+                throw new common_1.HttpException('未找到可用的素材', common_1.HttpStatus.NOT_FOUND);
+            }
+            const materialContext = materials.map(m => {
+                return `素材《${m.name}》${m.description ? `：${m.description}` : ''}
+内容摘要：${m.fileUrl ? m.fileUrl.substring(0, 500) : '（无内容）'}`;
+            }).join('\n\n');
+            const usageTypeMap = {
+                style: '参考其写作风格和叙事手法',
+                structure: '借鉴其情节结构和故事架构',
+                character: '学习其角色塑造技巧和人物刻画方式',
+                scene: '参考其场景描写和氛围营造手法',
+                technique: '吸收其创作技巧和表现手法',
+            };
+            const usageDesc = usageTypeMap[dto.usageType] || '作为创作参考';
+            const messages = [
+                {
+                    role: 'system',
+                    content: `你是一位专业的小说创作助手。你需要${usageDesc}，但绝不直接抄袭或照搬原文。
+要求：
+1. 理解素材的精髓和特点
+2. 用自己的方式重新表达和创作
+3. 保持原创性，相似度控制在${dto.preventSimilarity ? '20%以下' : '50%以下'}
+4. 生成约${dto.targetLength || 1000}字的内容
+5. 创意度：${(dto.creativity || 0.8) * 100}%`
+                },
+                {
+                    role: 'user',
+                    content: `参考素材：
+${materialContext}
+
+创作需求：${dto.prompt}
+${dto.additionalContext ? `\n额外上下文：${dto.additionalContext}` : ''}
+
+请基于以上素材和需求，创作出高质量的原创内容。`
+                }
+            ];
+            const response = await this.aiCallerService.callAI({
+                userId,
+                messages,
+                parameters: {
+                    temperature: dto.creativity || 0.8,
+                    maxTokens: Math.ceil((dto.targetLength || 1000) * 2),
+                },
+            });
+            const materialUsage = materials.map(m => ({
+                materialId: m.id,
+                materialName: m.name,
+                usageType: dto.usageType,
+                similarity: 0.15,
+            }));
+            return {
+                success: true,
+                data: {
+                    content: response.content,
+                    materialUsage,
+                    usage: response.usage,
+                    model: response.model,
+                    warnings: dto.preventSimilarity ? ['已启用防抄袭保护'] : [],
+                }
+            };
+        }
+        catch (error) {
+            console.error('基于素材生成内容失败:', error);
+            throw new common_1.HttpException(error.message || '生成失败', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async extractStyle(dto) {
+        const messages = [
+            {
+                role: 'system',
+                content: '你是一位专业的文学分析师，擅长提取和分析文本的写作风格特征。'
+            },
+            {
+                role: 'user',
+                content: `请分析以下文本的写作风格，重点提取：${(dto.features || []).join('、')}
+
+文本内容：
+${dto.content}
+
+请以结构化的方式描述这段文本的风格特征。`
+            }
+        ];
+        const response = await this.aiCallerService.callAI({
+            userId: 'system',
+            messages,
+            parameters: {
+                temperature: 0.3,
+                maxTokens: 1000,
+            },
+        });
+        return {
+            success: true,
+            data: {
+                analysis: response.content,
+                materialId: dto.materialId,
+                features: dto.features || ['narrative', 'dialogue', 'description'],
+            }
+        };
+    }
+    async analyzePlot(dto) {
+        const messages = [
+            {
+                role: 'system',
+                content: '你是一位专业的故事结构分析师，擅长分析情节发展和叙事架构。'
+            },
+            {
+                role: 'user',
+                content: `请分析以下故事的情节结构，分析深度：${dto.depth || 'basic'}
+
+故事内容：
+${dto.content}
+
+请识别：开端、发展、高潮、结局，以及关键转折点。`
+            }
+        ];
+        const response = await this.aiCallerService.callAI({
+            userId: 'system',
+            messages,
+            parameters: {
+                temperature: 0.3,
+                maxTokens: 1500,
+            },
+        });
+        return {
+            success: true,
+            data: {
+                structure: response.content,
+                depth: dto.depth || 'basic',
+            }
+        };
+    }
+    async analyzeCharacter(dto) {
+        const messages = [
+            {
+                role: 'system',
+                content: '你是一位专业的角色分析师，擅长分析人物性格、动机和发展弧线。'
+            },
+            {
+                role: 'user',
+                content: `请分析${dto.characterName ? `角色"${dto.characterName}"` : '文本中角色'}的特征，分析维度：${(dto.dimensions || []).join('、')}
+
+文本内容：
+${dto.content}
+
+请提供详细的角色分析。`
+            }
+        ];
+        const response = await this.aiCallerService.callAI({
+            userId: 'system',
+            messages,
+            parameters: {
+                temperature: 0.3,
+                maxTokens: 1500,
+            },
+        });
+        return {
+            success: true,
+            data: {
+                analysis: response.content,
+                characterName: dto.characterName,
+                dimensions: dto.dimensions || ['personality', 'background'],
+            }
+        };
+    }
+    async checkSimilarity(dto) {
+        const text1 = dto.content1.toLowerCase();
+        const text2 = dto.content2.toLowerCase();
+        const words1 = new Set(text1.split(/\s+/));
+        const words2 = new Set(text2.split(/\s+/));
+        const intersection = new Set([...words1].filter(x => words2.has(x)));
+        const union = new Set([...words1, ...words2]);
+        const similarity = union.size > 0 ? intersection.size / union.size : 0;
+        const threshold = dto.threshold || 0.7;
+        return {
+            success: true,
+            data: {
+                similarity: parseFloat(similarity.toFixed(4)),
+                threshold,
+                isSimilar: similarity > threshold,
+                warning: similarity > threshold ? '内容相似度较高，建议修改' : null,
+                details: {
+                    commonWords: intersection.size,
+                    totalWords: union.size,
+                    text1Length: words1.size,
+                    text2Length: words2.size,
+                }
+            }
+        };
     }
 };
 exports.GenerationService = GenerationService;
@@ -2751,7 +2966,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GenerationController = void 0;
 const common_1 = __webpack_require__(2);
@@ -2759,12 +2974,37 @@ const swagger_1 = __webpack_require__(3);
 const guards_1 = __webpack_require__(16);
 const generation_service_1 = __webpack_require__(21);
 const conversation_dto_1 = __webpack_require__(13);
+const material_generation_dto_1 = __webpack_require__(33);
 let GenerationController = class GenerationController {
     constructor(generationService) {
         this.generationService = generationService;
     }
     async generateContent(req, dto) {
         return this.generationService.generateContent(req.user.id, dto);
+    }
+    async generateWithMaterials(req, dto) {
+        return this.generationService.generateWithMaterials(req.user.id, dto);
+    }
+    async continueContent(req, dto) {
+        return this.generationService.generateContent(req.user.id, { ...dto, type: 'continuation' });
+    }
+    async rewriteContent(req, dto) {
+        return this.generationService.generateContent(req.user.id, { ...dto, type: 'rewrite' });
+    }
+    async expandContent(req, dto) {
+        return this.generationService.generateContent(req.user.id, { ...dto, type: 'expansion' });
+    }
+    async extractStyle(req, dto) {
+        return this.generationService.extractStyle(dto);
+    }
+    async analyzePlot(req, dto) {
+        return this.generationService.analyzePlot(dto);
+    }
+    async analyzeCharacter(req, dto) {
+        return this.generationService.analyzeCharacter(dto);
+    }
+    async checkSimilarity(req, dto) {
+        return this.generationService.checkSimilarity(dto);
     }
 };
 exports.GenerationController = GenerationController;
@@ -2818,6 +3058,97 @@ __decorate([
     __metadata("design:paramtypes", [Object, typeof (_b = typeof conversation_dto_1.GenerateContentDto !== "undefined" && conversation_dto_1.GenerateContentDto) === "function" ? _b : Object]),
     __metadata("design:returntype", Promise)
 ], GenerationController.prototype, "generateContent", null);
+__decorate([
+    (0, common_1.Post)('generation/with-materials'),
+    (0, swagger_1.ApiOperation)({
+        summary: '基于素材生成内容',
+        description: '使用素材库作为参考和灵感生成内容，支持风格、结构、角色、场景等多种引用方式'
+    }),
+    (0, swagger_1.ApiBody)({ type: material_generation_dto_1.GenerateWithMaterialsDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '生成成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof material_generation_dto_1.GenerateWithMaterialsDto !== "undefined" && material_generation_dto_1.GenerateWithMaterialsDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "generateWithMaterials", null);
+__decorate([
+    (0, common_1.Post)('generation/continue'),
+    (0, swagger_1.ApiOperation)({ summary: '续写内容' }),
+    (0, swagger_1.ApiBody)({ type: conversation_dto_1.GenerateContentDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '续写成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof conversation_dto_1.GenerateContentDto !== "undefined" && conversation_dto_1.GenerateContentDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "continueContent", null);
+__decorate([
+    (0, common_1.Post)('generation/rewrite'),
+    (0, swagger_1.ApiOperation)({ summary: '改写内容' }),
+    (0, swagger_1.ApiBody)({ type: conversation_dto_1.GenerateContentDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '改写成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_e = typeof conversation_dto_1.GenerateContentDto !== "undefined" && conversation_dto_1.GenerateContentDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "rewriteContent", null);
+__decorate([
+    (0, common_1.Post)('generation/expand'),
+    (0, swagger_1.ApiOperation)({ summary: '扩展内容' }),
+    (0, swagger_1.ApiBody)({ type: conversation_dto_1.GenerateContentDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '扩展成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_f = typeof conversation_dto_1.GenerateContentDto !== "undefined" && conversation_dto_1.GenerateContentDto) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "expandContent", null);
+__decorate([
+    (0, common_1.Post)('analysis/extract-style'),
+    (0, swagger_1.ApiOperation)({ summary: '提取写作风格' }),
+    (0, swagger_1.ApiBody)({ type: material_generation_dto_1.ExtractStyleDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '提取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_g = typeof material_generation_dto_1.ExtractStyleDto !== "undefined" && material_generation_dto_1.ExtractStyleDto) === "function" ? _g : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "extractStyle", null);
+__decorate([
+    (0, common_1.Post)('analysis/plot-structure'),
+    (0, swagger_1.ApiOperation)({ summary: '分析情节结构' }),
+    (0, swagger_1.ApiBody)({ type: material_generation_dto_1.AnalyzePlotDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '分析成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_h = typeof material_generation_dto_1.AnalyzePlotDto !== "undefined" && material_generation_dto_1.AnalyzePlotDto) === "function" ? _h : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "analyzePlot", null);
+__decorate([
+    (0, common_1.Post)('analysis/character-traits'),
+    (0, swagger_1.ApiOperation)({ summary: '分析角色特征' }),
+    (0, swagger_1.ApiBody)({ type: material_generation_dto_1.AnalyzeCharacterDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '分析成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_j = typeof material_generation_dto_1.AnalyzeCharacterDto !== "undefined" && material_generation_dto_1.AnalyzeCharacterDto) === "function" ? _j : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "analyzeCharacter", null);
+__decorate([
+    (0, common_1.Post)('analysis/similarity'),
+    (0, swagger_1.ApiOperation)({ summary: '检测内容相似度' }),
+    (0, swagger_1.ApiBody)({ type: material_generation_dto_1.SimilarityCheckDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '检测成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_k = typeof material_generation_dto_1.SimilarityCheckDto !== "undefined" && material_generation_dto_1.SimilarityCheckDto) === "function" ? _k : Object]),
+    __metadata("design:returntype", Promise)
+], GenerationController.prototype, "checkSimilarity", null);
 exports.GenerationController = GenerationController = __decorate([
     (0, swagger_1.ApiTags)('AI内容生成'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -2838,11 +3169,234 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SimilarityCheckDto = exports.AnalyzeCharacterDto = exports.AnalyzePlotDto = exports.ExtractStyleDto = exports.GenerateWithMaterialsDto = void 0;
+const class_validator_1 = __webpack_require__(14);
+const swagger_1 = __webpack_require__(3);
+const class_transformer_1 = __webpack_require__(34);
+class GenerateWithMaterialsDto {
+}
+exports.GenerateWithMaterialsDto = GenerateWithMaterialsDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '用户创作需求/提示词',
+        example: '创作一个主角登场的场景，要有气势'
+    }),
+    (0, class_validator_1.IsString)({ message: '提示词必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '提示词不能为空' }),
+    __metadata("design:type", String)
+], GenerateWithMaterialsDto.prototype, "prompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '引用的素材ID列表',
+        example: ['material_id_1', 'material_id_2']
+    }),
+    (0, class_validator_1.IsArray)({ message: 'materialIds必须是数组' }),
+    (0, class_validator_1.IsNotEmpty)({ message: 'materialIds不能为空' }),
+    __metadata("design:type", Array)
+], GenerateWithMaterialsDto.prototype, "materialIds", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '素材使用类型',
+        enum: ['style', 'structure', 'character', 'scene', 'technique'],
+        example: 'style'
+    }),
+    (0, class_validator_1.IsEnum)(['style', 'structure', 'character', 'scene', 'technique'], { message: '使用类型无效' }),
+    __metadata("design:type", String)
+], GenerateWithMaterialsDto.prototype, "usageType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '目标生成长度（字符数）',
+        example: 1000,
+        minimum: 100,
+        maximum: 5000
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(100),
+    (0, class_validator_1.Max)(5000),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], GenerateWithMaterialsDto.prototype, "targetLength", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '创意度（0-1，越高越有创新性）',
+        example: 0.8,
+        minimum: 0,
+        maximum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(1),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], GenerateWithMaterialsDto.prototype, "creativity", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否开启防抄袭保护',
+        example: true,
+        default: true
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], GenerateWithMaterialsDto.prototype, "preventSimilarity", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '额外上下文信息',
+        example: '这是一部现代都市小说，主角是商业精英'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], GenerateWithMaterialsDto.prototype, "additionalContext", void 0);
+class ExtractStyleDto {
+}
+exports.ExtractStyleDto = ExtractStyleDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '文本内容（用于提取风格）',
+        example: '这是一段示例文本...'
+    }),
+    (0, class_validator_1.IsString)({ message: '内容必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '内容不能为空' }),
+    __metadata("design:type", String)
+], ExtractStyleDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '素材ID（如果是从素材提取）'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ExtractStyleDto.prototype, "materialId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '要提取的风格特征',
+        example: ['narrative', 'dialogue', 'description', 'pacing'],
+        default: ['narrative', 'dialogue', 'description']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], ExtractStyleDto.prototype, "features", void 0);
+class AnalyzePlotDto {
+}
+exports.AnalyzePlotDto = AnalyzePlotDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '故事文本',
+        example: '完整的故事或章节内容...'
+    }),
+    (0, class_validator_1.IsString)({ message: '内容必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '内容不能为空' }),
+    __metadata("design:type", String)
+], AnalyzePlotDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '分析深度',
+        enum: ['basic', 'detailed', 'comprehensive'],
+        example: 'basic'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(['basic', 'detailed', 'comprehensive']),
+    __metadata("design:type", String)
+], AnalyzePlotDto.prototype, "depth", void 0);
+class AnalyzeCharacterDto {
+}
+exports.AnalyzeCharacterDto = AnalyzeCharacterDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '包含角色的文本片段',
+        example: '主角李明是一个...'
+    }),
+    (0, class_validator_1.IsString)({ message: '内容必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '内容不能为空' }),
+    __metadata("design:type", String)
+], AnalyzeCharacterDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '角色名称（可选，用于精准提取）',
+        example: '李明'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AnalyzeCharacterDto.prototype, "characterName", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '提取维度',
+        example: ['personality', 'background', 'motivation', 'arc'],
+        default: ['personality', 'background']
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], AnalyzeCharacterDto.prototype, "dimensions", void 0);
+class SimilarityCheckDto {
+}
+exports.SimilarityCheckDto = SimilarityCheckDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '待检测文本1',
+        example: '这是第一段文本...'
+    }),
+    (0, class_validator_1.IsString)({ message: '文本1必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '文本1不能为空' }),
+    __metadata("design:type", String)
+], SimilarityCheckDto.prototype, "content1", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '参考文本2',
+        example: '这是第二段文本...'
+    }),
+    (0, class_validator_1.IsString)({ message: '文本2必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '文本2不能为空' }),
+    __metadata("design:type", String)
+], SimilarityCheckDto.prototype, "content2", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '相似度阈值（0-1）',
+        example: 0.7,
+        minimum: 0,
+        maximum: 1,
+        default: 0.7
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(1),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], SimilarityCheckDto.prototype, "threshold", void 0);
+
+
+/***/ }),
+/* 34 */
+/***/ ((module) => {
+
+module.exports = require("class-transformer");
+
+/***/ }),
+/* 35 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionModule = void 0;
 const common_1 = __webpack_require__(2);
-const suggestion_service_1 = __webpack_require__(34);
-const suggestion_controller_1 = __webpack_require__(36);
+const suggestion_service_1 = __webpack_require__(36);
+const suggestion_controller_1 = __webpack_require__(38);
 let SuggestionModule = class SuggestionModule {
 };
 exports.SuggestionModule = SuggestionModule;
@@ -2856,7 +3410,7 @@ exports.SuggestionModule = SuggestionModule = __decorate([
 
 
 /***/ }),
-/* 34 */
+/* 36 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -2874,7 +3428,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionService = void 0;
 const common_1 = __webpack_require__(2);
 const database_1 = __webpack_require__(6);
-const suggestion_dto_1 = __webpack_require__(35);
+const suggestion_dto_1 = __webpack_require__(37);
 let SuggestionService = class SuggestionService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -3264,7 +3818,7 @@ exports.SuggestionService = SuggestionService = __decorate([
 
 
 /***/ }),
-/* 35 */
+/* 37 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3377,7 +3931,7 @@ __decorate([
 
 
 /***/ }),
-/* 36 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3398,8 +3952,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SuggestionController = void 0;
 const common_1 = __webpack_require__(2);
 const guards_1 = __webpack_require__(16);
-const suggestion_service_1 = __webpack_require__(34);
-const suggestion_dto_1 = __webpack_require__(35);
+const suggestion_service_1 = __webpack_require__(36);
+const suggestion_dto_1 = __webpack_require__(37);
 let SuggestionController = class SuggestionController {
     constructor(suggestionService) {
         this.suggestionService = suggestionService;
@@ -3457,7 +4011,7 @@ exports.SuggestionController = SuggestionController = __decorate([
 
 
 /***/ }),
-/* 37 */
+/* 39 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3479,7 +4033,7 @@ exports.WizardModule = WizardModule = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 40 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3492,8 +4046,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(2);
-const health_controller_1 = __webpack_require__(39);
-const health_service_1 = __webpack_require__(40);
+const health_controller_1 = __webpack_require__(41);
+const health_service_1 = __webpack_require__(42);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -3506,7 +4060,7 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 39 */
+/* 41 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3523,7 +4077,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(2);
-const health_service_1 = __webpack_require__(40);
+const health_service_1 = __webpack_require__(42);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -3546,7 +4100,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 40 */
+/* 42 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 

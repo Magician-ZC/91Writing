@@ -31,6 +31,11 @@ export interface AICallResponse {
   outputTokens: number;
   totalTokens: number;
   finishReason: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 /**

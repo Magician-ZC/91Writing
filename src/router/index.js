@@ -3,6 +3,8 @@ import Dashboard from '../views/Dashboard.vue'
 import HomePage from '../views/HomePage.vue'
 import PromptsLibrary from '../views/PromptsLibrary.vue'
 import NovelManagement from '../views/NovelManagement.vue'
+import NovelManagementCloud from '../views/NovelManagementCloud.vue'
+import DataMigrationWizard from '../views/DataMigrationWizard.vue'
 import NovelListTest from '../views/NovelListTest.vue'
 import WritingGoals from '../views/WritingGoals.vue'
 import TokenBilling from '../views/TokenBilling.vue'
@@ -10,6 +12,7 @@ import ApiConfig from '../views/ApiConfig.vue'
 import Settings from '../views/Settings.vue'
 import ChapterManagement from '../views/ChapterManagement.vue'
 import Writer from '../views/Writer.vue'
+import WriterRefactored from '../views/Writer_refactored.vue'
 import Home from '../views/Home.vue'
 import GenreManagement from '../views/GenreManagement.vue'
 import ToolsLibrary from '../views/ToolsLibrary.vue'
@@ -138,6 +141,18 @@ const routes = [
         meta: { title: '作品管理 - 91Writing' }
       },
       {
+        path: 'novels-cloud',
+        name: 'NovelManagementCloud',
+        component: NovelManagementCloud,
+        meta: { title: '云端作品管理 - 91Writing' }
+      },
+      {
+        path: 'migration',
+        name: 'DataMigration',
+        component: DataMigrationWizard,
+        meta: { title: '数据迁移 - 91Writing' }
+      },
+      {
         path: 'novels-test',
         name: 'NovelListTest',
         component: NovelListTest,
@@ -177,6 +192,12 @@ const routes = [
         path: 'writer',
         name: 'Writer',
         component: Writer,
+        meta: { title: '智能写作 - 91Writing' }
+      },
+      {
+        path: 'writer/:id',
+        name: 'WriterRefactored',
+        component: WriterRefactored,
         meta: { title: '智能写作 - 91Writing' }
       },
       {

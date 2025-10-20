@@ -358,32 +358,6 @@ export class MaterialService {
     return { success: true, data: references };
   }
 
-  async deleteMaterialReference(userId: string, referenceId: string) {
-    const reference = await this.prisma.materialReference.findUnique({
-      where: { id: referenceId },
-    });
-
-    if (!reference || reference.userId !== userId) {
-      throw new HttpException('引用记录不存在或无权访问', HttpStatus.NOT_FOUND);
-    }
-
-    await this.prisma.materialReference.delete({
-      where: { id: referenceId },
-    });
-
-    // 减少素材使用次数
-    await this.prisma.material.update({
-      where: { id: reference.materialId },
-      data: {
-        usageCount: {
-          decrement: 1,
-        },
-      },
-    });
-
-    return { success: true, message: '引用记录已删除' };
-  }
-
   // ===== 存储配额管理 =====
   async getStorageQuota(userId: string) {
     let quota = await this.prisma.userStorageQuota.findUnique({

@@ -5,14 +5,15 @@
 
 import analysisService from './analysisService.js'
 import backendApi from './backendApi.js'
+import apiManager from './apiManager.js'
 
 class SuggestionEngine {
   constructor() {
     this.suggestionTemplates = this.initializeSuggestionTemplates()
     this.userInteractions = this.loadUserInteractions()
     
-    // 云端建议配置
-    this.useCloudSuggestions = false
+    // 云端建议配置 - 默认启用
+    this.useCloudSuggestions = true
   }
 
   /**
@@ -26,6 +27,26 @@ class SuggestionEngine {
       return this.getWelcomeSuggestions()
     }
 
+    // 如果启用云端建议且有novelId，使用云端AI生成
+    if (this.useCloudSuggestions && context.novelId) {
+      try {
+        const response = await apiManager.generateSuggestions({
+          novelId: context.novelId,
+          chapterId: context.chapterId,
+          content: content,
+          context: context
+        })
+        
+        if (response.success && response.data.suggestions) {
+          return response.data.suggestions
+        }
+      } catch (error) {
+        console.error('云端建议生成失败，使用本地模式:', error)
+        // 降级到本地生成
+      }
+    }
+
+    // 本地生成模式（降级或未启用云端）
     // 获取实时分析结果
     const analysis = await analysisService.realtimeQualityAssessment(content)
     

@@ -123,15 +123,6 @@ export class MaterialController {
     return this.materialService.batchUpdateCategory(req.user.id, dto);
   }
 
-  @Delete('materials/references/:referenceId')
-  @ApiOperation({ summary: '删除素材引用记录' })
-  @ApiParam({ name: 'referenceId', description: '引用记录ID' })
-  @ApiResponse({ status: 200, description: '删除成功' })
-  @HttpCode(HttpStatus.OK)
-  async deleteMaterialReference(@Request() req, @Param('referenceId') referenceId: string) {
-    return this.materialService.deleteMaterialReference(req.user.id, referenceId);
-  }
-
   // ===== 参数化路由（必须在具体路由之后） =====
   
   @Get('materials/:id')

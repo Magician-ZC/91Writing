@@ -11,6 +11,10 @@ class ToolIntegrationService {
     this.novelStore = null
     this.wizardStore = null
     
+    // 添加执行锁防止重复调用
+    this.executing = false
+    this.executionQueue = []
+    
     // 工具映射配置
     this.toolMapping = {
       concept: {
@@ -100,6 +104,13 @@ class ToolIntegrationService {
    * 调用工具并整合结果
    */
   async executeAndIntegrateTool(toolType, stepId, toolParams) {
+    // 添加执行锁，防止重复调用
+    if (this.executing) {
+      throw new Error('工具正在执行中，请稍后再试')
+    }
+    
+    this.executing = true
+    
     try {
       if (!this.isToolCompatible(toolType, stepId)) {
         throw new Error(`工具 ${toolType} 与步骤 ${stepId} 不兼容`)
@@ -121,6 +132,9 @@ class ToolIntegrationService {
     } catch (error) {
       console.error(`执行工具 ${toolType} 失败:`, error)
       throw error
+    } finally {
+      // 释放执行锁
+      this.executing = false
     }
   }
   
@@ -173,13 +187,14 @@ class ToolIntegrationService {
       this.init()
     }
     
-    console.log('callTool 被调用:', { toolType, prompt: prompt.substring(0, 100) + '...', params })
+    // 移除调试日志，避免触发响应式系统
+    // console.log('callTool 被调用:', { toolType, prompt: prompt.substring(0, 100) + '...', params })
     
     try {
-      // 优先使用unifiedAIService的预设场景方法
+      // 优先使用unifiedAIService的预设场景方法（仅调用一次，使用缓存）
       const status = await unifiedAIService.checkStatus()
       if (status.available) {
-        console.log('使用统一AI服务调用工具:', toolType)
+        // console.log('使用统一AI服务调用工具:', toolType)
         
         // 根据工具类型选择最佳的AI服务方法
         let result
@@ -1866,19 +1881,42 @@ class ContextBuilder {
   }
   
   buildGenrePrompt(params) {
-    return `扮演你觉得需要扮演的角色，现在，我想去除这篇文章的AI味，不改变文章的整体面貌，使得这篇文章更加自然流畅。文章如下：
-
-请分析以下类型的创作要点：
+    const genreType = params.genreType || params.genre || '通用'
+    const analysisDepth = params.analysisDepth || 'detailed'
     
-类型：${params.genre}
-目标读者：${params.audience || ''}
+    return `你是一位资深的题材分析专家，请对以下小说题材进行专业分析：
 
-请提供：
-1. 类型特点分析
-2. 读者期待
-3. 创作要点
-4. 成功要素
-5. 创新建议`
+**题材类型**: ${genreType}
+**分析深度**: ${analysisDepth === 'brief' ? '简要分析' : analysisDepth === 'market' ? '市场分析' : '详细分析'}
+
+请从以下维度进行分析：
+
+## 1. 题材特点
+- 这个题材的核心吸引力是什么？
+- 典型的故事元素和套路有哪些？
+- 读者最期待看到什么内容？
+
+## 2. 市场潜力
+- 当前市场热度和竞争情况
+- 目标受众群体画像
+- 商业价值和变现潜力
+
+## 3. 创作要点
+- 必须掌握的核心知识点
+- 常见的创作陷阱和避坑指南
+- 如何在同质化中脱颖而出
+
+## 4. 成功要素
+- 优秀作品的共同特征
+- 爆款作品的关键因素
+- 长期受欢迎的秘诀
+
+## 5. 创新建议
+- 可以尝试的创新方向
+- 跨类型融合的可能性
+- 未来发展趋势
+
+请提供详细、实用、可操作的分析结果。`
   }
   
   buildWorldviewPrompt(params) {

@@ -5676,7 +5676,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MaterialController = void 0;
 const common_1 = __webpack_require__(3);
@@ -5728,9 +5728,6 @@ let MaterialController = class MaterialController {
     async batchUpdateCategory(req, dto) {
         return this.materialService.batchUpdateCategory(req.user.id, dto);
     }
-    async deleteMaterialReference(req, referenceId) {
-        return this.materialService.deleteMaterialReference(req.user.id, referenceId);
-    }
     async getMaterial(req, id) {
         return this.materialService.getMaterial(req.user.id, id);
     }
@@ -5745,6 +5742,27 @@ let MaterialController = class MaterialController {
     }
     async getMaterialReferences(req, id) {
         return this.materialService.getMaterialReferences(req.user.id, id);
+    }
+    async deleteMaterialReference(req, referenceId) {
+        return this.materialService.deleteMaterialReference(req.user.id, referenceId);
+    }
+    async analyzeMaterialStyle(req, id, dto) {
+        return this.materialService.analyzeMaterialStyle(req.user.id, id, dto.analysisType);
+    }
+    async analyzeMaterialStructure(req, id, dto) {
+        return this.materialService.analyzeMaterialStyle(req.user.id, id, 'structure');
+    }
+    async analyzeMaterialCharacters(req, id, dto) {
+        return this.materialService.analyzeMaterialStyle(req.user.id, id, 'characters');
+    }
+    async checkSimilarity(req, id, dto) {
+        return this.materialService.checkSimilarity(req.user.id, id, dto.content, dto.threshold || 0.7);
+    }
+    async getRecommendedMaterials(req, limit) {
+        return this.materialService.getRecommendedMaterials(req.user.id, limit || 10);
+    }
+    async searchWizardMaterials(req, query) {
+        return this.materialService.searchWizardMaterials(req.user.id, query.stepType, query.keyword, query.limit || 5);
     }
 };
 exports.MaterialController = MaterialController;
@@ -5830,18 +5848,6 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], MaterialController.prototype, "batchUpdateCategory", null);
 __decorate([
-    (0, common_1.Delete)('materials/references/:referenceId'),
-    (0, swagger_1.ApiOperation)({ summary: '删除素材引用记录' }),
-    (0, swagger_1.ApiParam)({ name: 'referenceId', description: '引用记录ID' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Param)('referenceId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", Promise)
-], MaterialController.prototype, "deleteMaterialReference", null);
-__decorate([
     (0, common_1.Get)('materials/:id'),
     (0, swagger_1.ApiOperation)({ summary: '获取素材详情' }),
     (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
@@ -5902,6 +5908,90 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], MaterialController.prototype, "getMaterialReferences", null);
+__decorate([
+    (0, common_1.Delete)('materials/references/:referenceId'),
+    (0, swagger_1.ApiOperation)({ summary: '删除素材引用记录' }),
+    (0, swagger_1.ApiParam)({ name: 'referenceId', description: '引用记录ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('referenceId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "deleteMaterialReference", null);
+__decorate([
+    (0, common_1.Post)('materials/:id/analyze/style'),
+    (0, swagger_1.ApiOperation)({ summary: '分析素材写作风格' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.AnalyzeMaterialDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '分析成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_h = typeof material_dto_1.AnalyzeMaterialDto !== "undefined" && material_dto_1.AnalyzeMaterialDto) === "function" ? _h : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "analyzeMaterialStyle", null);
+__decorate([
+    (0, common_1.Post)('materials/:id/analyze/structure'),
+    (0, swagger_1.ApiOperation)({ summary: '分析素材情节结构' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.AnalyzeMaterialDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '分析成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_j = typeof material_dto_1.AnalyzeMaterialDto !== "undefined" && material_dto_1.AnalyzeMaterialDto) === "function" ? _j : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "analyzeMaterialStructure", null);
+__decorate([
+    (0, common_1.Post)('materials/:id/analyze/characters'),
+    (0, swagger_1.ApiOperation)({ summary: '分析素材角色特征' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.AnalyzeMaterialDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '分析成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_k = typeof material_dto_1.AnalyzeMaterialDto !== "undefined" && material_dto_1.AnalyzeMaterialDto) === "function" ? _k : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "analyzeMaterialCharacters", null);
+__decorate([
+    (0, common_1.Post)('materials/:id/check-similarity'),
+    (0, swagger_1.ApiOperation)({ summary: '检测内容相似度' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '素材ID' }),
+    (0, swagger_1.ApiBody)({ type: material_dto_1.CheckSimilarityDto }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '检测成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_l = typeof material_dto_1.CheckSimilarityDto !== "undefined" && material_dto_1.CheckSimilarityDto) === "function" ? _l : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "checkSimilarity", null);
+__decorate([
+    (0, common_1.Get)('materials/recommendations'),
+    (0, swagger_1.ApiOperation)({ summary: '获取推荐素材' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Number]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "getRecommendedMaterials", null);
+__decorate([
+    (0, common_1.Get)('materials/search-for-wizard'),
+    (0, swagger_1.ApiOperation)({ summary: '搜索适用于向导的素材' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '搜索成功' }),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_m = typeof material_dto_1.SearchWizardMaterialsDto !== "undefined" && material_dto_1.SearchWizardMaterialsDto) === "function" ? _m : Object]),
+    __metadata("design:returntype", Promise)
+], MaterialController.prototype, "searchWizardMaterials", null);
 exports.MaterialController = MaterialController = __decorate([
     (0, swagger_1.ApiTags)('素材管理'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -6211,26 +6301,6 @@ let MaterialService = class MaterialService {
         });
         return { success: true, data: references };
     }
-    async deleteMaterialReference(userId, referenceId) {
-        const reference = await this.prisma.materialReference.findUnique({
-            where: { id: referenceId },
-        });
-        if (!reference || reference.userId !== userId) {
-            throw new common_1.HttpException('引用记录不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
-        }
-        await this.prisma.materialReference.delete({
-            where: { id: referenceId },
-        });
-        await this.prisma.material.update({
-            where: { id: reference.materialId },
-            data: {
-                usageCount: {
-                    decrement: 1,
-                },
-            },
-        });
-        return { success: true, message: '引用记录已删除' };
-    }
     async getStorageQuota(userId) {
         let quota = await this.prisma.userStorageQuota.findUnique({
             where: { userId },
@@ -6293,6 +6363,198 @@ let MaterialService = class MaterialService {
             });
         }
     }
+    async analyzeMaterialStyle(userId, materialId, analysisType) {
+        const material = await this.prisma.material.findUnique({
+            where: { id: materialId },
+        });
+        if (!material || material.userId !== userId) {
+            throw new common_1.HttpException('素材不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        if (material.type === 'TEXT' || material.type === 'DOCUMENT') {
+            return {
+                success: true,
+                data: {
+                    materialId,
+                    materialName: material.name,
+                    analysisType,
+                    features: {
+                        narrative: '叙事视角特征...',
+                        dialogue: '对话风格特征...',
+                        description: '描写风格特征...',
+                        pacing: '节奏特点...'
+                    },
+                    summary: '该素材采用第三人称全知视角，叙事节奏较快...',
+                    recommendations: [
+                        '适合用于快节奏的动作场景',
+                        '对话简洁有力，适合紧张场面',
+                    ]
+                }
+            };
+        }
+        throw new common_1.HttpException('只能分析文本类型的素材', common_1.HttpStatus.BAD_REQUEST);
+    }
+    async checkSimilarity(userId, materialId, content, threshold = 0.7) {
+        const material = await this.prisma.material.findUnique({
+            where: { id: materialId },
+        });
+        if (!material || material.userId !== userId) {
+            throw new common_1.HttpException('素材不存在或无权访问', common_1.HttpStatus.NOT_FOUND);
+        }
+        const similarity = this.calculateSimpleSimilarity(content, material.fileUrl || '');
+        return {
+            success: true,
+            data: {
+                materialId,
+                similarity,
+                isSimilar: similarity > threshold,
+                threshold,
+                warning: similarity > threshold ? '内容与素材相似度较高，建议修改' : null,
+            }
+        };
+    }
+    calculateSimpleSimilarity(text1, text2) {
+        const words1 = new Set(text1.toLowerCase().split(/\s+/));
+        const words2 = new Set(text2.toLowerCase().split(/\s+/));
+        const intersection = new Set([...words1].filter(x => words2.has(x)));
+        const union = new Set([...words1, ...words2]);
+        return union.size > 0 ? intersection.size / union.size : 0;
+    }
+    async searchWizardMaterials(userId, stepType, keyword, limit = 5) {
+        try {
+            const categoryMap = {
+                outline: ['大纲', '结构', '情节'],
+                character: ['角色', '人物', '角色设定'],
+                worldview: ['世界观', '设定', '背景'],
+                scene: ['场景', '描写', '环境'],
+                dialogue: ['对话', '台词']
+            };
+            const categories = categoryMap[stepType] || [];
+            const where = { userId };
+            where.type = 'TEXT';
+            if (keyword) {
+                where.OR = [
+                    { name: { contains: keyword } },
+                    { description: { contains: keyword } },
+                    { category: { in: categories } }
+                ];
+            }
+            else if (categories.length > 0) {
+                where.category = { in: categories };
+            }
+            const materials = await this.prisma.material.findMany({
+                where,
+                take: limit,
+                orderBy: [
+                    { usageCount: 'desc' },
+                    { createdAt: 'desc' }
+                ],
+                select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    category: true,
+                    description: true,
+                    tags: true,
+                    usageCount: true,
+                    createdAt: true,
+                }
+            });
+            return {
+                success: true,
+                data: {
+                    stepType,
+                    materials,
+                    total: materials.length,
+                }
+            };
+        }
+        catch (error) {
+            console.error('搜索向导素材失败:', error);
+            return {
+                success: true,
+                data: {
+                    stepType,
+                    materials: [],
+                    total: 0,
+                }
+            };
+        }
+    }
+    async deleteMaterialReference(userId, referenceId) {
+        const reference = await this.prisma.materialReference.findUnique({
+            where: { id: referenceId },
+            include: { material: true }
+        });
+        if (!reference) {
+            throw new common_1.HttpException('引用记录不存在', common_1.HttpStatus.NOT_FOUND);
+        }
+        if (reference.userId !== userId) {
+            throw new common_1.HttpException('无权删除此引用记录', common_1.HttpStatus.FORBIDDEN);
+        }
+        await this.prisma.materialReference.delete({
+            where: { id: referenceId }
+        });
+        if (reference.material && reference.material.usageCount > 0) {
+            await this.prisma.material.update({
+                where: { id: reference.materialId },
+                data: {
+                    usageCount: {
+                        decrement: 1
+                    }
+                }
+            });
+        }
+        return {
+            success: true,
+            message: '引用记录已删除'
+        };
+    }
+    async getRecommendedMaterials(userId, limit = 10) {
+        try {
+            const recentReferences = await this.prisma.materialReference.findMany({
+                where: { userId },
+                take: 20,
+                orderBy: { createdAt: 'desc' },
+                select: { materialId: true }
+            });
+            const recentMaterialIds = recentReferences.map(r => r.materialId);
+            let recommendedCategories = [];
+            if (recentMaterialIds.length > 0) {
+                const recentMaterials = await this.prisma.material.findMany({
+                    where: {
+                        id: { in: recentMaterialIds },
+                        userId
+                    },
+                    select: { category: true }
+                });
+                recommendedCategories = recentMaterials
+                    .map(m => m.category)
+                    .filter((c) => c !== null);
+            }
+            const materials = await this.prisma.material.findMany({
+                where: {
+                    userId,
+                    id: { notIn: recentMaterialIds },
+                    ...(recommendedCategories.length > 0 ? {
+                        category: { in: recommendedCategories }
+                    } : {})
+                },
+                take: limit,
+                orderBy: { createdAt: 'desc' }
+            });
+            return {
+                success: true,
+                data: materials
+            };
+        }
+        catch (error) {
+            console.error('获取推荐素材失败:', error);
+            return {
+                success: true,
+                data: []
+            };
+        }
+    }
 };
 exports.MaterialService = MaterialService;
 exports.MaterialService = MaterialService = __decorate([
@@ -6317,7 +6579,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AddMaterialReferenceDto = exports.BatchUpdateCategoryDto = exports.BatchDeleteMaterialsDto = exports.QueryMaterialsDto = exports.UpdateMaterialDto = exports.CreateMaterialDto = void 0;
+exports.SearchWizardMaterialsDto = exports.CheckSimilarityDto = exports.AnalyzeMaterialDto = exports.AddMaterialReferenceDto = exports.BatchUpdateCategoryDto = exports.BatchDeleteMaterialsDto = exports.QueryMaterialsDto = exports.UpdateMaterialDto = exports.CreateMaterialDto = void 0;
 const class_validator_1 = __webpack_require__(20);
 const swagger_1 = __webpack_require__(4);
 const client_1 = __webpack_require__(12);
@@ -6573,6 +6835,98 @@ __decorate([
     (0, class_transformer_1.Type)(() => Number),
     __metadata("design:type", Number)
 ], AddMaterialReferenceDto.prototype, "position", void 0);
+class AnalyzeMaterialDto {
+}
+exports.AnalyzeMaterialDto = AnalyzeMaterialDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '分析类型',
+        enum: ['style', 'structure', 'characters', 'themes'],
+        example: 'style'
+    }),
+    (0, class_validator_1.IsEnum)(['style', 'structure', 'characters', 'themes'], { message: '分析类型无效' }),
+    __metadata("design:type", String)
+], AnalyzeMaterialDto.prototype, "analysisType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '提取文本长度',
+        example: 500,
+        default: 500
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(100),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], AnalyzeMaterialDto.prototype, "extractLength", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '目标用途',
+        enum: ['reference', 'inspiration', 'template'],
+        example: 'reference'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(['reference', 'inspiration', 'template']),
+    __metadata("design:type", String)
+], AnalyzeMaterialDto.prototype, "targetUse", void 0);
+class CheckSimilarityDto {
+}
+exports.CheckSimilarityDto = CheckSimilarityDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '待检测内容',
+        example: '这是一段需要检测的文本...'
+    }),
+    (0, class_validator_1.IsString)({ message: '内容必须是字符串' }),
+    (0, class_validator_1.IsNotEmpty)({ message: '内容不能为空' }),
+    __metadata("design:type", String)
+], CheckSimilarityDto.prototype, "content", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '相似度阈值',
+        example: 0.7,
+        minimum: 0,
+        maximum: 1
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], CheckSimilarityDto.prototype, "threshold", void 0);
+class SearchWizardMaterialsDto {
+}
+exports.SearchWizardMaterialsDto = SearchWizardMaterialsDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '向导步骤类型',
+        enum: ['outline', 'character', 'worldview', 'scene', 'dialogue'],
+        example: 'character'
+    }),
+    (0, class_validator_1.IsEnum)(['outline', 'character', 'worldview', 'scene', 'dialogue'], { message: '步骤类型无效' }),
+    __metadata("design:type", String)
+], SearchWizardMaterialsDto.prototype, "stepType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '用户输入的关键词',
+        example: '主角 性格'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], SearchWizardMaterialsDto.prototype, "keyword", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '返回数量限制',
+        example: 5,
+        default: 5
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], SearchWizardMaterialsDto.prototype, "limit", void 0);
 
 
 /***/ }),
@@ -9980,6 +10334,12 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 module.exports = require("rxjs/operators");
 
+/***/ }),
+/* 85 */
+/***/ ((module) => {
+
+module.exports = require("express");
+
 /***/ })
 /******/ 	]);
 /************************************************************************/
@@ -10023,7 +10383,12 @@ const app_module_1 = __webpack_require__(5);
 const all_exceptions_filter_1 = __webpack_require__(82);
 const response_interceptor_1 = __webpack_require__(83);
 async function bootstrap() {
-    const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const app = await core_1.NestFactory.create(app_module_1.AppModule, {
+        bodyParser: true,
+    });
+    const express = __webpack_require__(85);
+    app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ limit: '50mb', extended: true }));
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,

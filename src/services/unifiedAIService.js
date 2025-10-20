@@ -8,6 +8,13 @@ import apiManager from './apiManager'
 import apiService from './api.js'
 
 class UnifiedAIService {
+  constructor() {
+    // 添加缓存以避免重复调用
+    this.statusCache = null
+    this.statusCacheTime = 0
+    this.CACHE_DURATION = 30000 // 30秒缓存
+  }
+  
   /**
    * 调用AI聊天
    * @param {Array} messages - 消息数组 [{role: 'user', content: '...'}]
@@ -329,26 +336,59 @@ ${content}
   }
 
   /**
-   * 检查AI服务状态
+   * 检查AI服务状态（带缓存）
+   * @param {boolean} forceRefresh - 是否强制刷新缓存
    * @returns {Promise<{available: boolean, configCount: number, defaultConfig: Object|null}>}
    */
-  async checkStatus() {
+  async checkStatus(forceRefresh = false) {
     try {
+      // 检查缓存是否有效
+      const now = Date.now()
+      if (!forceRefresh && this.statusCache && (now - this.statusCacheTime) < this.CACHE_DURATION) {
+        // 移除console.log避免无限循环
+        // console.log('使用缓存的AI状态')
+        return this.statusCache
+      }
+      
+      // 调用API获取最新状态
       const available = await aiConfigService.getAvailableConfigs()
       const defaultConfig = await aiConfigService.getDefaultConfig()
 
-      return {
+      const status = {
         available: (available.system.length + available.user.length) > 0,
         configCount: available.system.length + available.user.length,
         defaultConfig
       }
+      
+      // 更新缓存
+      this.statusCache = status
+      this.statusCacheTime = now
+      
+      return status
     } catch (error) {
+      // console.error('检查AI状态失败:', error)
+      
+      // 如果有缓存，即使过期也返回缓存
+      if (this.statusCache) {
+        // console.log('API调用失败，使用缓存的AI状态')
+        return this.statusCache
+      }
+      
+      // 否则返回默认值
       return {
         available: false,
         configCount: 0,
         defaultConfig: null
       }
     }
+  }
+  
+  /**
+   * 清除状态缓存
+   */
+  clearStatusCache() {
+    this.statusCache = null
+    this.statusCacheTime = 0
   }
 }
 

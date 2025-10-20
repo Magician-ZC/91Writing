@@ -442,6 +442,151 @@ const toolConfigs = {
         ]
       }
     ]
+  },
+  
+  genre: {
+    title: '题材分析器',
+    description: '分析题材潜力和特点',
+    icon: '🎯',
+    fields: [
+      {
+        key: 'genreType',
+        label: '题材类型',
+        type: 'select',
+        options: [
+          { label: '玄幻奇幻', value: 'fantasy' },
+          { label: '都市现代', value: 'urban' },
+          { label: '科幻未来', value: 'scifi' },
+          { label: '历史架空', value: 'historical' },
+          { label: '武侠仙侠', value: 'wuxia' },
+          { label: '言情浪漫', value: 'romance' }
+        ],
+        required: true
+      },
+      {
+        key: 'analysisDepth',
+        label: '分析深度',
+        type: 'select',
+        options: [
+          { label: '简要分析', value: 'brief' },
+          { label: '详细分析', value: 'detailed' },
+          { label: '市场分析', value: 'market' }
+        ]
+      }
+    ]
+  },
+  
+  outline: {
+    title: '细纲生成器',
+    description: '生成详细的章节细纲',
+    icon: '📝',
+    fields: [
+      {
+        key: 'chapterCount',
+        label: '章节数量',
+        type: 'number',
+        min: 1,
+        max: 50,
+        placeholder: '10',
+        required: true
+      },
+      {
+        key: 'detailLevel',
+        label: '细节程度',
+        type: 'select',
+        options: [
+          { label: '简略大纲', value: 'brief' },
+          { label: '详细大纲', value: 'detailed' },
+          { label: '超详细大纲', value: 'comprehensive' }
+        ],
+        required: true
+      },
+      {
+        key: 'focusAreas',
+        label: '重点区域',
+        type: 'checkbox',
+        options: [
+          { label: '开篇', value: 'opening' },
+          { label: '高潮', value: 'climax' },
+          { label: '结局', value: 'ending' }
+        ]
+      }
+    ]
+  },
+  
+  cheat: {
+    title: '金手指生成器',
+    description: '设计主角的特殊能力',
+    icon: '✨',
+    fields: [
+      {
+        key: 'cheatType',
+        label: '金手指类型',
+        type: 'select',
+        options: [
+          { label: '系统类', value: 'system' },
+          { label: '空间类', value: 'space' },
+          { label: '重生类', value: 'rebirth' },
+          { label: '穿越类', value: 'transmigration' },
+          { label: '异能类', value: 'power' },
+          { label: '宝物类', value: 'treasure' }
+        ],
+        required: true
+      },
+      {
+        key: 'powerLevel',
+        label: '能力强度',
+        type: 'select',
+        options: [
+          { label: '弱开高走', value: 'weak_to_strong' },
+          { label: '中等稳定', value: 'moderate' },
+          { label: '强力开局', value: 'strong_start' }
+        ]
+      },
+      {
+        key: 'limitations',
+        label: '限制条件',
+        type: 'textarea',
+        placeholder: '描述金手指的使用限制和代价...',
+        rows: 3
+      }
+    ]
+  },
+  
+  title: {
+    title: '书名生成器',
+    description: '生成吸引人的书名',
+    icon: '💎',
+    fields: [
+      {
+        key: 'count',
+        label: '生成数量',
+        type: 'select',
+        options: [
+          { label: '5个', value: 5 },
+          { label: '10个', value: 10 },
+          { label: '15个', value: 15 }
+        ],
+        required: true
+      },
+      {
+        key: 'style',
+        label: '书名风格',
+        type: 'select',
+        options: [
+          { label: '简洁大气', value: 'concise' },
+          { label: '悬疑吸引', value: 'mysterious' },
+          { label: '霸气侧漏', value: 'domineering' },
+          { label: '文艺清新', value: 'literary' }
+        ]
+      },
+      {
+        key: 'keywords',
+        label: '关键词',
+        type: 'input',
+        placeholder: '输入希望包含的关键词（可选）'
+      }
+    ]
   }
 }
 
@@ -536,9 +681,11 @@ const executeTool = async () => {
   progress.value = 0
   progressText.value = '准备执行工具...'
   
+  let progressInterval = null
+  
   try {
     // 模拟进度更新
-    const progressInterval = setInterval(() => {
+    progressInterval = setInterval(() => {
       if (progress.value < 90) {
         progress.value += Math.random() * 15
         updateProgressText()
@@ -552,8 +699,12 @@ const executeTool = async () => {
       toolParams
     )
     
-    // 清除进度定时器
-    clearInterval(progressInterval)
+    // 清除进度定时器（关键修复！）
+    if (progressInterval) {
+      clearInterval(progressInterval)
+      progressInterval = null
+    }
+    
     progress.value = 100
     progressText.value = '执行完成'
     
@@ -565,9 +716,18 @@ const executeTool = async () => {
     console.error('工具执行失败:', error)
     ElMessage.error('工具执行失败：' + error.message)
   } finally {
+    // 确保清除定时器（防止内存泄漏）
+    if (progressInterval) {
+      clearInterval(progressInterval)
+      progressInterval = null
+    }
+    
     executing.value = false
-    progress.value = 0
-    progressText.value = ''
+    // 延迟清除进度条，让用户看到100%
+    setTimeout(() => {
+      progress.value = 0
+      progressText.value = ''
+    }, 1000)
   }
 }
 
@@ -629,6 +789,56 @@ const formatResult = (toolResult) => {
             content: toolResult.settings?.culture || '文化传统设定...'
           }
         }
+      }
+      
+    case 'genre':
+      return {
+        type: 'structured',
+        sections: {
+          potential: {
+            title: '题材潜力',
+            content: toolResult.potential || '题材潜力分析...'
+          },
+          advantages: {
+            title: '优势特点',
+            content: toolResult.advantages || '题材优势...'
+          },
+          suggestions: {
+            title: '创作建议',
+            content: toolResult.suggestions || '创作建议...'
+          }
+        }
+      }
+      
+    case 'outline':
+      return {
+        type: 'list',
+        items: toolResult.chapters || []
+      }
+      
+    case 'cheat':
+      return {
+        type: 'structured',
+        sections: {
+          description: {
+            title: '金手指描述',
+            content: toolResult.description || '金手指能力描述...'
+          },
+          abilities: {
+            title: '核心能力',
+            content: toolResult.abilities || '能力清单...'
+          },
+          limitations: {
+            title: '限制条件',
+            content: toolResult.limitations || '使用限制...'
+          }
+        }
+      }
+      
+    case 'title':
+      return {
+        type: 'list',
+        items: toolResult.titles || []
       }
       
     default:

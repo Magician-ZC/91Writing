@@ -554,8 +554,13 @@ const completeWizard = async () => {
     ElMessage.success('小说创建完成！')
     emit('wizard-completed', novelData)
     
-    // 导航回小说管理页面
-    router.push({ name: 'NovelManagement' })
+    // 跳转到写作界面（使用新创建的小说ID）
+    if (novelData && novelData.id) {
+      router.push({ name: 'WriterRefactored', params: { id: novelData.id } })
+    } else {
+      // 如果没有ID，返回小说管理页面
+      router.push({ name: 'NovelManagement' })
+    }
   } catch (error) {
     if (error !== 'cancel') {
       console.error('完成向导失败:', error)

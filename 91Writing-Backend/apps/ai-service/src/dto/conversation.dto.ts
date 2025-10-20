@@ -80,6 +80,15 @@ export class GenerateContentDto {
   contentType?: string = 'continuation';
 
   @ApiPropertyOptional({
+    description: '生成类型（用于内部路由）',
+    enum: ['continuation', 'rewrite', 'expansion'],
+    example: 'continuation'
+  })
+  @IsOptional()
+  @IsEnum(['continuation', 'rewrite', 'expansion'])
+  type?: string;
+
+  @ApiPropertyOptional({
     description: '内容长度',
     enum: ['short', 'medium', 'long'],
     default: 'medium',

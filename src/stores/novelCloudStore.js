@@ -622,6 +622,139 @@ export const useNovelCloudStore = defineStore('novelCloud', () => {
     }
   }
   
+  // ========== 章节版本控制 (Week 6) ==========
+  
+  /**
+   * 创建章节版本快照
+   */
+  async function createChapterVersion(chapterId, versionData) {
+    try {
+      const response = await apiManager.createChapterVersion({
+        chapterId,
+        ...versionData
+      })
+      
+      if (response.success) {
+        console.log(`✓ 创建章节版本成功: v${response.data.versionNumber}`)
+        return response.data
+      } else {
+        throw new Error(response.message || '创建版本失败')
+      }
+    } catch (error) {
+      console.error('创建章节版本失败:', error)
+      ElMessage.error(error.message || '创建版本失败')
+      return null
+    }
+  }
+  
+  /**
+   * 获取章节版本历史
+   */
+  async function getChapterVersionHistory(chapterId, params = {}) {
+    try {
+      const response = await apiManager.getChapterVersionHistory(chapterId, params)
+      
+      if (response.success) {
+        return response.data
+      } else {
+        throw new Error(response.message || '获取版本历史失败')
+      }
+    } catch (error) {
+      console.error('获取版本历史失败:', error)
+      ElMessage.error(error.message || '获取版本历史失败')
+      return []
+    }
+  }
+  
+  /**
+   * 获取指定版本详情
+   */
+  async function getChapterVersion(chapterId, versionNumber) {
+    try {
+      const response = await apiManager.getChapterVersion(chapterId, versionNumber)
+      
+      if (response.success) {
+        return response.data
+      } else {
+        throw new Error(response.message || '获取版本详情失败')
+      }
+    } catch (error) {
+      console.error('获取版本详情失败:', error)
+      ElMessage.error(error.message || '获取版本详情失败')
+      return null
+    }
+  }
+  
+  /**
+   * 比较两个版本
+   */
+  async function compareChapterVersions(chapterId, version1, version2) {
+    try {
+      const response = await apiManager.compareChapterVersions({
+        chapterId,
+        versionNumber1: version1,
+        versionNumber2: version2
+      })
+      
+      if (response.success) {
+        return response.data
+      } else {
+        throw new Error(response.message || '版本比较失败')
+      }
+    } catch (error) {
+      console.error('版本比较失败:', error)
+      ElMessage.error(error.message || '版本比较失败')
+      return null
+    }
+  }
+  
+  /**
+   * 恢复到指定版本
+   */
+  async function restoreChapterVersion(chapterId, versionNumber, restoreOptions = {}) {
+    try {
+      const response = await apiManager.restoreChapterVersion({
+        chapterId,
+        versionNumber,
+        ...restoreOptions
+      })
+      
+      if (response.success) {
+        // 刷新章节内容
+        if (currentChapter.value?.id === chapterId) {
+          await fetchChapter(currentNovel.value?.id, chapterId)
+        }
+        
+        ElMessage.success(`成功恢复到版本 v${versionNumber}`)
+        return response.data
+      } else {
+        throw new Error(response.message || '版本恢复失败')
+      }
+    } catch (error) {
+      console.error('版本恢复失败:', error)
+      ElMessage.error(error.message || '版本恢复失败')
+      return null
+    }
+  }
+  
+  /**
+   * 获取章节版本统计
+   */
+  async function getChapterVersionStats(chapterId) {
+    try {
+      const response = await apiManager.getChapterVersionStats(chapterId)
+      
+      if (response.success) {
+        return response.data
+      } else {
+        throw new Error(response.message || '获取版本统计失败')
+      }
+    } catch (error) {
+      console.error('获取版本统计失败:', error)
+      return null
+    }
+  }
+  
   // ========== 返回 ==========
   
   return {
@@ -671,6 +804,14 @@ export const useNovelCloudStore = defineStore('novelCloud', () => {
     resetFilters,
     clearCurrent,
     getNovelStats,
+    
+    // 版本控制 (Week 6)
+    createChapterVersion,
+    getChapterVersionHistory,
+    getChapterVersion,
+    compareChapterVersions,
+    restoreChapterVersion,
+    getChapterVersionStats,
   }
 })
 

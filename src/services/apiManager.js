@@ -588,6 +588,88 @@ class ApiManager {
     })
   }
 
+  // ===== 角色管理API =====
+  
+  async getCharacters(novelId, params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/characters/novel/${novelId}${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getCharacter(characterId) {
+    return await this.request(`/api/v1/characters/${characterId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createCharacter(characterData) {
+    return await this.request('/api/v1/characters', {
+      method: 'POST',
+      data: characterData,
+      fallbackLocal: false
+    })
+  }
+
+  async updateCharacter(characterId, updateData) {
+    return await this.request(`/api/v1/characters/${characterId}`, {
+      method: 'PUT',
+      data: updateData,
+      fallbackLocal: false
+    })
+  }
+
+  async deleteCharacter(characterId) {
+    return await this.request(`/api/v1/characters/${characterId}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 世界观管理API =====
+  
+  async getWorldSettings(novelId, params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/world-settings/novel/${novelId}${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async getWorldSetting(settingId) {
+    return await this.request(`/api/v1/world-settings/${settingId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  async createWorldSetting(settingData) {
+    return await this.request('/api/v1/world-settings', {
+      method: 'POST',
+      data: settingData,
+      fallbackLocal: false
+    })
+  }
+
+  async updateWorldSetting(settingId, updateData) {
+    return await this.request(`/api/v1/world-settings/${settingId}`, {
+      method: 'PUT',
+      data: updateData,
+      fallbackLocal: false
+    })
+  }
+
+  async deleteWorldSetting(settingId) {
+    return await this.request(`/api/v1/world-settings/${settingId}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
   // ===== 提示词管理API =====
   
   async getPrompts(params = {}) {
@@ -1222,6 +1304,172 @@ class ApiManager {
 
   async validateInviteCode(inviteCode) {
     return await this.request(`/api/v1/auth/validate-invite/${inviteCode}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 写作建议系统API (Week 7) =====
+  
+  /**
+   * 创建写作建议
+   */
+  async createSuggestion(suggestionData) {
+    return await this.request('/api/v1/suggestions', {
+      method: 'POST',
+      data: suggestionData,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * AI生成写作建议
+   */
+  async generateSuggestions(generateData) {
+    return await this.request('/api/v1/suggestions/generate', {
+      method: 'POST',
+      data: generateData,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取小说的写作建议列表
+   */
+  async getSuggestions(novelId, params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/suggestions/novel/${novelId}${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取单个写作建议详情
+   */
+  async getSuggestion(suggestionId) {
+    return await this.request(`/api/v1/suggestions/${suggestionId}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 采纳写作建议
+   */
+  async adoptSuggestion(adoptData) {
+    return await this.request('/api/v1/suggestions/adopt', {
+      method: 'POST',
+      data: adoptData,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 评价写作建议
+   */
+  async rateSuggestion(rateData) {
+    return await this.request('/api/v1/suggestions/rate', {
+      method: 'POST',
+      data: rateData,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 删除写作建议
+   */
+  async deleteSuggestion(suggestionId) {
+    return await this.request(`/api/v1/suggestions/${suggestionId}`, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 批量删除写作建议
+   */
+  async bulkDeleteSuggestions(novelId, suggestionIds) {
+    return await this.request(`/api/v1/suggestions/novel/${novelId}/bulk-delete`, {
+      method: 'POST',
+      data: { suggestionIds },
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取写作建议统计
+   */
+  async getSuggestionStats(novelId) {
+    return await this.request(`/api/v1/suggestions/novel/${novelId}/stats`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  // ===== 章节版本控制API (Week 6) =====
+  
+  /**
+   * 创建章节版本快照
+   */
+  async createChapterVersion(versionData) {
+    return await this.request('/api/v1/versions', {
+      method: 'POST',
+      data: versionData,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取章节版本历史
+   */
+  async getChapterVersionHistory(chapterId, params = {}) {
+    const query = new URLSearchParams(params).toString()
+    const endpoint = `/api/v1/versions/chapter/${chapterId}/history${query ? '?' + query : ''}`
+    return await this.request(endpoint, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取指定版本详情
+   */
+  async getChapterVersion(chapterId, versionNumber) {
+    return await this.request(`/api/v1/versions/chapter/${chapterId}/version/${versionNumber}`, {
+      method: 'GET',
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 比较两个版本
+   */
+  async compareChapterVersions(compareData) {
+    return await this.request('/api/v1/versions/compare', {
+      method: 'POST',
+      data: compareData,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 恢复到指定版本
+   */
+  async restoreChapterVersion(restoreData) {
+    return await this.request('/api/v1/versions/restore', {
+      method: 'POST',
+      data: restoreData,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * 获取章节版本统计
+   */
+  async getChapterVersionStats(chapterId) {
+    return await this.request(`/api/v1/versions/chapter/${chapterId}/stats`, {
       method: 'GET',
       fallbackLocal: false
     })
