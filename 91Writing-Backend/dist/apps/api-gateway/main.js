@@ -49,7 +49,8 @@ const payment_module_1 = __webpack_require__(21);
 const admin_module_1 = __webpack_require__(25);
 const novel_module_1 = __webpack_require__(28);
 const users_module_1 = __webpack_require__(31);
-const database_1 = __webpack_require__(34);
+const ai_module_1 = __webpack_require__(34);
+const database_1 = __webpack_require__(37);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -92,6 +93,7 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
             novel_module_1.NovelModule,
+            ai_module_1.AiModule,
             proxy_module_1.ProxyModule,
             payment_module_1.PaymentModule,
             admin_module_1.AdminModule,
@@ -1056,7 +1058,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NovelController = void 0;
 const common_1 = __webpack_require__(3);
@@ -1089,6 +1091,9 @@ let NovelController = class NovelController {
         return this.proxyToNovelService(req, res);
     }
     async proxyComments(req, res) {
+        return this.proxyToNovelService(req, res);
+    }
+    async proxyConsistency(req, res) {
         return this.proxyToNovelService(req, res);
     }
     async proxyToNovelService(req, res) {
@@ -1174,6 +1179,14 @@ __decorate([
     __metadata("design:paramtypes", [typeof (_r = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _r : Object, typeof (_s = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _s : Object]),
     __metadata("design:returntype", Promise)
 ], NovelController.prototype, "proxyComments", null);
+__decorate([
+    (0, common_1.All)('consistency*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_t = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _t : Object, typeof (_u = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _u : Object]),
+    __metadata("design:returntype", Promise)
+], NovelController.prototype, "proxyConsistency", null);
 exports.NovelController = NovelController = __decorate([
     (0, swagger_1.ApiTags)('Novel Service Proxy'),
     (0, common_1.Controller)(),
@@ -1453,6 +1466,153 @@ exports.UsersService = UsersService = UsersService_1 = __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AiModule = void 0;
+const common_1 = __webpack_require__(3);
+const ai_controller_1 = __webpack_require__(35);
+const ai_service_1 = __webpack_require__(36);
+let AiModule = class AiModule {
+};
+exports.AiModule = AiModule;
+exports.AiModule = AiModule = __decorate([
+    (0, common_1.Module)({
+        controllers: [ai_controller_1.AiController],
+        providers: [ai_service_1.AiService],
+        exports: [ai_service_1.AiService],
+    })
+], AiModule);
+
+
+/***/ }),
+/* 35 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AiController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const express_1 = __webpack_require__(12);
+const ai_service_1 = __webpack_require__(36);
+let AiController = class AiController {
+    constructor(aiService) {
+        this.aiService = aiService;
+    }
+    async proxyToAiService(req, res) {
+        return this.aiService.forwardRequest(req, res);
+    }
+};
+exports.AiController = AiController;
+__decorate([
+    (0, common_1.All)('*'),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof express_1.Request !== "undefined" && express_1.Request) === "function" ? _b : Object, typeof (_c = typeof express_1.Response !== "undefined" && express_1.Response) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], AiController.prototype, "proxyToAiService", null);
+exports.AiController = AiController = __decorate([
+    (0, swagger_1.ApiTags)('ai'),
+    (0, swagger_1.ApiExcludeController)(),
+    (0, common_1.Controller)('ai'),
+    __metadata("design:paramtypes", [typeof (_a = typeof ai_service_1.AiService !== "undefined" && ai_service_1.AiService) === "function" ? _a : Object])
+], AiController);
+
+
+/***/ }),
+/* 36 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var AiService_1;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AiService = void 0;
+const common_1 = __webpack_require__(3);
+const axios_1 = __webpack_require__(24);
+let AiService = AiService_1 = class AiService {
+    constructor() {
+        this.logger = new common_1.Logger(AiService_1.name);
+        const host = process.env.AI_SERVICE_HOST || 'localhost';
+        const port = process.env.AI_SERVICE_PORT || '3004';
+        this.aiServiceUrl = `http://${host}:${port}`;
+    }
+    async forwardRequest(req, res) {
+        try {
+            const targetPath = req.url.replace(/^\/ai/, '');
+            const targetUrl = `${this.aiServiceUrl}${targetPath}`;
+            this.logger.debug(`转发请求到AI Service: ${targetUrl}`);
+            const response = await (0, axios_1.default)({
+                method: req.method,
+                url: targetUrl,
+                headers: {
+                    ...req.headers,
+                    host: undefined,
+                },
+                data: req.body,
+                params: req.query,
+                responseType: 'stream',
+            });
+            Object.keys(response.headers).forEach((key) => {
+                res.setHeader(key, response.headers[key]);
+            });
+            res.status(response.status);
+            response.data.pipe(res);
+        }
+        catch (error) {
+            this.logger.error(`转发到AI Service失败: ${error.message}`);
+            if (error.response) {
+                res.status(error.response.status).json(error.response.data);
+            }
+            else {
+                res.status(500).json({
+                    success: false,
+                    message: 'AI服务不可用',
+                    error: error.message,
+                });
+            }
+        }
+    }
+};
+exports.AiService = AiService;
+exports.AiService = AiService = AiService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [])
+], AiService);
+
+
+/***/ }),
+/* 37 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -1468,12 +1628,12 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(35), exports);
-__exportStar(__webpack_require__(36), exports);
+__exportStar(__webpack_require__(38), exports);
+__exportStar(__webpack_require__(39), exports);
 
 
 /***/ }),
-/* 35 */
+/* 38 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1487,7 +1647,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DatabaseModule = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const prisma_service_1 = __webpack_require__(36);
+const prisma_service_1 = __webpack_require__(39);
 let DatabaseModule = class DatabaseModule {
 };
 exports.DatabaseModule = DatabaseModule;
@@ -1502,7 +1662,7 @@ exports.DatabaseModule = DatabaseModule = __decorate([
 
 
 /***/ }),
-/* 36 */
+/* 39 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -1521,7 +1681,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrismaService = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
-const client_1 = __webpack_require__(37);
+const client_1 = __webpack_require__(40);
 let PrismaService = PrismaService_1 = class PrismaService extends client_1.PrismaClient {
     constructor(configService) {
         super({
@@ -1648,19 +1808,19 @@ exports.PrismaService = PrismaService = PrismaService_1 = __decorate([
 
 
 /***/ }),
-/* 37 */
+/* 40 */
 /***/ ((module) => {
 
 module.exports = require("@prisma/client");
 
 /***/ }),
-/* 38 */
+/* 41 */
 /***/ ((module) => {
 
 module.exports = require("compression");
 
 /***/ }),
-/* 39 */
+/* 42 */
 /***/ ((module) => {
 
 module.exports = require("helmet");
@@ -1705,8 +1865,8 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const compression = __webpack_require__(38);
-const helmet_1 = __webpack_require__(39);
+const compression = __webpack_require__(41);
+const helmet_1 = __webpack_require__(42);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['error', 'warn', 'log', 'debug', 'verbose'],

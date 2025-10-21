@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { DatabaseModule } from '@app/database';
-import { AuthModule } from '@app/auth';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 import { VideoGenerationController } from './video-generation.controller';
 import { VideoGenerationService } from './video-generation.service';
 import { StoryboardAgentService } from '../../services/storyboard-agent.service';
@@ -19,7 +20,11 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 @Module({
   imports: [
     DatabaseModule,
-    AuthModule,
+    PassportModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'your-secret-key',
+      signOptions: { expiresIn: '7d' },
+    }),
     // Bull队列配置
     BullModule.registerQueue({
       name: 'video-generation',

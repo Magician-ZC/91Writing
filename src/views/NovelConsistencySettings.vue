@@ -1,667 +1,714 @@
 <template>
-  <div class="consistency-settings">
-    <el-page-header @back="goBack" title="返回">
-      <template #content>
-        <span class="page-title">视觉一致性配置 - {{ novel?.title }}</span>
+  <div class="novel-consistency-settings">
+    <el-card class="settings-card">
+      <template #header>
+        <div class="card-header">
+          <span class="header-title">
+            <el-icon><Connection /></el-icon>
+            人物一致性配置
+          </span>
+          <div class="header-actions">
+            <el-tag type="success" v-if="profile?.autoExtracted">
+              <el-icon><MagicStick /></el-icon>
+              AI自动管理
+            </el-tag>
+            <el-button type="primary" :icon="Refresh" @click="autoExtract">
+              自动提取角色
+            </el-button>
+          </div>
+        </div>
       </template>
-    </el-page-header>
 
-    <el-card class="main-card" v-loading="loading">
-      <!-- 工具栏 -->
-      <div class="toolbar">
-        <el-button type="primary" :icon="MagicStick" @click="autoExtract">
-          自动提取特征
-        </el-button>
-        <el-button :icon="Upload" @click="importConfig">导入配置</el-button>
-        <el-button :icon="Download" @click="exportConfig">导出配置</el-button>
-        <el-button 
-          type="success" 
-          :icon="Check" 
-          @click="saveConfig"
-          :loading="saving"
-        >
-          保存配置
-        </el-button>
+      <!-- 加载状态 -->
+      <div v-if="loading" class="loading-container">
+        <el-skeleton :rows="5" animated />
       </div>
 
-      <el-tabs v-model="activeTab" class="settings-tabs">
-        <!-- 角色配置 -->
-        <el-tab-pane label="角色特征" name="characters">
-          <div class="tab-content">
-            <div class="section-header">
-              <span>角色列表 ({{ profile.characters.length }})</span>
-              <el-button type="primary" size="small" :icon="Plus" @click="addCharacter">
-                添加角色
-              </el-button>
-            </div>
+      <!-- 空状态 -->
+      <el-empty v-else-if="!profile" description="尚未配置人物一致性">
+        <el-button type="primary" :icon="MagicStick" @click="autoExtract">
+          AI自动提取角色特征
+        </el-button>
+      </el-empty>
 
-            <el-empty v-if="profile.characters.length === 0" description="暂无角色配置">
-              <el-button type="primary" @click="addCharacter">添加第一个角色</el-button>
-            </el-empty>
+      <!-- 配置内容 -->
+      <div v-else class="settings-content">
+        <!-- 自动更新开关 -->
+        <el-alert
+          title="智能自动管理"
+          type="info"
+          :closable="false"
+          show-icon
+          class="auto-alert"
+        >
+          <div class="alert-content">
+            <div>系统会自动从每章内容中提取角色特征，无需手动配置</div>
+            <div>生成视频时自动保持人物视觉一致性</div>
+            <el-switch 
+              v-model="profile.autoUpdate"
+              active-text="自动更新：开启（推荐）"
+              inactive-text="自动更新：关闭"
+              @change="toggleAutoUpdate"
+              class="auto-switch"
+            />
+          </div>
+        </el-alert>
 
-            <el-collapse v-else v-model="activeCharacters" accordion>
-              <el-collapse-item 
-                v-for="(char, index) in profile.characters" 
-                :key="index"
-                :name="index"
+        <!-- 角色列表 -->
+        <el-divider content-position="left">
+          <el-icon><User /></el-icon>
+          角色列表
+        </el-divider>
+
+        <div class="characters-grid">
+          <el-card 
+            v-for="char in characters" 
+            :key="char.name"
+            class="character-card"
+            shadow="hover"
+          >
+            <template #header>
+              <div class="char-header">
+                <span class="char-name">{{ char.name }}</span>
+                <el-dropdown @command="(cmd) => handleCharAction(cmd, char)">
+                  <el-icon class="more-icon"><MoreFilled /></el-icon>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item :icon="Edit" command="edit">编辑</el-dropdown-item>
+                      <el-dropdown-item :icon="View" command="view">查看详情</el-dropdown-item>
+                      <el-dropdown-item :icon="Delete" command="delete">删除</el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </template>
+
+            <!-- 参考图 -->
+            <div class="char-reference" v-if="char.referenceImages && char.referenceImages.length">
+              <el-image 
+                :src="char.referenceImages[0]" 
+                fit="cover"
+                class="reference-image"
+                :preview-src-list="char.referenceImages"
               >
-                <template #title>
-                  <div class="character-title">
-                    <el-avatar :size="32">{{ char.name[0] }}</el-avatar>
-                    <span class="char-name">{{ char.name }}</span>
-                    <el-tag v-if="char.importance >= 80" type="danger" size="small">主角</el-tag>
-                    <el-tag v-else-if="char.importance >= 60" type="warning" size="small">重要</el-tag>
-                    <el-tag v-else type="info" size="small">配角</el-tag>
+                <template #error>
+                  <div class="image-placeholder">
+                    <el-icon><Picture /></el-icon>
+                    <span>暂无参考图</span>
                   </div>
                 </template>
-
-                <el-form :model="char" label-width="120px" class="character-form">
-                  <el-form-item label="角色名称">
-                    <el-input v-model="char.name" placeholder="输入角色名称" />
-                  </el-form-item>
-
-                  <el-form-item label="基础外貌">
-                    <el-input
-                      v-model="char.baseAppearance"
-                      type="textarea"
-                      :rows="3"
-                      placeholder="描述角色的基本外貌特征（不会改变的部分）"
-                    />
-                    <div class="form-tip">
-                      例如：黑发蓝眼，身高约180cm，五官轮廓分明的年轻男子
-                    </div>
-                  </el-form-item>
-
-                  <el-form-item label="视觉关键词">
-                    <el-tag
-                      v-for="(keyword, kidx) in char.keywords"
-                      :key="kidx"
-                      closable
-                      @close="removeKeyword(char, kidx)"
-                      class="keyword-tag"
-                    >
-                      {{ keyword }}
-                    </el-tag>
-                    <el-input
-                      v-if="char.showKeywordInput"
-                      v-model="char.newKeyword"
-                      size="small"
-                      @keyup.enter="addKeyword(char)"
-                      @blur="addKeyword(char)"
-                      class="keyword-input"
-                    />
-                    <el-button
-                      v-else
-                      size="small"
-                      @click="char.showKeywordInput = true"
-                    >
-                      + 添加关键词
-                    </el-button>
-                    <div class="form-tip">
-                      关键词用于视觉一致性控制，例如：黑发、蓝眼、黑袍、佩剑
-                    </div>
-                  </el-form-item>
-
-                  <el-form-item label="参考图">
-                    <el-upload
-                      :action="uploadUrl"
-                      :headers="uploadHeaders"
-                      :show-file-list="false"
-                      :on-success="(res) => handleImageUpload(char, res)"
-                      accept="image/*"
-                    >
-                      <el-image
-                        v-if="char.referenceImageUrl"
-                        :src="char.referenceImageUrl"
-                        fit="cover"
-                        class="reference-image"
-                      >
-                        <template #error>
-                          <div class="image-slot">
-                            <el-icon><Picture /></el-icon>
-                          </div>
-                        </template>
-                      </el-image>
-                      <el-button v-else :icon="Upload">上传参考图</el-button>
-                    </el-upload>
-                    <div class="form-tip">
-                      上传角色参考图可以提高生成一致性
-                    </div>
-                  </el-form-item>
-
-                  <el-form-item label="重要性">
-                    <el-slider v-model="char.importance" :min="0" :max="100" show-stops />
-                  </el-form-item>
-
-                  <el-form-item label="动态状态">
-                    <el-button size="small" @click="showStateDialog(char)">
-                      管理章节状态 ({{ Object.keys(char.dynamicState || {}).length }})
-                    </el-button>
-                    <div class="form-tip">
-                      为不同章节设置特殊状态，如受伤、换装等
-                    </div>
-                  </el-form-item>
-
-                  <el-form-item>
-                    <el-button type="danger" @click="deleteCharacter(index)">
-                      删除角色
-                    </el-button>
-                  </el-form-item>
-                </el-form>
-              </el-collapse-item>
-            </el-collapse>
-          </div>
-        </el-tab-pane>
-
-        <!-- 环境配置 -->
-        <el-tab-pane label="环境场景" name="environments">
-          <div class="tab-content">
-            <div class="section-header">
-              <span>环境列表 ({{ profile.environments.length }})</span>
-              <el-button type="primary" size="small" :icon="Plus" @click="addEnvironment">
-                添加环境
-              </el-button>
+              </el-image>
+            </div>
+            <div v-else class="char-reference">
+              <div class="image-placeholder">
+                <el-icon><Picture /></el-icon>
+                <span>首次生成视频后自动获取</span>
+              </div>
             </div>
 
-            <el-empty v-if="profile.environments.length === 0" description="暂无环境配置" />
+            <!-- 基础信息 -->
+            <div class="char-info">
+              <div class="info-item">
+                <span class="label">外貌:</span>
+                <p class="value">{{ char.baseAppearance || '待自动提取' }}</p>
+              </div>
+              
+              <div class="info-item">
+                <span class="label">关键词:</span>
+                <div class="keywords">
+                  <el-tag 
+                    v-for="keyword in (char.keywords || [])" 
+                    :key="keyword"
+                    size="small"
+                    class="keyword-tag"
+                  >
+                    {{ keyword }}
+                  </el-tag>
+                  <span v-if="!char.keywords || char.keywords.length === 0" class="no-data">
+                    待自动提取
+                  </span>
+                </div>
+              </div>
 
-            <el-space direction="vertical" :size="16" style="width: 100%">
-              <el-card 
-                v-for="(env, index) in profile.environments" 
-                :key="index"
-                class="env-card"
-              >
-                <template #header>
-                  <div class="card-header">
-                    <span>{{ env.name }}</span>
-                    <el-button 
-                      type="danger" 
-                      size="small" 
-                      text 
-                      @click="deleteEnvironment(index)"
+              <!-- 章节动态状态 -->
+              <div class="info-item" v-if="char.dynamicState && Object.keys(char.dynamicState).length">
+                <span class="label">章节状态:</span>
+                <el-scrollbar height="80px">
+                  <div class="dynamic-states">
+                    <el-tag 
+                      v-for="(state, chapter) in char.dynamicState" 
+                      :key="chapter"
+                      type="info"
+                      size="small"
                     >
-                      删除
-                    </el-button>
-                  </div>
-                </template>
-
-                <el-form :model="env" label-width="100px">
-                  <el-form-item label="场景名称">
-                    <el-input v-model="env.name" />
-                  </el-form-item>
-                  <el-form-item label="场景描述">
-                    <el-input v-model="env.description" type="textarea" :rows="2" />
-                  </el-form-item>
-                  <el-form-item label="视觉风格">
-                    <el-input v-model="env.visualStyle" />
-                  </el-form-item>
-                  <el-form-item label="关键词">
-                    <el-tag
-                      v-for="(kw, kidx) in env.keywords"
-                      :key="kidx"
-                      closable
-                      @close="env.keywords.splice(kidx, 1)"
-                    >
-                      {{ kw }}
+                      第{{ chapter }}章: {{ state }}
                     </el-tag>
-                  </el-form-item>
-                </el-form>
-              </el-card>
-            </el-space>
-          </div>
-        </el-tab-pane>
+                  </div>
+                </el-scrollbar>
+              </div>
+            </div>
+          </el-card>
+        </div>
 
-        <!-- 视觉风格 -->
-        <el-tab-pane label="视觉风格" name="visualStyle">
-          <div class="tab-content">
-            <el-form :model="profile.visualStyle" label-width="120px">
+        <!-- 视觉风格配置 -->
+        <el-divider content-position="left">
+          <el-icon><Brush /></el-icon>
+          视觉风格
+        </el-divider>
+
+        <el-form :model="visualStyleForm" label-width="120px" class="visual-style-form">
+          <el-row :gutter="20">
+            <el-col :span="12">
               <el-form-item label="整体风格">
-                <el-select v-model="profile.visualStyle.overall">
+                <el-select v-model="visualStyleForm.overall" style="width: 100%">
                   <el-option label="写实风格" value="realistic" />
                   <el-option label="动漫风格" value="anime" />
                   <el-option label="奇幻风格" value="fantasy" />
                   <el-option label="科幻风格" value="scifi" />
-                  <el-option label="水墨画风格" value="ink-painting" />
-                  <el-option label="油画风格" value="oil-painting" />
+                  <el-option label="水墨风格" value="ink" />
                 </el-select>
               </el-form-item>
-
+            </el-col>
+            <el-col :span="12">
               <el-form-item label="色调">
-                <el-select v-model="profile.visualStyle.colorTone">
+                <el-select v-model="visualStyleForm.colorTone" style="width: 100%">
                   <el-option label="自然色调" value="natural" />
                   <el-option label="暖色调" value="warm" />
                   <el-option label="冷色调" value="cold" />
-                  <el-option label="高对比" value="high-contrast" />
-                  <el-option label="低饱和" value="low-saturation" />
+                  <el-option label="高饱和" value="vibrant" />
+                  <el-option label="黑白" value="monochrome" />
                 </el-select>
               </el-form-item>
+            </el-col>
+          </el-row>
 
+          <el-row :gutter="20">
+            <el-col :span="12">
               <el-form-item label="艺术风格">
-                <el-select v-model="profile.visualStyle.artStyle">
-                  <el-option label="电影感" value="cinematic" />
-                  <el-option label="插画风格" value="illustration" />
-                  <el-option label="概念艺术" value="concept-art" />
-                  <el-option label="漫画风格" value="comic" />
+                <el-select v-model="visualStyleForm.artStyle" style="width: 100%">
+                  <el-option label="电影级" value="cinematic" />
+                  <el-option label="油画" value="oil-painting" />
+                  <el-option label="水彩" value="watercolor" />
+                  <el-option label="漫画" value="comic" />
+                  <el-option label="素描" value="sketch" />
                 </el-select>
               </el-form-item>
-
+            </el-col>
+            <el-col :span="12">
               <el-form-item label="光照">
-                <el-select v-model="profile.visualStyle.lighting">
+                <el-select v-model="visualStyleForm.lighting" style="width: 100%">
                   <el-option label="自然光" value="natural" />
                   <el-option label="戏剧光" value="dramatic" />
                   <el-option label="柔和光" value="soft" />
                   <el-option label="背光" value="backlight" />
-                  <el-option label="侧光" value="sidelight" />
+                  <el-option label="黄金时刻" value="golden-hour" />
                 </el-select>
               </el-form-item>
+            </el-col>
+          </el-row>
+        </el-form>
 
-              <el-form-item label="附加标签">
-                <el-tag
-                  v-for="(tag, index) in profile.visualStyle.additionalTags"
-                  :key="index"
-                  closable
-                  @close="profile.visualStyle.additionalTags.splice(index, 1)"
-                  class="style-tag"
-                >
-                  {{ tag }}
-                </el-tag>
-                <el-button size="small" @click="addStyleTag">+ 添加标签</el-button>
-              </el-form-item>
-            </el-form>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
+        <!-- 操作按钮 -->
+        <div class="action-buttons">
+          <el-button 
+            type="primary" 
+            size="large" 
+            :icon="Check" 
+            @click="saveProfile"
+            :loading="saving"
+          >
+            保存配置
+          </el-button>
+          <el-button 
+            size="large" 
+            :icon="Refresh" 
+            @click="loadProfile"
+          >
+            重新加载
+          </el-button>
+          <el-button 
+            size="large" 
+            :icon="Download" 
+            @click="exportProfile"
+          >
+            导出配置
+          </el-button>
+        </div>
+      </div>
     </el-card>
 
-    <!-- 自动提取对话框 -->
+    <!-- 编辑角色对话框 -->
     <el-dialog
-      v-model="showExtractDialog"
-      title="自动提取角色特征"
-      width="500px"
+      v-model="showEditCharDialog"
+      title="编辑角色特征"
+      width="700px"
     >
-      <el-form :model="extractForm" label-width="100px">
-        <el-form-item label="起始章节">
-          <el-input-number v-model="extractForm.startChapter" :min="1" />
+      <el-form :model="editCharForm" label-width="100px">
+        <el-form-item label="角色名称">
+          <el-input v-model="editCharForm.name" disabled />
         </el-form-item>
-        <el-form-item label="结束章节">
-          <el-input-number v-model="extractForm.endChapter" :min="1" />
+
+        <el-form-item label="外貌描述">
+          <el-input
+            v-model="editCharForm.baseAppearance"
+            type="textarea"
+            :rows="4"
+            placeholder="详细的外貌描述"
+          />
         </el-form-item>
-        <el-form-item label="覆盖现有">
-          <el-switch v-model="extractForm.overwrite" />
-          <div class="form-tip">
-            如果开启，将覆盖现有的角色配置；否则合并
-          </div>
+
+        <el-form-item label="关键词">
+          <el-tag
+            v-for="keyword in editCharForm.keywords"
+            :key="keyword"
+            closable
+            @close="removeKeyword(keyword)"
+            class="keyword-tag"
+          >
+            {{ keyword }}
+          </el-tag>
+          <el-input
+            v-model="newKeyword"
+            size="small"
+            style="width: 100px"
+            @keyup.enter="addKeyword"
+          >
+            <template #append>
+              <el-button :icon="Plus" @click="addKeyword" />
+            </template>
+          </el-input>
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="showExtractDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmExtract" :loading="extracting">
-          开始提取
-        </el-button>
+        <el-button @click="showEditCharDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveCharacter">保存</el-button>
       </template>
-    </el-dialog>
-
-    <!-- 状态管理对话框 -->
-    <el-dialog
-      v-model="showStateManager"
-      title="管理角色状态"
-      width="600px"
-    >
-      <div v-if="currentCharacter">
-        <el-button type="primary" size="small" @click="addState">添加状态</el-button>
-        <el-table :data="stateList" style="margin-top: 16px">
-          <el-table-column prop="chapter" label="章节" width="100" />
-          <el-table-column prop="state" label="状态描述" />
-          <el-table-column label="操作" width="100">
-            <template #default="{ $index }">
-              <el-button type="danger" size="small" text @click="deleteState($index)">
-                删除
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  MagicStick,
-  Upload,
-  Download,
+import { 
+  Connection, 
+  MagicStick, 
+  Refresh, 
+  User, 
+  MoreFilled, 
+  Edit, 
+  View, 
+  Delete, 
+  Picture, 
+  Brush,
   Check,
-  Plus,
-  Picture
+  Download,
+  Plus
 } from '@element-plus/icons-vue'
 import { consistencyService } from '@/services/consistencyService'
-import { novelService } from '@/services/novelService'
 
 const route = useRoute()
-const router = useRouter()
+const novelId = computed(() => route.params.novelId || route.query.novelId)
 
-const novelId = route.params.novelId
-const novel = ref(null)
+// 状态
 const loading = ref(false)
 const saving = ref(false)
-const extracting = ref(false)
+const profile = ref(null)
+const showEditCharDialog = ref(false)
 
-const activeTab = ref('characters')
-const activeCharacters = ref([0])
-const showExtractDialog = ref(false)
-const showStateManager = ref(false)
-const currentCharacter = ref(null)
+// 编辑角色表单
+const editCharForm = reactive({
+  name: '',
+  baseAppearance: '',
+  keywords: [],
+  referenceImages: []
+})
+const newKeyword = ref('')
 
-// 配置数据
-const profile = reactive({
-  characters: [],
-  environments: [],
-  objects: [],
-  visualStyle: {
-    overall: 'realistic',
-    colorTone: 'natural',
-    artStyle: 'cinematic',
-    lighting: 'natural',
-    additionalTags: []
+// 视觉风格表单
+const visualStyleForm = reactive({
+  overall: 'realistic',
+  colorTone: 'natural',
+  artStyle: 'cinematic',
+  lighting: 'natural'
+})
+
+// 计算属性
+const characters = computed(() => {
+  if (!profile.value || !profile.value.characters) {
+    return []
   }
-})
-
-// 提取表单
-const extractForm = reactive({
-  startChapter: 1,
-  endChapter: 3,
-  overwrite: false
-})
-
-// 上传配置
-const uploadUrl = computed(() => `${import.meta.env.VITE_API_BASE_URL}/upload/image`)
-const uploadHeaders = computed(() => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`
-}))
-
-// 状态列表
-const stateList = computed(() => {
-  if (!currentCharacter.value?.dynamicState) return []
-  return Object.entries(currentCharacter.value.dynamicState).map(([chapter, state]) => ({
-    chapter: `第${chapter}章`,
-    state
-  }))
+  
+  // 兼容两种格式
+  if (Array.isArray(profile.value.characters)) {
+    return profile.value.characters
+  } else if (profile.value.characters.characters) {
+    return profile.value.characters.characters
+  }
+  
+  return []
 })
 
 // 方法
 const loadProfile = async () => {
+  if (!novelId.value) {
+    ElMessage.warning('未指定小说ID')
+    return
+  }
+
   loading.value = true
   try {
-    const data = await consistencyService.getProfile(novelId)
-    Object.assign(profile, data)
+    const data = await consistencyService.getProfile(novelId.value)
+    profile.value = data
+    
+    // 加载视觉风格
+    if (data.visualStyle) {
+      Object.assign(visualStyleForm, data.visualStyle)
+    }
   } catch (error) {
-    // 如果没有配置，使用默认值
-    console.log('使用默认配置')
+    // 如果没有配置，显示空状态
+    if (error.message.includes('不存在')) {
+      profile.value = null
+    } else {
+      ElMessage.error(error.message || '加载配置失败')
+    }
   } finally {
     loading.value = false
   }
 }
 
-const loadNovel = async () => {
-  try {
-    novel.value = await novelService.getNovel(novelId)
-  } catch (error) {
-    ElMessage.error('加载小说信息失败')
-  }
-}
-
-const saveConfig = async () => {
-  // 验证配置
-  const validation = consistencyService.validateProfile(profile)
-  if (!validation.valid) {
-    ElMessage.error(validation.errors[0])
+const autoExtract = async () => {
+  if (!novelId.value) {
+    ElMessage.warning('未指定小说ID')
     return
   }
 
+  try {
+    await ElMessageBox.confirm(
+      'AI将自动分析小说内容，提取所有角色的外貌特征。是否继续？',
+      '自动提取角色',
+      {
+        confirmButtonText: '开始提取',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    loading.value = true
+    const data = await consistencyService.autoExtract({
+      novelId: novelId.value,
+      startChapter: 1,
+      endChapter: 10,  // 分析前10章
+      overwrite: false
+    })
+    
+    profile.value = data
+    ElMessage.success('角色特征提取成功')
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '自动提取失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+const toggleAutoUpdate = async (value) => {
+  try {
+    await consistencyService.updateProfile(novelId.value, {
+      autoUpdate: value
+    })
+    ElMessage.success(value ? '已开启自动更新' : '已关闭自动更新')
+  } catch (error) {
+    ElMessage.error('更新设置失败')
+    profile.value.autoUpdate = !value  // 回滚
+  }
+}
+
+const saveProfile = async () => {
+  if (!novelId.value) return
+
   saving.value = true
   try {
-    await consistencyService.updateProfile(novelId, profile)
-    ElMessage.success('保存成功')
+    await consistencyService.updateProfile(novelId.value, {
+      visualStyle: visualStyleForm
+    })
+    ElMessage.success('配置保存成功')
+    await loadProfile()
   } catch (error) {
-    ElMessage.error(error.message)
+    ElMessage.error(error.message || '保存失败')
   } finally {
     saving.value = false
   }
 }
 
-const autoExtract = () => {
-  showExtractDialog.value = true
+const handleCharAction = (command, char) => {
+  switch (command) {
+    case 'edit':
+      editCharacter(char)
+      break
+    case 'view':
+      viewCharacter(char)
+      break
+    case 'delete':
+      deleteCharacter(char)
+      break
+  }
 }
 
-const confirmExtract = async () => {
-  extracting.value = true
+const editCharacter = (char) => {
+  Object.assign(editCharForm, {
+    name: char.name,
+    baseAppearance: char.baseAppearance || '',
+    keywords: [...(char.keywords || [])],
+    referenceImages: [...(char.referenceImages || [])]
+  })
+  showEditCharDialog.value = true
+}
+
+const saveCharacter = async () => {
   try {
-    const data = await consistencyService.autoExtract({
-      novelId,
-      ...extractForm
-    })
-    Object.assign(profile, data)
-    ElMessage.success('自动提取完成')
-    showExtractDialog.value = false
+    await consistencyService.updateCharacter(
+      novelId.value,
+      editCharForm.name,
+      {
+        baseAppearance: editCharForm.baseAppearance,
+        keywords: editCharForm.keywords
+      }
+    )
+    ElMessage.success('角色特征已更新')
+    showEditCharDialog.value = false
+    await loadProfile()
   } catch (error) {
-    ElMessage.error(error.message)
-  } finally {
-    extracting.value = false
+    ElMessage.error(error.message || '更新失败')
   }
 }
 
-const addCharacter = () => {
-  profile.characters.push({
-    name: '',
-    baseAppearance: '',
-    keywords: [],
-    dynamicState: {},
-    importance: 50,
-    showKeywordInput: false,
-    newKeyword: ''
-  })
-  activeCharacters.value = [profile.characters.length - 1]
-}
-
-const deleteCharacter = async (index) => {
-  try {
-    await ElMessageBox.confirm('确定要删除这个角色吗？', '确认删除', {
-      type: 'warning'
-    })
-    profile.characters.splice(index, 1)
-  } catch {}
-}
-
-const addKeyword = (char) => {
-  if (char.newKeyword && char.newKeyword.trim()) {
-    char.keywords.push(char.newKeyword.trim())
-    char.newKeyword = ''
-  }
-  char.showKeywordInput = false
-}
-
-const removeKeyword = (char, index) => {
-  char.keywords.splice(index, 1)
-}
-
-const handleImageUpload = (char, response) => {
-  char.referenceImageUrl = response.url
-  ElMessage.success('上传成功')
-}
-
-const showStateDialog = (char) => {
-  currentCharacter.value = char
-  showStateManager.value = true
-}
-
-const addState = async () => {
-  try {
-    const { value: chapter } = await ElMessageBox.prompt('请输入章节号', '添加状态', {
-      inputPattern: /^\d+$/,
-      inputErrorMessage: '请输入有效的章节号'
-    })
-
-    const { value: state } = await ElMessageBox.prompt('请输入状态描述', '添加状态')
-
-    if (!currentCharacter.value.dynamicState) {
-      currentCharacter.value.dynamicState = {}
+const viewCharacter = (char) => {
+  ElMessageBox.alert(
+    `<div style="line-height: 1.8">
+      <p><strong>角色名称:</strong> ${char.name}</p>
+      <p><strong>外貌描述:</strong> ${char.baseAppearance || '待提取'}</p>
+      <p><strong>关键词:</strong> ${(char.keywords || []).join(', ')}</p>
+      <p><strong>参考图数量:</strong> ${(char.referenceImages || []).length}</p>
+      <p><strong>章节状态记录:</strong> ${Object.keys(char.dynamicState || {}).length}个</p>
+    </div>`,
+    '角色详情',
+    {
+      dangerouslyUseHTMLString: true,
+      confirmButtonText: '关闭'
     }
-    currentCharacter.value.dynamicState[chapter] = state
-  } catch {}
+  )
 }
 
-const deleteState = (index) => {
-  const chapter = Object.keys(currentCharacter.value.dynamicState)[index]
-  delete currentCharacter.value.dynamicState[chapter]
-}
-
-const addEnvironment = () => {
-  profile.environments.push({
-    name: '',
-    description: '',
-    visualStyle: '',
-    keywords: []
-  })
-}
-
-const deleteEnvironment = (index) => {
-  profile.environments.splice(index, 1)
-}
-
-const addStyleTag = async () => {
+const deleteCharacter = async (char) => {
   try {
-    const { value } = await ElMessageBox.prompt('请输入标签', '添加标签')
-    if (value) {
-      profile.visualStyle.additionalTags.push(value)
-    }
-  } catch {}
-}
+    await ElMessageBox.confirm(
+      `确定删除角色"${char.name}"的一致性配置吗？`,
+      '确认删除',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
 
-const exportConfig = () => {
-  consistencyService.exportProfile(profile, 'json')
-  ElMessage.success('导出成功')
-}
-
-const importConfig = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = 'application/json'
-  input.onchange = async (e) => {
-    const file = e.target.files[0]
-    try {
-      const imported = await consistencyService.importProfile(file)
-      Object.assign(profile, imported)
-      ElMessage.success('导入成功')
-    } catch (error) {
-      ElMessage.error(error.message)
+    await consistencyService.deleteCharacter(novelId.value, char.name)
+    ElMessage.success('角色已删除')
+    await loadProfile()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
     }
   }
-  input.click()
 }
 
-const goBack = () => {
-  router.back()
+const addKeyword = () => {
+  if (newKeyword.value.trim() && !editCharForm.keywords.includes(newKeyword.value)) {
+    editCharForm.keywords.push(newKeyword.value.trim())
+    newKeyword.value = ''
+  }
+}
+
+const removeKeyword = (keyword) => {
+  const index = editCharForm.keywords.indexOf(keyword)
+  if (index > -1) {
+    editCharForm.keywords.splice(index, 1)
+  }
+}
+
+const exportProfile = () => {
+  if (profile.value) {
+    consistencyService.exportProfile(profile.value)
+    ElMessage.success('配置已导出')
+  }
 }
 
 // 生命周期
-onMounted(async () => {
-  await loadNovel()
-  await loadProfile()
+onMounted(() => {
+  loadProfile()
 })
 </script>
 
 <style scoped lang="scss">
-.consistency-settings {
+.novel-consistency-settings {
   padding: 20px;
 
-  .page-title {
-    font-size: 18px;
-    font-weight: 500;
-  }
-
-  .main-card {
-    margin-top: 20px;
-  }
-
-  .toolbar {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  .tab-content {
-    padding: 20px 0;
-  }
-
-  .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    font-size: 16px;
-    font-weight: 500;
-  }
-
-  .character-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    .char-name {
-      font-weight: 500;
-    }
-  }
-
-  .character-form {
-    padding: 20px;
-  }
-
-  .form-tip {
-    font-size: 12px;
-    color: #909399;
-    margin-top: 8px;
-  }
-
-  .keyword-tag {
-    margin-right: 8px;
-    margin-bottom: 8px;
-  }
-
-  .keyword-input {
-    width: 120px;
-  }
-
-  .reference-image {
-    width: 200px;
-    height: 200px;
-    cursor: pointer;
-
-    .image-slot {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      background: #f5f7fa;
-    }
-  }
-
-  .env-card {
+  .settings-card {
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
+
+      .header-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 500;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
     }
   }
 
-  .style-tag {
-    margin-right: 8px;
-    margin-bottom: 8px;
+  .loading-container {
+    padding: 40px;
+  }
+
+  .auto-alert {
+    margin-bottom: 20px;
+
+    .alert-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .auto-switch {
+        margin-top: 8px;
+      }
+    }
+  }
+
+  .characters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+
+    .character-card {
+      .char-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .char-name {
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .more-icon {
+          cursor: pointer;
+          font-size: 18px;
+          
+          &:hover {
+            color: #409eff;
+          }
+        }
+      }
+
+      .char-reference {
+        margin-bottom: 16px;
+
+        .reference-image {
+          width: 100%;
+          height: 200px;
+          border-radius: 4px;
+        }
+
+        .image-placeholder {
+          width: 100%;
+          height: 200px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: #f5f7fa;
+          border-radius: 4px;
+          color: #909399;
+          gap: 8px;
+
+          .el-icon {
+            font-size: 40px;
+          }
+
+          span {
+            font-size: 12px;
+          }
+        }
+      }
+
+      .char-info {
+        .info-item {
+          margin-bottom: 12px;
+
+          .label {
+            font-weight: 500;
+            color: #606266;
+            font-size: 13px;
+          }
+
+          .value {
+            margin: 4px 0;
+            color: #303133;
+            font-size: 13px;
+            line-height: 1.6;
+          }
+
+          .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+
+            .keyword-tag {
+              margin: 0;
+            }
+
+            .no-data {
+              color: #909399;
+              font-size: 12px;
+            }
+          }
+
+          .dynamic-states {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px;
+          }
+        }
+      }
+    }
+  }
+
+  .visual-style-form {
+    max-width: 800px;
+    margin: 20px 0;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    padding: 30px 0;
+    border-top: 1px solid #ebeef5;
   }
 }
 </style>
-

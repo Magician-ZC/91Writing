@@ -4,3 +4,7 @@ export * from './interceptors';
 export * from './pipes';
 export * from './filters';
 export * from './utils';
+export * from './services/package-permission.service';
+export * from './services/feature-quota.service';
+export * from './guards/package-feature.guard';
+export * from './decorators/require-feature.decorator';

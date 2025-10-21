@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@app/common/guards';
+import { JwtAuthGuard, PackageFeatureGuard, RequireFeature, RequireQuota } from '@app/common';
 import { AssistantService } from './assistant.service';
 import { InitializeSessionDto, ConversationDto } from '../../dto/conversation.dto';
 import { GeneralChatDto } from './dto/general-chat.dto';
@@ -20,12 +20,17 @@ import { GeneralChatStreamDto } from './dto/general-chat-stream.dto';
 
 @ApiTags('AI助手')
 @ApiBearerAuth('JWT-auth')
-@Controller('assistant')
-@UseGuards(JwtAuthGuard)
+@Controller()
+@UseGuards(JwtAuthGuard, PackageFeatureGuard)
 export class AssistantController {
   constructor(private readonly assistantService: AssistantService) {}
 
-  @Post('sessions')
+  @Post('assistant/sessions')
+  @RequireFeature('aiAssistant')
+  @RequireQuota('daily')
+  @ApiOperation({ summary: '初始化AI助手会话' })
+  @ApiResponse({ status: 200, description: '会话初始化成功' })
+  @ApiResponse({ status: 403, description: '无权限或配额不足' })
   async initializeSession(
     @Request() req,
     @Body(ValidationPipe) initDto: InitializeSessionDto,
@@ -33,7 +38,12 @@ export class AssistantController {
     return this.assistantService.initializeSession(req.user.id, initDto);
   }
 
-  @Post('chat')
+  @Post('assistant/chat')
+  @RequireFeature('aiAssistant')
+  @RequireQuota('daily')
+  @ApiOperation({ summary: 'AI助手对话' })
+  @ApiResponse({ status: 200, description: '对话成功' })
+  @ApiResponse({ status: 403, description: '无权限或配额不足' })
   async handleConversation(
     @Request() req,
     @Body(ValidationPipe) conversationDto: ConversationDto,
@@ -41,7 +51,9 @@ export class AssistantController {
     return this.assistantService.handleConversation(req.user.id, conversationDto);
   }
 
-  @Get('sessions/:sessionId/history')
+  @Get('assistant/sessions/:sessionId/history')
+  @ApiOperation({ summary: '获取会话历史' })
+  @ApiResponse({ status: 200, description: '获取成功' })
   async getConversationHistory(
     @Request() req,
     @Param('sessionId') sessionId: string,
@@ -49,13 +61,17 @@ export class AssistantController {
     return this.assistantService.getConversationHistory(req.user.id, sessionId);
   }
 
-  @Post('sessions/cleanup')
+  @Post('assistant/sessions/cleanup')
+  @ApiOperation({ summary: '清理会话' })
+  @ApiResponse({ status: 200, description: '清理成功' })
   async cleanupSessions() {
     this.assistantService.cleanupSessions();
     return { message: '会话清理完成' };
   }
 
-  @Post('general')
+  @Post('assistant/general')
+  @RequireFeature('aiWriting')
+  @RequireQuota('daily')
   @ApiOperation({ 
     summary: '通用AI对话',
     description: '不关联具体小说的通用AI对话，用于题材分析、创意生成等场景'
@@ -80,7 +96,9 @@ export class AssistantController {
     return this.assistantService.generalChat(req.user.id, chatDto);
   }
 
-  @Post('general/stream')
+  @Post('assistant/general/stream')
+  @RequireFeature('aiWriting')
+  @RequireQuota('daily')
   @ApiOperation({ 
     summary: '通用AI对话（流式）',
     description: '流式输出，实时返回AI生成的内容，逐字符推送'

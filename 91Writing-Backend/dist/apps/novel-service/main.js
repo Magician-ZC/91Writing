@@ -53,10 +53,11 @@ const material_module_1 = __webpack_require__(45);
 const migration_module_1 = __webpack_require__(49);
 const prompt_module_1 = __webpack_require__(53);
 const collaboration_module_1 = __webpack_require__(57);
-const version_module_1 = __webpack_require__(69);
-const comment_module_1 = __webpack_require__(73);
-const health_module_1 = __webpack_require__(77);
-const jwt_strategy_1 = __webpack_require__(80);
+const version_module_1 = __webpack_require__(73);
+const comment_module_1 = __webpack_require__(77);
+const health_module_1 = __webpack_require__(81);
+const consistency_module_1 = __webpack_require__(84);
+const jwt_strategy_1 = __webpack_require__(88);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -92,6 +93,7 @@ exports.AppModule = AppModule = __decorate([
             version_module_1.VersionModule,
             comment_module_1.CommentModule,
             health_module_1.HealthModule,
+            consistency_module_1.ConsistencyModule,
         ],
         providers: [
             jwt_strategy_1.JwtStrategy,
@@ -1526,6 +1528,62 @@ let ChapterService = class ChapterService {
             },
         });
     }
+    async getVideoStatus(novelId, chapterId, userId) {
+        const chapter = await this.prisma.chapter.findFirst({
+            where: {
+                id: chapterId,
+                novelId,
+                novel: { userId }
+            },
+            select: {
+                id: true,
+                videoStatus: true,
+                videoUrl: true,
+            },
+        });
+        if (!chapter) {
+            throw new common_1.NotFoundException('章节不存在或无权访问');
+        }
+        const log = await this.prisma.videoGenerationLog.findFirst({
+            where: { chapterId },
+            orderBy: { createdAt: 'desc' },
+        });
+        return {
+            chapterId: chapter.id,
+            status: chapter.videoStatus || 'PENDING',
+            stage: log?.stage || 'SCRIPT',
+            progress: log?.progress || 0,
+            videoUrl: chapter.videoUrl || null,
+            errorMessage: log?.errorMessage || null,
+            startedAt: log?.startedAt || null,
+            completedAt: log?.completedAt || null,
+        };
+    }
+    async deleteVideo(novelId, chapterId, userId) {
+        const chapter = await this.prisma.chapter.findFirst({
+            where: {
+                id: chapterId,
+                novelId,
+                novel: { userId }
+            },
+        });
+        if (!chapter) {
+            throw new common_1.NotFoundException('章节不存在或无权访问');
+        }
+        await this.prisma.chapter.update({
+            where: { id: chapterId },
+            data: {
+                videoStatus: null,
+                videoUrl: null,
+                videoMetadata: null,
+                generatedImages: null,
+            },
+        });
+        return {
+            success: true,
+            message: '视频已删除',
+        };
+    }
 };
 exports.ChapterService = ChapterService;
 exports.ChapterService = ChapterService = __decorate([
@@ -1593,6 +1651,13 @@ let ChapterController = class ChapterController {
     }
     async reorder(novelId, req, body) {
         return this.chapterService.reorder(novelId, req.user.id, body.chapterOrders);
+    }
+    async getVideoStatus(novelId, id, req) {
+        return this.chapterService.getVideoStatus(novelId, id, req.user.id);
+    }
+    async deleteVideo(novelId, id, req) {
+        await this.chapterService.deleteVideo(novelId, id, req.user.id);
+        return { message: '视频删除成功' };
     }
 };
 exports.ChapterController = ChapterController;
@@ -1939,6 +2004,56 @@ __decorate([
     __metadata("design:paramtypes", [String, Object, Object]),
     __metadata("design:returntype", Promise)
 ], ChapterController.prototype, "reorder", null);
+__decorate([
+    (0, common_1.Get)(':id/video-status'),
+    (0, swagger_1.ApiOperation)({
+        summary: '获取章节视频生成状态',
+        description: '查询指定章节的视频生成进度和状态'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '返回视频生成状态',
+        schema: {
+            type: 'object',
+            properties: {
+                chapterId: { type: 'string' },
+                status: { type: 'string', enum: ['PENDING', 'GENERATING', 'COMPLETED', 'FAILED', 'CANCELLED'] },
+                stage: { type: 'string', enum: ['SCRIPT', 'IMAGE', 'VIDEO', 'MERGE', 'UPLOAD', 'COMPLETED'] },
+                progress: { type: 'number', minimum: 0, maximum: 100 },
+                videoUrl: { type: 'string', nullable: true },
+                errorMessage: { type: 'string', nullable: true }
+            }
+        }
+    }),
+    __param(0, (0, common_1.Param)('novelId')),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], ChapterController.prototype, "getVideoStatus", null);
+__decorate([
+    (0, common_1.Delete)(':id/video'),
+    (0, swagger_1.ApiOperation)({
+        summary: '删除章节视频',
+        description: '删除已生成的视频，允许重新生成'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'novelId', description: '小说ID' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: '章节ID' }),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '视频删除成功',
+    }),
+    __param(0, (0, common_1.Param)('novelId')),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], ChapterController.prototype, "deleteVideo", null);
 exports.ChapterController = ChapterController = __decorate([
     (0, swagger_1.ApiTags)('chapters'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -8709,6 +8824,10 @@ __exportStar(__webpack_require__(65), exports);
 __exportStar(__webpack_require__(66), exports);
 __exportStar(__webpack_require__(67), exports);
 __exportStar(__webpack_require__(68), exports);
+__exportStar(__webpack_require__(69), exports);
+__exportStar(__webpack_require__(70), exports);
+__exportStar(__webpack_require__(71), exports);
+__exportStar(__webpack_require__(72), exports);
 
 
 /***/ }),
@@ -8815,11 +8934,444 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var PackagePermissionService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PackagePermissionService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let PackagePermissionService = PackagePermissionService_1 = class PackagePermissionService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(PackagePermissionService_1.name);
+    }
+    async checkVideoGenerationPermission(userId) {
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: {
+                package: true,
+            },
+        });
+        if (!subscription || subscription.status !== 'ACTIVE') {
+            this.logger.log(`用户${userId}无有效订阅，使用免费限制`);
+            return {
+                allowed: false,
+                limits: this.getFreeLimits(),
+                packageName: '免费套餐',
+                message: '请升级套餐以使用视频生成功能'
+            };
+        }
+        const features = subscription.package.features;
+        const videoFeatures = features?.videoGeneration;
+        if (!videoFeatures || !videoFeatures.enabled) {
+            this.logger.log(`用户${userId}套餐不包含视频生成功能`);
+            return {
+                allowed: false,
+                limits: this.getFreeLimits(),
+                packageName: subscription.package.name,
+                message: '当前套餐不包含视频生成功能'
+            };
+        }
+        this.logger.log(`用户${userId}套餐: ${subscription.package.name}, 视频配额: ${videoFeatures.dailyQuota}/${videoFeatures.monthlyQuota}`);
+        return {
+            allowed: true,
+            limits: {
+                dailyQuota: videoFeatures.dailyQuota || 5,
+                monthlyQuota: videoFeatures.monthlyQuota || 50,
+                maxSceneCount: videoFeatures.maxSceneCount || 5,
+                maxVideoDuration: videoFeatures.maxVideoDuration || 30,
+                allowedQualities: videoFeatures.allowedQualities || ['standard'],
+                allowedResolutions: videoFeatures.allowedResolutions || ['1024x576'],
+                enableAdvancedParams: videoFeatures.enableAdvancedParams || false,
+                enableCustomPrompts: videoFeatures.enableCustomPrompts || false,
+                priority: videoFeatures.priority || 'normal'
+            },
+            packageName: subscription.package.name
+        };
+    }
+    validateUserParams(userParams, limits) {
+        const errors = [];
+        if (userParams.sceneCount && userParams.sceneCount > limits.maxSceneCount) {
+            errors.push(`分镜数量超出限制（最多${limits.maxSceneCount}个，请升级套餐）`);
+        }
+        const totalDuration = (userParams.sceneCount || 5) * (userParams.videoDuration || 5);
+        if (totalDuration > limits.maxVideoDuration) {
+            errors.push(`视频总时长超出限制（最多${limits.maxVideoDuration}秒，请升级套餐）`);
+        }
+        if (userParams.imageQuality && !limits.allowedQualities.includes(userParams.imageQuality)) {
+            errors.push(`图片质量"${userParams.imageQuality}"不在允许范围内（允许：${limits.allowedQualities.join(', ')}），请升级套餐`);
+        }
+        if (userParams.imageResolution && !limits.allowedResolutions.includes(userParams.imageResolution)) {
+            errors.push(`图片分辨率不在允许范围内（允许：${limits.allowedResolutions.join(', ')}），请升级套餐`);
+        }
+        if (!limits.enableAdvancedParams) {
+            const advancedParams = ['samplingSteps', 'cfgScale', 'negativePrompt'];
+            const usedAdvanced = advancedParams.filter(param => userParams[param] !== undefined);
+            if (usedAdvanced.length > 0) {
+                errors.push(`当前套餐不支持高级参数配置（${usedAdvanced.join(', ')}），请升级到专业版或企业版`);
+            }
+        }
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    }
+    getFreeLimits() {
+        return {
+            dailyQuota: 0,
+            monthlyQuota: 0,
+            maxSceneCount: 0,
+            maxVideoDuration: 0,
+            allowedQualities: [],
+            allowedResolutions: [],
+            enableAdvancedParams: false,
+            enableCustomPrompts: false,
+            priority: 'low'
+        };
+    }
+};
+exports.PackagePermissionService = PackagePermissionService;
+exports.PackagePermissionService = PackagePermissionService = PackagePermissionService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], PackagePermissionService);
+
+
+/***/ }),
+/* 70 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var FeatureQuotaService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FeatureQuotaService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let FeatureQuotaService = FeatureQuotaService_1 = class FeatureQuotaService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(FeatureQuotaService_1.name);
+    }
+    async checkAndConsumeQuota(userId, feature, quotaType = 'daily') {
+        this.logger.log(`检查用户${userId}的${feature}配额（${quotaType}）`);
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let limit = 0;
+        let packageName = '免费套餐';
+        if (subscription && subscription.status === 'ACTIVE') {
+            packageName = subscription.package.name;
+            const features = subscription.package.features;
+            const featureConfig = features?.[feature];
+            if (featureConfig && featureConfig.enabled) {
+                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
+                if (limit === -1) {
+                    this.logger.log(`用户${userId}套餐${packageName}的${feature}不限配额`);
+                    return {
+                        allowed: true,
+                        remaining: -1,
+                        limit: -1,
+                    };
+                }
+            }
+        }
+        else {
+            const freeLimit = this.getFreeFunctionLimit(feature, quotaType);
+            limit = freeLimit;
+            if (limit === 0) {
+                this.logger.log(`免费用户不允许使用${feature}`);
+                return {
+                    allowed: false,
+                    remaining: 0,
+                    limit: 0,
+                    message: `${this.getFeatureName(feature)}功能需要订阅套餐，请升级`
+                };
+            }
+        }
+        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
+        let quota = await this.prisma.featureQuota.findUnique({
+            where: {
+                userId_feature_quotaType_date: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                },
+            },
+        });
+        if (!quota) {
+            quota = await this.prisma.featureQuota.create({
+                data: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                    usedCount: 0,
+                    limit,
+                },
+            });
+        }
+        const remaining = Math.max(0, limit - quota.usedCount);
+        if (remaining <= 0) {
+            this.logger.log(`用户${userId}的${feature}配额已用尽（${quota.usedCount}/${limit}）`);
+            return {
+                allowed: false,
+                remaining: 0,
+                limit,
+                message: `已达${quotaType === 'daily' ? '每日' : '每月'}配额限制（${limit}次），请升级套餐`
+            };
+        }
+        await this.prisma.featureQuota.update({
+            where: { id: quota.id },
+            data: {
+                usedCount: { increment: 1 },
+                lastUsedAt: new Date(),
+            },
+        });
+        this.logger.log(`用户${userId}消费${feature}配额，剩余${remaining - 1}/${limit}`);
+        return {
+            allowed: true,
+            remaining: remaining - 1,
+            limit,
+        };
+    }
+    async getQuotaStatus(userId, feature) {
+        const daily = await this.getQuotaRemaining(userId, feature, 'daily');
+        const monthly = await this.getQuotaRemaining(userId, feature, 'monthly');
+        return {
+            daily,
+            monthly,
+        };
+    }
+    async getQuotaRemaining(userId, feature, quotaType) {
+        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
+        const quota = await this.prisma.featureQuota.findUnique({
+            where: {
+                userId_feature_quotaType_date: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                },
+            },
+        });
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let limit = 0;
+        if (subscription && subscription.status === 'ACTIVE') {
+            const features = subscription.package.features;
+            const featureConfig = features?.[feature];
+            if (featureConfig && featureConfig.enabled) {
+                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
+            }
+        }
+        else {
+            limit = this.getFreeFunctionLimit(feature, quotaType);
+        }
+        const usedCount = quota?.usedCount || 0;
+        const remaining = limit === -1 ? -1 : Math.max(0, limit - usedCount);
+        return {
+            used: usedCount,
+            remaining,
+            limit,
+        };
+    }
+    getFreeFunctionLimit(feature, quotaType) {
+        const freeLimits = {
+            aiWriting: { daily: 100, monthly: 1000 },
+            aiAssistant: { daily: 50, monthly: 500 },
+            videoGeneration: { daily: 0, monthly: 0 },
+            materialGeneration: { daily: 10, monthly: 100 },
+        };
+        const featureLimits = freeLimits[feature];
+        if (!featureLimits) {
+            return 0;
+        }
+        return quotaType === 'daily' ? featureLimits.daily : featureLimits.monthly;
+    }
+    getFeatureName(feature) {
+        const names = {
+            videoGeneration: '视频生成',
+            aiWriting: 'AI写作',
+            aiAssistant: 'AI写作助手',
+            materialGeneration: '素材生成',
+        };
+        return names[feature] || feature;
+    }
+    getTodayDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+    }
+    getMonthStartDate() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+};
+exports.FeatureQuotaService = FeatureQuotaService;
+exports.FeatureQuotaService = FeatureQuotaService = FeatureQuotaService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], FeatureQuotaService);
+
+
+/***/ }),
+/* 71 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PackageFeatureGuard = void 0;
+const common_1 = __webpack_require__(3);
+const core_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(9);
+const feature_quota_service_1 = __webpack_require__(70);
+let PackageFeatureGuard = class PackageFeatureGuard {
+    constructor(reflector, prisma, featureQuotaService) {
+        this.reflector = reflector;
+        this.prisma = prisma;
+        this.featureQuotaService = featureQuotaService;
+    }
+    async canActivate(context) {
+        const requiredFeature = this.reflector.get('feature', context.getHandler());
+        const quotaType = this.reflector.get('quotaType', context.getHandler()) || 'daily';
+        if (!requiredFeature) {
+            return true;
+        }
+        const request = context.switchToHttp().getRequest();
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+            throw new common_1.ForbiddenException('未登录或token无效');
+        }
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let featureConfig = null;
+        let packageName = '免费套餐';
+        if (subscription && subscription.status === 'ACTIVE') {
+            packageName = subscription.package.name;
+            const features = subscription.package.features;
+            featureConfig = features?.[requiredFeature];
+            if (!featureConfig || !featureConfig.enabled) {
+                throw new common_1.ForbiddenException({
+                    message: `当前套餐（${packageName}）不包含${this.getFeatureName(requiredFeature)}功能`,
+                    feature: requiredFeature,
+                    packageName,
+                    upgradeRequired: true,
+                });
+            }
+        }
+        else {
+            const allowed = await this.checkFreeUserAccess(requiredFeature);
+            if (!allowed) {
+                throw new common_1.ForbiddenException({
+                    message: `${this.getFeatureName(requiredFeature)}功能需要订阅套餐，请升级`,
+                    feature: requiredFeature,
+                    packageName: '免费套餐',
+                    upgradeRequired: true,
+                });
+            }
+        }
+        const quotaResult = await this.featureQuotaService.checkAndConsumeQuota(userId, requiredFeature, quotaType);
+        if (!quotaResult.allowed) {
+            throw new common_1.ForbiddenException({
+                message: quotaResult.message,
+                feature: requiredFeature,
+                packageName,
+                quotaType,
+                used: quotaResult.limit,
+                limit: quotaResult.limit,
+                upgradeRequired: quotaResult.limit > 0,
+            });
+        }
+        request.packageLimits = featureConfig;
+        request.packageName = packageName;
+        request.quotaRemaining = {
+            [quotaType]: quotaResult.remaining,
+        };
+        return true;
+    }
+    async checkFreeUserAccess(feature) {
+        const freeFunctions = ['aiWriting', 'aiAssistant', 'materialGeneration'];
+        return freeFunctions.includes(feature);
+    }
+    getFeatureName(feature) {
+        const names = {
+            videoGeneration: '视频生成',
+            aiWriting: 'AI写作',
+            aiAssistant: 'AI写作助手',
+            materialGeneration: '素材生成',
+            suggestion: '写作建议',
+        };
+        return names[feature] || feature;
+    }
+};
+exports.PackageFeatureGuard = PackageFeatureGuard;
+exports.PackageFeatureGuard = PackageFeatureGuard = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof core_1.Reflector !== "undefined" && core_1.Reflector) === "function" ? _a : Object, typeof (_b = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _b : Object, typeof (_c = typeof feature_quota_service_1.FeatureQuotaService !== "undefined" && feature_quota_service_1.FeatureQuotaService) === "function" ? _c : Object])
+], PackageFeatureGuard);
+
+
+/***/ }),
+/* 72 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RequireQuota = exports.RequireFeature = exports.QUOTA_TYPE_KEY = exports.FEATURE_KEY = void 0;
+const common_1 = __webpack_require__(3);
+exports.FEATURE_KEY = 'feature';
+exports.QUOTA_TYPE_KEY = 'quotaType';
+const RequireFeature = (feature) => (0, common_1.SetMetadata)(exports.FEATURE_KEY, feature);
+exports.RequireFeature = RequireFeature;
+const RequireQuota = (quotaType = 'daily') => (0, common_1.SetMetadata)(exports.QUOTA_TYPE_KEY, quotaType);
+exports.RequireQuota = RequireQuota;
+
+
+/***/ }),
+/* 73 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VersionModule = void 0;
 const common_1 = __webpack_require__(3);
-const version_controller_1 = __webpack_require__(70);
-const version_service_1 = __webpack_require__(71);
+const version_controller_1 = __webpack_require__(74);
+const version_service_1 = __webpack_require__(75);
 const database_1 = __webpack_require__(9);
 let VersionModule = class VersionModule {
 };
@@ -8835,7 +9387,7 @@ exports.VersionModule = VersionModule = __decorate([
 
 
 /***/ }),
-/* 70 */
+/* 74 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8856,8 +9408,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VersionController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const version_service_1 = __webpack_require__(71);
-const version_dto_1 = __webpack_require__(72);
+const version_service_1 = __webpack_require__(75);
+const version_dto_1 = __webpack_require__(76);
 const common_2 = __webpack_require__(61);
 let VersionController = class VersionController {
     constructor(versionService) {
@@ -9207,7 +9759,7 @@ exports.VersionController = VersionController = __decorate([
 
 
 /***/ }),
-/* 71 */
+/* 75 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9419,7 +9971,7 @@ exports.VersionService = VersionService = __decorate([
 
 
 /***/ }),
-/* 72 */
+/* 76 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9530,7 +10082,7 @@ __decorate([
 
 
 /***/ }),
-/* 73 */
+/* 77 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9543,8 +10095,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentModule = void 0;
 const common_1 = __webpack_require__(3);
-const comment_controller_1 = __webpack_require__(74);
-const comment_service_1 = __webpack_require__(75);
+const comment_controller_1 = __webpack_require__(78);
+const comment_service_1 = __webpack_require__(79);
 const database_1 = __webpack_require__(9);
 let CommentModule = class CommentModule {
 };
@@ -9560,7 +10112,7 @@ exports.CommentModule = CommentModule = __decorate([
 
 
 /***/ }),
-/* 74 */
+/* 78 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9581,8 +10133,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const comment_service_1 = __webpack_require__(75);
-const comment_dto_1 = __webpack_require__(76);
+const comment_service_1 = __webpack_require__(79);
+const comment_dto_1 = __webpack_require__(80);
 const common_2 = __webpack_require__(61);
 let CommentController = class CommentController {
     constructor(commentService) {
@@ -9701,7 +10253,7 @@ exports.CommentController = CommentController = __decorate([
 
 
 /***/ }),
-/* 75 */
+/* 79 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -9719,7 +10271,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentService = void 0;
 const common_1 = __webpack_require__(3);
 const database_1 = __webpack_require__(9);
-const comment_dto_1 = __webpack_require__(76);
+const comment_dto_1 = __webpack_require__(80);
 let CommentService = class CommentService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -9964,7 +10516,7 @@ exports.CommentService = CommentService = __decorate([
 
 
 /***/ }),
-/* 76 */
+/* 80 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10044,7 +10596,7 @@ __decorate([
 
 
 /***/ }),
-/* 77 */
+/* 81 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10057,8 +10609,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthModule = void 0;
 const common_1 = __webpack_require__(3);
-const health_controller_1 = __webpack_require__(78);
-const health_service_1 = __webpack_require__(79);
+const health_controller_1 = __webpack_require__(82);
+const health_service_1 = __webpack_require__(83);
 let HealthModule = class HealthModule {
 };
 exports.HealthModule = HealthModule;
@@ -10071,7 +10623,7 @@ exports.HealthModule = HealthModule = __decorate([
 
 
 /***/ }),
-/* 78 */
+/* 82 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10088,7 +10640,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.HealthController = void 0;
 const common_1 = __webpack_require__(3);
-const health_service_1 = __webpack_require__(79);
+const health_service_1 = __webpack_require__(83);
 let HealthController = class HealthController {
     constructor(healthService) {
         this.healthService = healthService;
@@ -10111,7 +10663,7 @@ exports.HealthController = HealthController = __decorate([
 
 
 /***/ }),
-/* 79 */
+/* 83 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10142,7 +10694,702 @@ exports.HealthService = HealthService = __decorate([
 
 
 /***/ }),
-/* 80 */
+/* 84 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConsistencyModule = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+const jwt_1 = __webpack_require__(7);
+const passport_1 = __webpack_require__(8);
+const consistency_controller_1 = __webpack_require__(85);
+const consistency_service_1 = __webpack_require__(86);
+let ConsistencyModule = class ConsistencyModule {
+};
+exports.ConsistencyModule = ConsistencyModule;
+exports.ConsistencyModule = ConsistencyModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            database_1.DatabaseModule,
+            passport_1.PassportModule,
+            jwt_1.JwtModule.register({
+                secret: process.env.JWT_SECRET || 'your-secret-key',
+                signOptions: { expiresIn: '7d' },
+            }),
+        ],
+        controllers: [consistency_controller_1.ConsistencyController],
+        providers: [consistency_service_1.ConsistencyService],
+        exports: [consistency_service_1.ConsistencyService],
+    })
+], ConsistencyModule);
+
+
+/***/ }),
+/* 85 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConsistencyController = void 0;
+const common_1 = __webpack_require__(3);
+const swagger_1 = __webpack_require__(4);
+const common_2 = __webpack_require__(61);
+const consistency_service_1 = __webpack_require__(86);
+const consistency_dto_1 = __webpack_require__(87);
+let ConsistencyController = class ConsistencyController {
+    constructor(consistencyService) {
+        this.consistencyService = consistencyService;
+    }
+    async create(req, dto) {
+        const userId = req.user.userId;
+        return this.consistencyService.create(dto, userId);
+    }
+    async findOne(req, novelId) {
+        const userId = req.user.userId;
+        return this.consistencyService.findOne(novelId, userId);
+    }
+    async update(req, novelId, dto) {
+        const userId = req.user.userId;
+        return this.consistencyService.update(novelId, dto, userId);
+    }
+    async autoExtract(req, dto) {
+        const userId = req.user.userId;
+        return this.consistencyService.autoExtract(dto, userId);
+    }
+};
+exports.ConsistencyController = ConsistencyController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: '创建一致性配置' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '创建成功', type: consistency_dto_1.ConsistencyProfileResponseDto }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_b = typeof consistency_dto_1.CreateConsistencyProfileDto !== "undefined" && consistency_dto_1.CreateConsistencyProfileDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], ConsistencyController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(':novelId'),
+    (0, swagger_1.ApiOperation)({ summary: '获取一致性配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功', type: consistency_dto_1.ConsistencyProfileResponseDto }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], ConsistencyController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Put)(':novelId'),
+    (0, swagger_1.ApiOperation)({ summary: '更新一致性配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功', type: consistency_dto_1.ConsistencyProfileResponseDto }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Param)('novelId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, typeof (_e = typeof consistency_dto_1.UpdateConsistencyProfileDto !== "undefined" && consistency_dto_1.UpdateConsistencyProfileDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], ConsistencyController.prototype, "update", null);
+__decorate([
+    (0, common_1.Post)('auto-extract'),
+    (0, swagger_1.ApiOperation)({ summary: '自动提取一致性配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '提取成功', type: consistency_dto_1.ConsistencyProfileResponseDto }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_g = typeof consistency_dto_1.AutoExtractConsistencyDto !== "undefined" && consistency_dto_1.AutoExtractConsistencyDto) === "function" ? _g : Object]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], ConsistencyController.prototype, "autoExtract", null);
+exports.ConsistencyController = ConsistencyController = __decorate([
+    (0, swagger_1.ApiTags)('一致性配置'),
+    (0, common_1.Controller)(),
+    (0, common_1.UseGuards)(common_2.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof consistency_service_1.ConsistencyService !== "undefined" && consistency_service_1.ConsistencyService) === "function" ? _a : Object])
+], ConsistencyController);
+
+
+/***/ }),
+/* 86 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var ConsistencyService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConsistencyService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let ConsistencyService = ConsistencyService_1 = class ConsistencyService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(ConsistencyService_1.name);
+    }
+    async create(dto, userId) {
+        this.logger.log(`创建一致性配置，小说ID: ${dto.novelId}`);
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: dto.novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.NotFoundException('小说不存在或无权访问');
+        }
+        const existing = await this.prisma.consistencyProfile.findUnique({
+            where: { novelId: dto.novelId },
+        });
+        if (existing) {
+            throw new Error('该小说已存在一致性配置，请使用更新接口');
+        }
+        const charactersMap = this.convertCharactersToMap(dto.characters);
+        const environmentsMap = this.convertEnvironmentsToMap(dto.environments || []);
+        const objectsMap = this.convertObjectsToMap(dto.objects || []);
+        const profile = await this.prisma.consistencyProfile.create({
+            data: {
+                novelId: dto.novelId,
+                characters: charactersMap,
+                environments: environmentsMap,
+                objects: objectsMap,
+                visualStyle: dto.visualStyle,
+            },
+        });
+        return this.formatResponse(profile);
+    }
+    async findOne(novelId, userId) {
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.NotFoundException('小说不存在或无权访问');
+        }
+        const profile = await this.prisma.consistencyProfile.findUnique({
+            where: { novelId },
+        });
+        if (!profile) {
+            throw new common_1.NotFoundException('一致性配置不存在');
+        }
+        return this.formatResponse(profile);
+    }
+    async update(novelId, dto, userId) {
+        this.logger.log(`更新一致性配置，小说ID: ${novelId}`);
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.NotFoundException('小说不存在或无权访问');
+        }
+        const existing = await this.prisma.consistencyProfile.findUnique({
+            where: { novelId },
+        });
+        if (!existing) {
+            throw new common_1.NotFoundException('一致性配置不存在');
+        }
+        const updateData = {};
+        if (dto.characters) {
+            updateData.characters = this.convertCharactersToMap(dto.characters);
+        }
+        if (dto.environments) {
+            updateData.environments = this.convertEnvironmentsToMap(dto.environments);
+        }
+        if (dto.objects) {
+            updateData.objects = this.convertObjectsToMap(dto.objects);
+        }
+        if (dto.visualStyle) {
+            updateData.visualStyle = dto.visualStyle;
+        }
+        updateData.version = existing.version + 1;
+        const profile = await this.prisma.consistencyProfile.update({
+            where: { novelId },
+            data: updateData,
+        });
+        return this.formatResponse(profile);
+    }
+    async autoExtract(dto, userId) {
+        this.logger.log(`自动提取一致性配置，小说ID: ${dto.novelId}`);
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: dto.novelId, userId },
+        });
+        if (!novel) {
+            throw new common_1.NotFoundException('小说不存在或无权访问');
+        }
+        const chapters = await this.prisma.chapter.findMany({
+            where: {
+                novelId: dto.novelId,
+                chapterNumber: {
+                    gte: dto.startChapter || 1,
+                    lte: dto.endChapter || 3,
+                },
+                isDeleted: false,
+            },
+            orderBy: { chapterNumber: 'asc' },
+        });
+        if (chapters.length === 0) {
+            throw new common_1.NotFoundException('未找到可用的章节进行提取');
+        }
+        const characters = await this.extractCharactersFromChapters(chapters);
+        const existing = await this.prisma.consistencyProfile.findUnique({
+            where: { novelId: dto.novelId },
+        });
+        const charactersMap = this.convertCharactersToMap(characters);
+        if (existing) {
+            if (dto.overwrite) {
+                const profile = await this.prisma.consistencyProfile.update({
+                    where: { novelId: dto.novelId },
+                    data: {
+                        characters: charactersMap,
+                        version: existing.version + 1,
+                    },
+                });
+                return this.formatResponse(profile);
+            }
+            else {
+                const mergedCharacters = {
+                    ...existing.characters,
+                    ...charactersMap,
+                };
+                const profile = await this.prisma.consistencyProfile.update({
+                    where: { novelId: dto.novelId },
+                    data: {
+                        characters: mergedCharacters,
+                        version: existing.version + 1,
+                    },
+                });
+                return this.formatResponse(profile);
+            }
+        }
+        else {
+            const profile = await this.prisma.consistencyProfile.create({
+                data: {
+                    novelId: dto.novelId,
+                    characters: charactersMap,
+                    environments: {},
+                    objects: {},
+                    visualStyle: {
+                        overall: 'realistic',
+                        colorTone: 'natural',
+                        artStyle: 'cinematic',
+                        lighting: 'natural',
+                    },
+                },
+            });
+            return this.formatResponse(profile);
+        }
+    }
+    async extractCharactersFromChapters(chapters) {
+        const characters = [];
+        const novelId = chapters[0].novelId;
+        const novelCharacters = await this.prisma.character.findMany({
+            where: { novelId },
+            orderBy: { importance: 'desc' },
+            take: 10,
+        });
+        for (const char of novelCharacters) {
+            characters.push({
+                name: char.name,
+                baseAppearance: char.appearance || '默认外貌',
+                dynamicState: {},
+                keywords: this.extractKeywordsFromAppearance(char.appearance || ''),
+                importance: char.importance,
+                firstAppearance: 1,
+            });
+        }
+        return characters;
+    }
+    extractKeywordsFromAppearance(appearance) {
+        const keywords = [];
+        const patterns = [
+            /黑发|白发|金发|红发|棕发/g,
+            /蓝眼|绿眼|黑眼|棕眼/g,
+            /高挑|矮小|魁梧|纤细/g,
+            /长袍|盔甲|西装|便装/g,
+        ];
+        patterns.forEach(pattern => {
+            const matches = appearance.match(pattern);
+            if (matches) {
+                keywords.push(...matches);
+            }
+        });
+        return Array.from(new Set(keywords));
+    }
+    convertCharactersToMap(characters) {
+        const map = {};
+        characters.forEach(char => {
+            map[char.name] = {
+                name: char.name,
+                baseAppearance: char.baseAppearance,
+                dynamicState: char.dynamicState || {},
+                keywords: char.keywords,
+                referenceImageUrl: char.referenceImageUrl,
+                importance: char.importance,
+                firstAppearance: char.firstAppearance,
+            };
+        });
+        return map;
+    }
+    convertEnvironmentsToMap(environments) {
+        const map = {};
+        environments.forEach(env => {
+            map[env.name] = {
+                name: env.name,
+                description: env.description,
+                visualStyle: env.visualStyle,
+                keywords: env.keywords,
+                referenceImageUrl: env.referenceImageUrl,
+            };
+        });
+        return map;
+    }
+    convertObjectsToMap(objects) {
+        const map = {};
+        objects.forEach(obj => {
+            map[obj.name] = {
+                name: obj.name,
+                description: obj.description,
+                appearance: obj.appearance,
+                keywords: obj.keywords,
+            };
+        });
+        return map;
+    }
+    formatResponse(profile) {
+        const characters = Object.values(profile.characters || {});
+        const environments = Object.values(profile.environments || {});
+        const objects = Object.values(profile.objects || {});
+        return {
+            id: profile.id,
+            novelId: profile.novelId,
+            characters: characters,
+            environments: environments,
+            objects: objects,
+            visualStyle: profile.visualStyle,
+            version: profile.version,
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt,
+        };
+    }
+};
+exports.ConsistencyService = ConsistencyService;
+exports.ConsistencyService = ConsistencyService = ConsistencyService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], ConsistencyService);
+
+
+/***/ }),
+/* 87 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AutoExtractConsistencyDto = exports.ConsistencyProfileResponseDto = exports.UpdateConsistencyProfileDto = exports.CreateConsistencyProfileDto = exports.VisualStyleConfigDto = exports.ObjectProfileDto = exports.EnvironmentProfileDto = exports.CharacterProfileDto = void 0;
+const class_validator_1 = __webpack_require__(20);
+const swagger_1 = __webpack_require__(4);
+const class_transformer_1 = __webpack_require__(32);
+class CharacterProfileDto {
+}
+exports.CharacterProfileDto = CharacterProfileDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '角色名称' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CharacterProfileDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '基础外貌描述(不变)' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CharacterProfileDto.prototype, "baseAppearance", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '动态状态(按章节)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_a = typeof Record !== "undefined" && Record) === "function" ? _a : Object)
+], CharacterProfileDto.prototype, "dynamicState", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '视觉关键词', type: [String] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], CharacterProfileDto.prototype, "keywords", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '参考图URL' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CharacterProfileDto.prototype, "referenceImageUrl", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '角色重要性', minimum: 0, maximum: 100 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], CharacterProfileDto.prototype, "importance", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '首次出场章节' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], CharacterProfileDto.prototype, "firstAppearance", void 0);
+class EnvironmentProfileDto {
+}
+exports.EnvironmentProfileDto = EnvironmentProfileDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '场景名称' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EnvironmentProfileDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '场景描述' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EnvironmentProfileDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '视觉风格' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EnvironmentProfileDto.prototype, "visualStyle", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '关键词', type: [String] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], EnvironmentProfileDto.prototype, "keywords", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '参考图URL' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EnvironmentProfileDto.prototype, "referenceImageUrl", void 0);
+class ObjectProfileDto {
+}
+exports.ObjectProfileDto = ObjectProfileDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '物品名称' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ObjectProfileDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '物品描述' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ObjectProfileDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '外观描述' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ObjectProfileDto.prototype, "appearance", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '关键词', type: [String] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], ObjectProfileDto.prototype, "keywords", void 0);
+class VisualStyleConfigDto {
+}
+exports.VisualStyleConfigDto = VisualStyleConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '整体风格', example: 'realistic' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VisualStyleConfigDto.prototype, "overall", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '色调', example: 'warm' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VisualStyleConfigDto.prototype, "colorTone", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '艺术风格', example: 'cinematic' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VisualStyleConfigDto.prototype, "artStyle", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '光照风格', example: 'natural' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], VisualStyleConfigDto.prototype, "lighting", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '附加风格标签', type: [String] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], VisualStyleConfigDto.prototype, "additionalTags", void 0);
+class CreateConsistencyProfileDto {
+}
+exports.CreateConsistencyProfileDto = CreateConsistencyProfileDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '小说ID' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateConsistencyProfileDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '角色特征配置', type: [CharacterProfileDto] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => CharacterProfileDto),
+    __metadata("design:type", Array)
+], CreateConsistencyProfileDto.prototype, "characters", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '环境场景配置', type: [EnvironmentProfileDto] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => EnvironmentProfileDto),
+    __metadata("design:type", Array)
+], CreateConsistencyProfileDto.prototype, "environments", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '物品配置', type: [ObjectProfileDto] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => ObjectProfileDto),
+    __metadata("design:type", Array)
+], CreateConsistencyProfileDto.prototype, "objects", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视觉风格配置' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => VisualStyleConfigDto),
+    __metadata("design:type", VisualStyleConfigDto)
+], CreateConsistencyProfileDto.prototype, "visualStyle", void 0);
+class UpdateConsistencyProfileDto {
+}
+exports.UpdateConsistencyProfileDto = UpdateConsistencyProfileDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '角色特征配置', type: [CharacterProfileDto] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => CharacterProfileDto),
+    __metadata("design:type", Array)
+], UpdateConsistencyProfileDto.prototype, "characters", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '环境场景配置', type: [EnvironmentProfileDto] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => EnvironmentProfileDto),
+    __metadata("design:type", Array)
+], UpdateConsistencyProfileDto.prototype, "environments", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '物品配置', type: [ObjectProfileDto] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => ObjectProfileDto),
+    __metadata("design:type", Array)
+], UpdateConsistencyProfileDto.prototype, "objects", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视觉风格配置' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => VisualStyleConfigDto),
+    __metadata("design:type", VisualStyleConfigDto)
+], UpdateConsistencyProfileDto.prototype, "visualStyle", void 0);
+class ConsistencyProfileResponseDto {
+}
+exports.ConsistencyProfileResponseDto = ConsistencyProfileResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '配置ID' }),
+    __metadata("design:type", String)
+], ConsistencyProfileResponseDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '小说ID' }),
+    __metadata("design:type", String)
+], ConsistencyProfileResponseDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '角色特征配置', type: [CharacterProfileDto] }),
+    __metadata("design:type", Array)
+], ConsistencyProfileResponseDto.prototype, "characters", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '环境场景配置', type: [EnvironmentProfileDto] }),
+    __metadata("design:type", Array)
+], ConsistencyProfileResponseDto.prototype, "environments", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '物品配置', type: [ObjectProfileDto] }),
+    __metadata("design:type", Array)
+], ConsistencyProfileResponseDto.prototype, "objects", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视觉风格配置' }),
+    __metadata("design:type", VisualStyleConfigDto)
+], ConsistencyProfileResponseDto.prototype, "visualStyle", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '配置版本号' }),
+    __metadata("design:type", Number)
+], ConsistencyProfileResponseDto.prototype, "version", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '创建时间' }),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], ConsistencyProfileResponseDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '更新时间' }),
+    __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
+], ConsistencyProfileResponseDto.prototype, "updatedAt", void 0);
+class AutoExtractConsistencyDto {
+}
+exports.AutoExtractConsistencyDto = AutoExtractConsistencyDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '小说ID' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AutoExtractConsistencyDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '提取起始章节', minimum: 1, default: 1 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], AutoExtractConsistencyDto.prototype, "startChapter", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '提取结束章节', minimum: 1, default: 3 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    __metadata("design:type", Number)
+], AutoExtractConsistencyDto.prototype, "endChapter", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '是否覆盖现有配置', default: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", Boolean)
+], AutoExtractConsistencyDto.prototype, "overwrite", void 0);
+
+
+/***/ }),
+/* 88 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10161,7 +11408,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(6);
 const passport_1 = __webpack_require__(8);
-const passport_jwt_1 = __webpack_require__(81);
+const passport_jwt_1 = __webpack_require__(89);
 const database_1 = __webpack_require__(9);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, prisma) {
@@ -10223,13 +11470,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 81 */
+/* 89 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 82 */
+/* 90 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10293,7 +11540,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = __decorate([
 
 
 /***/ }),
-/* 83 */
+/* 91 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10306,7 +11553,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(3);
-const operators_1 = __webpack_require__(84);
+const operators_1 = __webpack_require__(92);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -10329,13 +11576,13 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 84 */
+/* 92 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
 
 /***/ }),
-/* 85 */
+/* 93 */
 /***/ ((module) => {
 
 module.exports = require("express");
@@ -10380,13 +11627,13 @@ const core_1 = __webpack_require__(2);
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(82);
-const response_interceptor_1 = __webpack_require__(83);
+const all_exceptions_filter_1 = __webpack_require__(90);
+const response_interceptor_1 = __webpack_require__(91);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         bodyParser: true,
     });
-    const express = __webpack_require__(85);
+    const express = __webpack_require__(93);
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
     app.useGlobalPipes(new common_1.ValidationPipe({

@@ -6,7 +6,7 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@app/common/guards';
+import { JwtAuthGuard, PackageFeatureGuard, RequireFeature, RequireQuota } from '@app/common';
 import { GenerationService } from './generation.service';
 import { GenerateContentDto } from '../../dto/conversation.dto';
 import {
@@ -20,11 +20,13 @@ import {
 @ApiTags('AI内容生成')
 @ApiBearerAuth('JWT-auth')
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PackageFeatureGuard)
 export class GenerationController {
   constructor(private readonly generationService: GenerationService) {}
 
   @Post('generation/content')
+  @RequireFeature('aiWriting')
+  @RequireQuota('daily')
   @ApiOperation({ 
     summary: 'AI内容生成',
     description: '使用AI生成小说内容，支持续写、场景、对话、描写、开头、结尾等多种内容类型'
@@ -76,12 +78,15 @@ export class GenerationController {
 
   // ===== 基于素材生成内容 =====
   @Post('generation/with-materials')
+  @RequireFeature('materialGeneration')
+  @RequireQuota('daily')
   @ApiOperation({ 
     summary: '基于素材生成内容',
     description: '使用素材库作为参考和灵感生成内容，支持风格、结构、角色、场景等多种引用方式'
   })
   @ApiBody({ type: GenerateWithMaterialsDto })
   @ApiResponse({ status: 200, description: '生成成功' })
+  @ApiResponse({ status: 403, description: '无权限或配额不足' })
   async generateWithMaterials(
     @Request() req,
     @Body(ValidationPipe) dto: GenerateWithMaterialsDto,
@@ -90,9 +95,12 @@ export class GenerationController {
   }
 
   @Post('generation/continue')
+  @RequireFeature('aiWriting')
+  @RequireQuota('daily')
   @ApiOperation({ summary: '续写内容' })
   @ApiBody({ type: GenerateContentDto })
   @ApiResponse({ status: 200, description: '续写成功' })
+  @ApiResponse({ status: 403, description: '无权限或配额不足' })
   async continueContent(
     @Request() req,
     @Body(ValidationPipe) dto: GenerateContentDto,
@@ -101,9 +109,12 @@ export class GenerationController {
   }
 
   @Post('generation/rewrite')
+  @RequireFeature('aiWriting')
+  @RequireQuota('daily')
   @ApiOperation({ summary: '改写内容' })
   @ApiBody({ type: GenerateContentDto })
   @ApiResponse({ status: 200, description: '改写成功' })
+  @ApiResponse({ status: 403, description: '无权限或配额不足' })
   async rewriteContent(
     @Request() req,
     @Body(ValidationPipe) dto: GenerateContentDto,
@@ -112,9 +123,12 @@ export class GenerationController {
   }
 
   @Post('generation/expand')
+  @RequireFeature('aiWriting')
+  @RequireQuota('daily')
   @ApiOperation({ summary: '扩展内容' })
   @ApiBody({ type: GenerateContentDto })
   @ApiResponse({ status: 200, description: '扩展成功' })
+  @ApiResponse({ status: 403, description: '无权限或配额不足' })
   async expandContent(
     @Request() req,
     @Body(ValidationPipe) dto: GenerateContentDto,

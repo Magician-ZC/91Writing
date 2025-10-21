@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Queue, Job, QueueScheduler } from 'bull';
+import { Queue, Job } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { GenerateVideoDto } from '../dto/video-generation.dto';
 

@@ -132,30 +132,47 @@
     <el-dialog
       v-model="showGenerateDialog"
       title="生成章节视频"
-      width="600px"
+      width="700px"
       :close-on-click-modal="false"
     >
-      <el-form :model="generateForm" label-width="120px">
+      <el-alert
+        v-if="userLimits && !userLimits.allowed"
+        title="需要升级套餐"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="upgrade-alert"
+      >
+        <div>{{ userLimits.message }}</div>
+        <el-button type="primary" size="small" @click="goToUpgrade">立即升级</el-button>
+      </el-alert>
+
+      <el-form v-else :model="generateForm" label-width="130px">
+        <!-- 基础配置 -->
+        <el-divider content-position="left">基础配置</el-divider>
+
         <el-form-item label="分镜数量">
           <el-slider 
             v-model="generateForm.sceneCount" 
             :min="3" 
-            :max="10" 
+            :max="userLimits?.limits?.maxSceneCount || 10" 
             :marks="sceneMarks"
             show-stops
           />
-          <div class="form-tip">建议3-8个场景，过多会增加生成时间和成本</div>
+          <div class="form-tip">
+            您的套餐最多支持{{ userLimits?.limits?.maxSceneCount || 10 }}个分镜
+          </div>
         </el-form-item>
 
-        <el-form-item label="视频时长">
+        <el-form-item label="单场景时长">
           <el-slider 
             v-model="generateForm.videoDuration" 
-            :min="10" 
-            :max="30" 
+            :min="3" 
+            :max="15" 
             :marks="durationMarks"
             show-stops
           />
-          <div class="form-tip">建议15-30秒，保持短视频格式</div>
+          <div class="form-tip">每个场景的视频时长（秒）</div>
         </el-form-item>
 
         <el-form-item label="视觉风格">
@@ -167,6 +184,127 @@
           </el-select>
         </el-form-item>
 
+        <!-- 图片质量（根据套餐） -->
+        <el-divider content-position="left">图片质量</el-divider>
+
+        <el-form-item label="质量级别">
+          <el-radio-group v-model="generateForm.imageQuality">
+            <el-radio 
+              label="standard" 
+              :disabled="!isQualityAllowed('standard')"
+            >
+              标准质量
+            </el-radio>
+            <el-radio 
+              label="high" 
+              :disabled="!isQualityAllowed('high')"
+            >
+              高质量
+              <el-tag v-if="!isQualityAllowed('high')" type="warning" size="small">
+                需升级
+              </el-tag>
+            </el-radio>
+            <el-radio 
+              label="ultra" 
+              :disabled="!isQualityAllowed('ultra')"
+            >
+              超高质量
+              <el-tag v-if="!isQualityAllowed('ultra')" type="danger" size="small">
+                仅企业版
+              </el-tag>
+            </el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="分辨率">
+          <el-select v-model="generateForm.imageResolution">
+            <el-option 
+              label="1024x576 (16:9推荐)" 
+              value="1024x576"
+              :disabled="!isResolutionAllowed('1024x576')"
+            />
+            <el-option 
+              label="1280x720 (HD)" 
+              value="1280x720"
+              :disabled="!isResolutionAllowed('1280x720')"
+            >
+              <span>1280x720 (HD)</span>
+              <el-tag v-if="!isResolutionAllowed('1280x720')" type="warning" size="small">需升级</el-tag>
+            </el-option>
+            <el-option 
+              label="1920x1080 (Full HD)" 
+              value="1920x1080"
+              :disabled="!isResolutionAllowed('1920x1080')"
+            >
+              <span>1920x1080 (Full HD)</span>
+              <el-tag v-if="!isResolutionAllowed('1920x1080')" type="danger" size="small">仅企业版</el-tag>
+            </el-option>
+          </el-select>
+        </el-form-item>
+
+        <!-- 高级参数（专业版及以上） -->
+        <el-collapse v-if="userLimits?.limits?.enableAdvancedParams" style="margin-bottom: 16px">
+          <el-collapse-item title="🔧 高级参数配置" name="advanced">
+            <el-form-item label="采样步数">
+              <el-slider 
+                v-model="generateForm.samplingSteps" 
+                :min="20" 
+                :max="50" 
+                show-input
+              />
+              <div class="form-tip">步数越多质量越好，但耗时越长（推荐30）</div>
+            </el-form-item>
+
+            <el-form-item label="CFG Scale">
+              <el-slider 
+                v-model="generateForm.cfgScale" 
+                :min="1" 
+                :max="20" 
+                :step="0.5" 
+                show-input
+              />
+              <div class="form-tip">提示词引导强度（推荐7-12）</div>
+            </el-form-item>
+
+            <el-form-item label="图生视频FPS">
+              <el-radio-group v-model="generateForm.fps">
+                <el-radio :label="24">24 FPS（电影）</el-radio>
+                <el-radio :label="30">30 FPS（推荐）</el-radio>
+                <el-radio :label="60">60 FPS（高流畅）</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="运动幅度">
+              <el-radio-group v-model="generateForm.motionIntensity">
+                <el-radio label="low">低（静态）</el-radio>
+                <el-radio label="medium">中（推荐）</el-radio>
+                <el-radio label="high">高（动作）</el-radio>
+              </el-radio-group>
+            </el-form-item>
+
+            <el-form-item label="转场效果">
+              <el-select v-model="generateForm.transitionEffect">
+                <el-option label="淡入淡出（推荐）" value="fade" />
+                <el-option label="交叉溶解" value="crossfade" />
+                <el-option label="滑动" value="slide" />
+                <el-option label="无转场" value="none" />
+              </el-select>
+            </el-form-item>
+          </el-collapse-item>
+        </el-collapse>
+
+        <!-- 升级提示 -->
+        <el-alert
+          v-if="!userLimits?.limits?.enableAdvancedParams"
+          title="高级参数需要升级套餐"
+          type="info"
+          :closable="false"
+          show-icon
+        >
+          <div>升级到<el-text type="primary">专业版</el-text>或<el-text type="primary">企业版</el-text>即可使用高级参数配置</div>
+          <el-button type="text" size="small" @click="goToUpgrade">立即升级 →</el-button>
+        </el-alert>
+
         <el-form-item label="重新生成">
           <el-switch 
             v-model="generateForm.forceRegenerate" 
@@ -175,15 +313,26 @@
           />
         </el-form-item>
 
-        <el-alert
-          title="成本预估"
-          type="warning"
-          :closable="false"
-          show-icon
-        >
-          <div>预计成本：¥{{ estimatedCost.toFixed(2) }}</div>
-          <div class="tip">包含图片生成和视频生成费用</div>
-        </el-alert>
+        <!-- 配额和成本信息 -->
+        <el-card shadow="never" class="info-card">
+          <div class="info-row">
+            <div class="info-item">
+              <span class="label">剩余配额:</span>
+              <span class="value">
+                每日 {{ userLimits?.limits?.dailyRemaining || 0 }}/{{ userLimits?.limits?.dailyQuota || 0 }}，
+                每月 {{ userLimits?.limits?.monthlyRemaining || 0 }}/{{ userLimits?.limits?.monthlyQuota || 0 }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">预计成本:</span>
+              <span class="value primary">¥{{ estimatedCost.toFixed(2) }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">预计时长:</span>
+              <span class="value">{{ estimatedTime }}分钟</span>
+            </div>
+          </div>
+        </el-card>
       </el-form>
 
       <template #footer>
@@ -192,6 +341,7 @@
           type="primary" 
           @click="handleGenerate"
           :loading="isGenerating"
+          :disabled="!userLimits?.allowed"
         >
           开始生成
         </el-button>
@@ -227,13 +377,31 @@ const videoStatus = ref(null)
 const showGenerateDialog = ref(false)
 const isGenerating = ref(false)
 const pollingTimer = ref(null)
+const userLimits = ref(null)
 
-// 生成配置
+// 生成配置（包含所有用户可自定义的参数）
 const generateForm = ref({
+  // 基础参数
   sceneCount: 5,
-  videoDuration: 15,
+  videoDuration: 5,
   visualStyle: 'realistic',
-  forceRegenerate: false
+  forceRegenerate: false,
+  
+  // 文生图参数
+  imageResolution: '1024x576',
+  imageQuality: 'standard',
+  samplingSteps: 30,
+  cfgScale: 7.5,
+  negativePrompt: '',
+  
+  // 图生视频参数
+  videoResolution: '1024x576',
+  fps: 30,
+  motionIntensity: 'medium',
+  videoQuality: 'high',
+  compressionLevel: 'medium',
+  transitionEffect: 'fade',
+  addTitleFrame: true
 })
 
 // 滑块标记
@@ -245,10 +413,10 @@ const sceneMarks = {
 }
 
 const durationMarks = {
+  3: '3秒',
+  5: '5秒',
   10: '10秒',
-  15: '15秒',
-  20: '20秒',
-  30: '30秒'
+  15: '15秒'
 }
 
 // 计算属性
@@ -307,11 +475,39 @@ const estimatedTime = computed(() => {
 })
 
 const estimatedCost = computed(() => {
-  // 成本计算：图片生成 + 视频生成
-  const imageCost = 0.02 * generateForm.value.sceneCount
-  const videoCost = 1.5 * generateForm.value.sceneCount
+  // 成本计算：图片生成 + 视频生成（根据质量调整）
+  const sceneCount = generateForm.value.sceneCount || 5
+  
+  // 图片成本（质量系数）
+  const qualityMultiplier = {
+    'standard': 1.0,
+    'high': 1.5,
+    'ultra': 2.0
+  }
+  const imageCost = 0.02 * sceneCount * (qualityMultiplier[generateForm.value.imageQuality] || 1.0)
+  
+  // 视频成本
+  const videoCost = 1.5 * sceneCount
+  
   return imageCost + videoCost
 })
+
+const estimatedTime = computed(() => {
+  // 预计时间（分钟）
+  const sceneCount = generateForm.value.sceneCount || 5
+  const baseTime = 3 // 基础时间3分钟
+  const sceneTime = sceneCount * 1 // 每个场景1分钟
+  return baseTime + sceneTime
+})
+
+// 权限检查辅助函数
+const isQualityAllowed = (quality) => {
+  return userLimits.value?.limits?.allowedQualities?.includes(quality) || false
+}
+
+const isResolutionAllowed = (resolution) => {
+  return userLimits.value?.limits?.allowedResolutions?.includes(resolution) || false
+}
 
 // 方法
 const loadVideoStatus = async () => {
@@ -328,12 +524,56 @@ const loadVideoStatus = async () => {
   }
 }
 
+const loadUserLimits = async () => {
+  try {
+    const response = await videoGenerationService.getUserPermissions()
+    userLimits.value = response
+    
+    // 根据权限设置默认值
+    if (response.allowed && response.limits) {
+      generateForm.value.imageQuality = response.limits.allowedQualities[0] || 'standard'
+      generateForm.value.imageResolution = response.limits.allowedResolutions[0] || '1024x576'
+    }
+  } catch (error) {
+    console.error('获取权限失败:', error)
+    userLimits.value = {
+      allowed: false,
+      message: '获取权限失败，请刷新重试'
+    }
+  }
+}
+
 const handleGenerate = async () => {
+  // 检查权限
+  if (!userLimits.value?.allowed) {
+    ElMessage.warning('您没有视频生成权限，请升级套餐')
+    return
+  }
+
   isGenerating.value = true
   try {
+    // 提交所有参数到后端
     await videoGenerationService.generateVideo({
       chapterId: props.chapterId,
-      ...generateForm.value
+      // 基础参数
+      sceneCount: generateForm.value.sceneCount,
+      videoDuration: generateForm.value.videoDuration,
+      visualStyle: generateForm.value.visualStyle,
+      forceRegenerate: generateForm.value.forceRegenerate,
+      // 文生图参数
+      imageResolution: generateForm.value.imageResolution,
+      imageQuality: generateForm.value.imageQuality,
+      samplingSteps: generateForm.value.samplingSteps,
+      cfgScale: generateForm.value.cfgScale,
+      negativePrompt: generateForm.value.negativePrompt,
+      // 图生视频参数
+      videoResolution: generateForm.value.videoResolution,
+      fps: generateForm.value.fps,
+      motionIntensity: generateForm.value.motionIntensity,
+      videoQuality: generateForm.value.videoQuality,
+      compressionLevel: generateForm.value.compressionLevel,
+      transitionEffect: generateForm.value.transitionEffect,
+      addTitleFrame: generateForm.value.addTitleFrame
     })
 
     ElMessage.success('视频生成任务已提交，请稍候...')
@@ -347,6 +587,11 @@ const handleGenerate = async () => {
   } finally {
     isGenerating.value = false
   }
+}
+
+const goToUpgrade = () => {
+  // 跳转到套餐购买页面
+  window.open('/subscription', '_blank')
 }
 
 const regenerateVideo = async () => {
@@ -432,6 +677,7 @@ const stopPolling = () => {
 // 生命周期
 onMounted(() => {
   loadVideoStatus()
+  loadUserLimits()
 })
 
 onUnmounted(() => {

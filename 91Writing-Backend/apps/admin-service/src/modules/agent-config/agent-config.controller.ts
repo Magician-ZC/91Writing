@@ -8,9 +8,13 @@ import {
   Param,
   Query,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard, RoleGuard, Roles } from '@app/auth';
+import { JwtAuthGuard } from '@app/common';
+import { RoleGuard } from '../admin/guards/role.guard';
+import { Roles } from '../admin/decorators/roles.decorator';
 import { AgentConfigService } from './agent-config.service';
 import {
   CreateAgentPromptConfigDto,
@@ -22,10 +26,10 @@ import {
 } from '../../dto/agent-config.dto';
 
 @ApiTags('Agent配置管理')
-@Controller('agent-prompts')
+@Controller()
 @UseGuards(JwtAuthGuard, RoleGuard)
 @Roles('ADMIN')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 export class AgentConfigController {
   constructor(private readonly agentConfigService: AgentConfigService) {}
 
@@ -77,10 +81,12 @@ export class AgentConfigController {
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '删除Agent配置' })
-  @ApiResponse({ status: 204, description: '删除成功' })
-  async remove(@Param('id') id: string): Promise<void> {
-    return this.agentConfigService.remove(id);
+  @ApiResponse({ status: 200, description: '删除成功' })
+  async remove(@Param('id') id: string) {
+    await this.agentConfigService.remove(id);
+    return { message: 'Agent配置删除成功' };
   }
 
   @Post('test')

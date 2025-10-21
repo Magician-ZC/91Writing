@@ -1053,6 +1053,12 @@ model ConsistencyProfile {
   objects      Json? // 重要物品描述 {name: {description, appearance, keywords}}
   visualStyle  Json?  @map("visual_style") // 整体视觉风格配置 {overall, colorTone, artStyle, lighting}
   version      Int    @default(1) // 配置版本号
+  
+  // 自动管理标记
+  autoExtracted    Boolean  @default(false) @map("auto_extracted")
+  lastExtractedAt  DateTime? @map("last_extracted_at")
+  autoUpdate       Boolean  @default(true) @map("auto_update")   // 是否自动更新
+  updateHistory    Json?    @map("update_history")              // 更新历史记录
 
   // 关联
   novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
@@ -1063,6 +1069,40 @@ model ConsistencyProfile {
 
   @@index([novelId])
   @@map("consistency_profiles")
+}
+
+// 角色特征数据库（由AI自动提取）
+model CharacterFeature {
+  id          String   @id @default(cuid())
+  
+  novelId     String   @map("novel_id")
+  chapterNumber Int    @map("chapter_number")
+  characterName String @map("character_name")
+  
+  // 自动提取的特征
+  appearance  String   @db.Text  // 外貌描述（AI生成）
+  clothing    String   @db.Text  // 服饰描述（AI生成）
+  state       String?  @db.Text  // 状态描述（受伤、疲惫等）
+  
+  // 视觉化提示词（由Agent优化）
+  visualPrompt   String  @map("visual_prompt") @db.Text
+  negativePrompt String? @map("negative_prompt") @db.Text
+  keywords       Json?   // 关键词列表
+  
+  // 一致性参考
+  referenceImageUrl String? @map("reference_image_url") @db.VarChar(500)  // 生成的参考图
+  referenceId       String? @map("reference_id")  // Provider的人物ID
+  
+  // 自动提取标记
+  extractedBy String  @map("extracted_by")  // storyboard-agent | image-agent
+  confidence  Float   @default(0.8)  // 提取置信度 0-1
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@unique([novelId, chapterNumber, characterName])
+  @@index([novelId, characterName])
+  @@index([novelId, chapterNumber])
+  @@map("character_features")
 }
 
 // 视频生成日志表
@@ -1156,4 +1196,163 @@ enum AgentType {
   IMAGE_OPTIMIZER // 文生图优化
   VIDEO_OPTIMIZER // 图生视频优化
   CONSISTENCY_KEEPER // 一致性管理
+}
+
+// ===== 视频API配置系统 =====
+// 视频API配置表（管理员配置）
+model VideoAPIConfig {
+  id          String   @id @default(cuid())
+  
+  // API密钥（加密存储）
+  volcengineAccessKeyId     String?  @map("volcengine_access_key_id") @db.Text
+  volcengineSecretAccessKey String?  @map("volcengine_secret_access_key") @db.Text  // 加密
+  jimengApiKey              String?  @map("jimeng_api_key") @db.Text  // 加密
+  klingApiKey               String?  @map("kling_api_key") @db.Text  // 加密
+  
+  // Provider配置
+  videoProvider      String  @default("jimeng") @map("video_provider")  // jimeng | kling
+  
+  // 路径配置
+  ffmpegPath         String  @default("/usr/bin/ffmpeg") @map("ffmpeg_path")
+  ffmpegPreset       String  @default("medium") @map("ffmpeg_preset")  // ultrafast | fast | medium | slow | veryslow
+  videoStoragePath   String  @default("/data/videos") @map("video_storage_path")
+  tempStoragePath    String  @default("/tmp/video-generation") @map("temp_storage_path")
+  autoCleanTemp      Boolean @default(true) @map("auto_clean_temp")
+  
+  // 文生图配置
+  imageGenConfig     Json?   @map("image_gen_config")  // 文生图参数配置
+  // {
+  //   "defaultResolution": "1024x576",
+  //   "quality": "standard",
+  //   "batchSize": 1,
+  //   "samplingSteps": 30,
+  //   "cfgScale": 7.5,
+  //   "defaultStyle": "realistic",
+  //   "globalNegativePrompt": "...",
+  //   "enableConsistency": true,
+  //   "timeout": 60
+  // }
+  
+  // 图生视频配置
+  videoGenConfig     Json?   @map("video_gen_config")  // 图生视频参数配置
+  // {
+  //   "defaultDuration": 5,
+  //   "resolution": "1024x576",
+  //   "fps": 30,
+  //   "defaultMotionIntensity": "medium",
+  //   "quality": "high",
+  //   "compressionLevel": "medium",
+  //   "transitionEffect": "fade",
+  //   "transitionDuration": 0.5,
+  //   "timeout": 120,
+  //   "maxRetries": 2,
+  //   "enableCharacterConsistency": true
+  // }
+  
+  // 默认生成配置
+  defaultGenConfig   Json?   @map("default_gen_config")  // 用户默认配置
+  // {
+  //   "defaultSceneCount": 5,
+  //   "minSceneWords": 100,
+  //   "defaultTotalDuration": 30,
+  //   "addTitleFrame": true,
+  //   "titleFrameDuration": 2
+  // }
+  
+  // 成本控制
+  userDailyQuota     Int     @default(5) @map("user_daily_quota")
+  userMonthlyQuota   Int     @default(50) @map("user_monthly_quota")
+  monthlyBudget      Float   @default(1000.0) @map("monthly_budget")
+  costAlertThreshold Float   @default(800.0) @map("cost_alert_threshold")
+  costPerImage       Float   @default(0.02) @map("cost_per_image")  // 单张图片成本
+  costPerVideo       Float   @default(1.5) @map("cost_per_video")   // 单个视频成本
+  
+  // 并发和性能
+  performanceConfig  Json?   @map("performance_config")  // 性能配置
+  // {
+  //   "maxConcurrentTasks": 3,
+  //   "imageGenConcurrency": 2,
+  //   "videoGenConcurrency": 1,
+  //   "enableCache": false,
+  //   "enableQueue": true
+  // }
+  
+  // 健康检查
+  isActive           Boolean @default(true) @map("is_active")
+  lastHealthCheck    DateTime? @map("last_health_check")
+  healthStatus       String? @map("health_status")
+  
+  // 审计信息
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedBy   String?  @map("updated_by")
+  
+  @@map("video_api_configs")
+}
+
+// API使用日志表
+model VideoAPIUsageLog {
+  id          String   @id @default(cuid())
+  
+  userId      String   @map("user_id")
+  chapterId   String   @map("chapter_id")
+  
+  provider    String   // volcengine | jimeng | kling
+  apiType     String   @map("api_type")   // text-to-image | image-to-video
+  
+  requestCost Float    @map("request_cost")   // 请求成本
+  success     Boolean  // 是否成功
+  errorMessage String? @map("error_message") @db.Text
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@index([userId, createdAt])
+  @@index([provider, createdAt])
+  @@map("video_api_usage_logs")
+}
+
+// 用户视频配额表
+model UserVideoQuota {
+  id          String   @id @default(cuid())
+  
+  userId      String   @unique @map("user_id")
+  
+  dailyUsed   Int      @default(0) @map("daily_used")
+  dailyLimit  Int      @default(5) @map("daily_limit")
+  dailyResetAt DateTime @map("daily_reset_at")
+  
+  monthlyUsed Int      @default(0) @map("monthly_used")
+  monthlyLimit Int     @default(50) @map("monthly_limit")
+  monthlyResetAt DateTime @map("monthly_reset_at")
+  
+  totalGenerated Int   @default(0) @map("total_generated")
+  totalCost   Float   @default(0.0) @map("total_cost")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@map("user_video_quotas")
+}
+
+// 功能配额使用记录表（统一管理所有付费功能的配额）
+model FeatureQuota {
+  id          String   @id @default(cuid())
+  
+  userId      String   @map("user_id")
+  feature     String   // videoGeneration | aiWriting | aiAssistant | materialGeneration
+  quotaType   String   @map("quota_type")  // daily | monthly
+  date        DateTime @db.Date  // 配额日期（每日：当天，每月：月初）
+  
+  usedCount   Int      @default(0) @map("used_count")  // 已使用次数
+  limit       Int      // 限额
+  
+  lastUsedAt  DateTime? @map("last_used_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@unique([userId, feature, quotaType, date], name: "userId_feature_quotaType_date")
+  @@index([userId, feature])
+  @@index([userId, date])
+  @@index([feature, date])
+  @@map("feature_quotas")
 }

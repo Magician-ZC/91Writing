@@ -56,6 +56,12 @@ export class NovelController {
     return this.proxyToNovelService(req, res);
   }
 
+  // 代理所有consistency相关请求（视频一致性配置）
+  @All('consistency*')
+  async proxyConsistency(@Req() req: Request, @Res() res: Response) {
+    return this.proxyToNovelService(req, res);
+  }
+
   private async proxyToNovelService(req: Request, res: Response) {
     try {
       // req.path already includes /api/v1/ from gateway's global prefix

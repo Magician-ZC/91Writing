@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Put, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@app/auth';
+import { JwtAuthGuard } from '@app/common';
 import { ConsistencyService } from './consistency.service';
 import {
   CreateConsistencyProfileDto,
@@ -10,9 +10,9 @@ import {
 } from '../../dto/consistency.dto';
 
 @ApiTags('一致性配置')
-@Controller('consistency')
+@Controller()
 @UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 export class ConsistencyController {
   constructor(private readonly consistencyService: ConsistencyService) {}
 

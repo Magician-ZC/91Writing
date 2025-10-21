@@ -11,6 +11,7 @@ import { HealthModule } from './modules/health/health.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AIConfigModule } from './modules/ai-config/ai-config.module';
 import { AgentConfigModule } from './modules/agent-config/agent-config.module';
+import { VideoAPIConfigModule } from './modules/video-api-config/video-api-config.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -75,6 +76,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     AnalyticsModule,
     AIConfigModule,
     AgentConfigModule,
+    VideoAPIConfigModule,
   ],
   controllers: [],
   providers: [JwtStrategy],

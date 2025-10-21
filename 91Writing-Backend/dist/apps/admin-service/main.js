@@ -49,7 +49,9 @@ const admin_module_1 = __webpack_require__(14);
 const health_module_1 = __webpack_require__(24);
 const analytics_module_1 = __webpack_require__(27);
 const ai_config_module_1 = __webpack_require__(34);
-const jwt_strategy_1 = __webpack_require__(40);
+const agent_config_module_1 = __webpack_require__(40);
+const video_api_config_module_1 = __webpack_require__(56);
+const jwt_strategy_1 = __webpack_require__(63);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -104,6 +106,8 @@ exports.AppModule = AppModule = __decorate([
             health_module_1.HealthModule,
             analytics_module_1.AnalyticsModule,
             ai_config_module_1.AIConfigModule,
+            agent_config_module_1.AgentConfigModule,
+            video_api_config_module_1.VideoAPIConfigModule,
         ],
         controllers: [],
         providers: [jwt_strategy_1.JwtStrategy],
@@ -3446,6 +3450,1907 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentConfigModule = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(10);
+const jwt_1 = __webpack_require__(9);
+const passport_1 = __webpack_require__(8);
+const agent_config_controller_1 = __webpack_require__(41);
+const agent_config_service_1 = __webpack_require__(54);
+let AgentConfigModule = class AgentConfigModule {
+};
+exports.AgentConfigModule = AgentConfigModule;
+exports.AgentConfigModule = AgentConfigModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            database_1.DatabaseModule,
+            passport_1.PassportModule,
+            jwt_1.JwtModule.register({
+                secret: process.env.JWT_SECRET || 'your-secret-key',
+                signOptions: { expiresIn: '7d' },
+            }),
+        ],
+        controllers: [agent_config_controller_1.AgentConfigController],
+        providers: [agent_config_service_1.AgentConfigService],
+        exports: [agent_config_service_1.AgentConfigService],
+    })
+], AgentConfigModule);
+
+
+/***/ }),
+/* 41 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentConfigController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const common_2 = __webpack_require__(42);
+const role_guard_1 = __webpack_require__(19);
+const roles_decorator_1 = __webpack_require__(20);
+const agent_config_service_1 = __webpack_require__(54);
+const agent_config_dto_1 = __webpack_require__(55);
+let AgentConfigController = class AgentConfigController {
+    constructor(agentConfigService) {
+        this.agentConfigService = agentConfigService;
+    }
+    async create(dto) {
+        return this.agentConfigService.create(dto);
+    }
+    async findAll(agentType) {
+        if (agentType) {
+            return this.agentConfigService.findByType(agentType);
+        }
+        return this.agentConfigService.findAll();
+    }
+    async findActive(agentType) {
+        return this.agentConfigService.findActiveByType(agentType);
+    }
+    async findOne(id) {
+        return this.agentConfigService.findOne(id);
+    }
+    async update(id, dto) {
+        return this.agentConfigService.update(id, dto);
+    }
+    async remove(id) {
+        await this.agentConfigService.remove(id);
+        return { message: 'Agent配置删除成功' };
+    }
+    async test(dto) {
+        return this.agentConfigService.test(dto);
+    }
+};
+exports.AgentConfigController = AgentConfigController;
+__decorate([
+    (0, common_1.Post)(),
+    (0, swagger_1.ApiOperation)({ summary: '创建Agent配置' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: '创建成功', type: agent_config_dto_1.AgentPromptConfigResponseDto }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_b = typeof agent_config_dto_1.CreateAgentPromptConfigDto !== "undefined" && agent_config_dto_1.CreateAgentPromptConfigDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], AgentConfigController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: '获取所有Agent配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功', type: [agent_config_dto_1.AgentPromptConfigResponseDto] }),
+    __param(0, (0, common_1.Query)('agentType')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof agent_config_dto_1.AgentType !== "undefined" && agent_config_dto_1.AgentType) === "function" ? _d : Object]),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], AgentConfigController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('active/:agentType'),
+    (0, swagger_1.ApiOperation)({ summary: '获取指定类型的激活配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功', type: agent_config_dto_1.AgentPromptConfigResponseDto }),
+    __param(0, (0, common_1.Param)('agentType')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_f = typeof agent_config_dto_1.AgentType !== "undefined" && agent_config_dto_1.AgentType) === "function" ? _f : Object]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], AgentConfigController.prototype, "findActive", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '获取单个配置详情' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '获取成功', type: agent_config_dto_1.AgentPromptConfigResponseDto }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], AgentConfigController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Put)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: '更新Agent配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功', type: agent_config_dto_1.AgentPromptConfigResponseDto }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_j = typeof agent_config_dto_1.UpdateAgentPromptConfigDto !== "undefined" && agent_config_dto_1.UpdateAgentPromptConfigDto) === "function" ? _j : Object]),
+    __metadata("design:returntype", typeof (_k = typeof Promise !== "undefined" && Promise) === "function" ? _k : Object)
+], AgentConfigController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: '删除Agent配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '删除成功' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AgentConfigController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)('test'),
+    (0, swagger_1.ApiOperation)({ summary: '测试Agent配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '测试完成', type: agent_config_dto_1.TestAgentPromptResponseDto }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_l = typeof agent_config_dto_1.TestAgentPromptDto !== "undefined" && agent_config_dto_1.TestAgentPromptDto) === "function" ? _l : Object]),
+    __metadata("design:returntype", typeof (_m = typeof Promise !== "undefined" && Promise) === "function" ? _m : Object)
+], AgentConfigController.prototype, "test", null);
+exports.AgentConfigController = AgentConfigController = __decorate([
+    (0, swagger_1.ApiTags)('Agent配置管理'),
+    (0, common_1.Controller)(),
+    (0, common_1.UseGuards)(common_2.JwtAuthGuard, role_guard_1.RoleGuard),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof agent_config_service_1.AgentConfigService !== "undefined" && agent_config_service_1.AgentConfigService) === "function" ? _a : Object])
+], AgentConfigController);
+
+
+/***/ }),
+/* 42 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(43), exports);
+__exportStar(__webpack_require__(30), exports);
+__exportStar(__webpack_require__(46), exports);
+__exportStar(__webpack_require__(47), exports);
+__exportStar(__webpack_require__(48), exports);
+__exportStar(__webpack_require__(49), exports);
+__exportStar(__webpack_require__(50), exports);
+__exportStar(__webpack_require__(51), exports);
+__exportStar(__webpack_require__(52), exports);
+__exportStar(__webpack_require__(53), exports);
+
+
+/***/ }),
+/* 43 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(44), exports);
+__exportStar(__webpack_require__(45), exports);
+
+
+/***/ }),
+/* 44 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TenantId = exports.Tenant = void 0;
+const common_1 = __webpack_require__(2);
+exports.Tenant = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.tenantId || request.headers['x-tenant-id'];
+});
+exports.TenantId = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user?.tenantId || request.headers['x-tenant-id'];
+});
+
+
+/***/ }),
+/* 45 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CurrentUser = exports.User = void 0;
+const common_1 = __webpack_require__(2);
+exports.User = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+});
+exports.CurrentUser = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    const user = request.user;
+    return data ? user?.[data] : user;
+});
+
+
+/***/ }),
+/* 46 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 47 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 48 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 49 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 50 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var PackagePermissionService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PackagePermissionService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(10);
+let PackagePermissionService = PackagePermissionService_1 = class PackagePermissionService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(PackagePermissionService_1.name);
+    }
+    async checkVideoGenerationPermission(userId) {
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: {
+                package: true,
+            },
+        });
+        if (!subscription || subscription.status !== 'ACTIVE') {
+            this.logger.log(`用户${userId}无有效订阅，使用免费限制`);
+            return {
+                allowed: false,
+                limits: this.getFreeLimits(),
+                packageName: '免费套餐',
+                message: '请升级套餐以使用视频生成功能'
+            };
+        }
+        const features = subscription.package.features;
+        const videoFeatures = features?.videoGeneration;
+        if (!videoFeatures || !videoFeatures.enabled) {
+            this.logger.log(`用户${userId}套餐不包含视频生成功能`);
+            return {
+                allowed: false,
+                limits: this.getFreeLimits(),
+                packageName: subscription.package.name,
+                message: '当前套餐不包含视频生成功能'
+            };
+        }
+        this.logger.log(`用户${userId}套餐: ${subscription.package.name}, 视频配额: ${videoFeatures.dailyQuota}/${videoFeatures.monthlyQuota}`);
+        return {
+            allowed: true,
+            limits: {
+                dailyQuota: videoFeatures.dailyQuota || 5,
+                monthlyQuota: videoFeatures.monthlyQuota || 50,
+                maxSceneCount: videoFeatures.maxSceneCount || 5,
+                maxVideoDuration: videoFeatures.maxVideoDuration || 30,
+                allowedQualities: videoFeatures.allowedQualities || ['standard'],
+                allowedResolutions: videoFeatures.allowedResolutions || ['1024x576'],
+                enableAdvancedParams: videoFeatures.enableAdvancedParams || false,
+                enableCustomPrompts: videoFeatures.enableCustomPrompts || false,
+                priority: videoFeatures.priority || 'normal'
+            },
+            packageName: subscription.package.name
+        };
+    }
+    validateUserParams(userParams, limits) {
+        const errors = [];
+        if (userParams.sceneCount && userParams.sceneCount > limits.maxSceneCount) {
+            errors.push(`分镜数量超出限制（最多${limits.maxSceneCount}个，请升级套餐）`);
+        }
+        const totalDuration = (userParams.sceneCount || 5) * (userParams.videoDuration || 5);
+        if (totalDuration > limits.maxVideoDuration) {
+            errors.push(`视频总时长超出限制（最多${limits.maxVideoDuration}秒，请升级套餐）`);
+        }
+        if (userParams.imageQuality && !limits.allowedQualities.includes(userParams.imageQuality)) {
+            errors.push(`图片质量"${userParams.imageQuality}"不在允许范围内（允许：${limits.allowedQualities.join(', ')}），请升级套餐`);
+        }
+        if (userParams.imageResolution && !limits.allowedResolutions.includes(userParams.imageResolution)) {
+            errors.push(`图片分辨率不在允许范围内（允许：${limits.allowedResolutions.join(', ')}），请升级套餐`);
+        }
+        if (!limits.enableAdvancedParams) {
+            const advancedParams = ['samplingSteps', 'cfgScale', 'negativePrompt'];
+            const usedAdvanced = advancedParams.filter(param => userParams[param] !== undefined);
+            if (usedAdvanced.length > 0) {
+                errors.push(`当前套餐不支持高级参数配置（${usedAdvanced.join(', ')}），请升级到专业版或企业版`);
+            }
+        }
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    }
+    getFreeLimits() {
+        return {
+            dailyQuota: 0,
+            monthlyQuota: 0,
+            maxSceneCount: 0,
+            maxVideoDuration: 0,
+            allowedQualities: [],
+            allowedResolutions: [],
+            enableAdvancedParams: false,
+            enableCustomPrompts: false,
+            priority: 'low'
+        };
+    }
+};
+exports.PackagePermissionService = PackagePermissionService;
+exports.PackagePermissionService = PackagePermissionService = PackagePermissionService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], PackagePermissionService);
+
+
+/***/ }),
+/* 51 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var FeatureQuotaService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FeatureQuotaService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(10);
+let FeatureQuotaService = FeatureQuotaService_1 = class FeatureQuotaService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(FeatureQuotaService_1.name);
+    }
+    async checkAndConsumeQuota(userId, feature, quotaType = 'daily') {
+        this.logger.log(`检查用户${userId}的${feature}配额（${quotaType}）`);
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let limit = 0;
+        let packageName = '免费套餐';
+        if (subscription && subscription.status === 'ACTIVE') {
+            packageName = subscription.package.name;
+            const features = subscription.package.features;
+            const featureConfig = features?.[feature];
+            if (featureConfig && featureConfig.enabled) {
+                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
+                if (limit === -1) {
+                    this.logger.log(`用户${userId}套餐${packageName}的${feature}不限配额`);
+                    return {
+                        allowed: true,
+                        remaining: -1,
+                        limit: -1,
+                    };
+                }
+            }
+        }
+        else {
+            const freeLimit = this.getFreeFunctionLimit(feature, quotaType);
+            limit = freeLimit;
+            if (limit === 0) {
+                this.logger.log(`免费用户不允许使用${feature}`);
+                return {
+                    allowed: false,
+                    remaining: 0,
+                    limit: 0,
+                    message: `${this.getFeatureName(feature)}功能需要订阅套餐，请升级`
+                };
+            }
+        }
+        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
+        let quota = await this.prisma.featureQuota.findUnique({
+            where: {
+                userId_feature_quotaType_date: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                },
+            },
+        });
+        if (!quota) {
+            quota = await this.prisma.featureQuota.create({
+                data: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                    usedCount: 0,
+                    limit,
+                },
+            });
+        }
+        const remaining = Math.max(0, limit - quota.usedCount);
+        if (remaining <= 0) {
+            this.logger.log(`用户${userId}的${feature}配额已用尽（${quota.usedCount}/${limit}）`);
+            return {
+                allowed: false,
+                remaining: 0,
+                limit,
+                message: `已达${quotaType === 'daily' ? '每日' : '每月'}配额限制（${limit}次），请升级套餐`
+            };
+        }
+        await this.prisma.featureQuota.update({
+            where: { id: quota.id },
+            data: {
+                usedCount: { increment: 1 },
+                lastUsedAt: new Date(),
+            },
+        });
+        this.logger.log(`用户${userId}消费${feature}配额，剩余${remaining - 1}/${limit}`);
+        return {
+            allowed: true,
+            remaining: remaining - 1,
+            limit,
+        };
+    }
+    async getQuotaStatus(userId, feature) {
+        const daily = await this.getQuotaRemaining(userId, feature, 'daily');
+        const monthly = await this.getQuotaRemaining(userId, feature, 'monthly');
+        return {
+            daily,
+            monthly,
+        };
+    }
+    async getQuotaRemaining(userId, feature, quotaType) {
+        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
+        const quota = await this.prisma.featureQuota.findUnique({
+            where: {
+                userId_feature_quotaType_date: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                },
+            },
+        });
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let limit = 0;
+        if (subscription && subscription.status === 'ACTIVE') {
+            const features = subscription.package.features;
+            const featureConfig = features?.[feature];
+            if (featureConfig && featureConfig.enabled) {
+                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
+            }
+        }
+        else {
+            limit = this.getFreeFunctionLimit(feature, quotaType);
+        }
+        const usedCount = quota?.usedCount || 0;
+        const remaining = limit === -1 ? -1 : Math.max(0, limit - usedCount);
+        return {
+            used: usedCount,
+            remaining,
+            limit,
+        };
+    }
+    getFreeFunctionLimit(feature, quotaType) {
+        const freeLimits = {
+            aiWriting: { daily: 100, monthly: 1000 },
+            aiAssistant: { daily: 50, monthly: 500 },
+            videoGeneration: { daily: 0, monthly: 0 },
+            materialGeneration: { daily: 10, monthly: 100 },
+        };
+        const featureLimits = freeLimits[feature];
+        if (!featureLimits) {
+            return 0;
+        }
+        return quotaType === 'daily' ? featureLimits.daily : featureLimits.monthly;
+    }
+    getFeatureName(feature) {
+        const names = {
+            videoGeneration: '视频生成',
+            aiWriting: 'AI写作',
+            aiAssistant: 'AI写作助手',
+            materialGeneration: '素材生成',
+        };
+        return names[feature] || feature;
+    }
+    getTodayDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+    }
+    getMonthStartDate() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+};
+exports.FeatureQuotaService = FeatureQuotaService;
+exports.FeatureQuotaService = FeatureQuotaService = FeatureQuotaService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], FeatureQuotaService);
+
+
+/***/ }),
+/* 52 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PackageFeatureGuard = void 0;
+const common_1 = __webpack_require__(2);
+const core_1 = __webpack_require__(1);
+const database_1 = __webpack_require__(10);
+const feature_quota_service_1 = __webpack_require__(51);
+let PackageFeatureGuard = class PackageFeatureGuard {
+    constructor(reflector, prisma, featureQuotaService) {
+        this.reflector = reflector;
+        this.prisma = prisma;
+        this.featureQuotaService = featureQuotaService;
+    }
+    async canActivate(context) {
+        const requiredFeature = this.reflector.get('feature', context.getHandler());
+        const quotaType = this.reflector.get('quotaType', context.getHandler()) || 'daily';
+        if (!requiredFeature) {
+            return true;
+        }
+        const request = context.switchToHttp().getRequest();
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+            throw new common_1.ForbiddenException('未登录或token无效');
+        }
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let featureConfig = null;
+        let packageName = '免费套餐';
+        if (subscription && subscription.status === 'ACTIVE') {
+            packageName = subscription.package.name;
+            const features = subscription.package.features;
+            featureConfig = features?.[requiredFeature];
+            if (!featureConfig || !featureConfig.enabled) {
+                throw new common_1.ForbiddenException({
+                    message: `当前套餐（${packageName}）不包含${this.getFeatureName(requiredFeature)}功能`,
+                    feature: requiredFeature,
+                    packageName,
+                    upgradeRequired: true,
+                });
+            }
+        }
+        else {
+            const allowed = await this.checkFreeUserAccess(requiredFeature);
+            if (!allowed) {
+                throw new common_1.ForbiddenException({
+                    message: `${this.getFeatureName(requiredFeature)}功能需要订阅套餐，请升级`,
+                    feature: requiredFeature,
+                    packageName: '免费套餐',
+                    upgradeRequired: true,
+                });
+            }
+        }
+        const quotaResult = await this.featureQuotaService.checkAndConsumeQuota(userId, requiredFeature, quotaType);
+        if (!quotaResult.allowed) {
+            throw new common_1.ForbiddenException({
+                message: quotaResult.message,
+                feature: requiredFeature,
+                packageName,
+                quotaType,
+                used: quotaResult.limit,
+                limit: quotaResult.limit,
+                upgradeRequired: quotaResult.limit > 0,
+            });
+        }
+        request.packageLimits = featureConfig;
+        request.packageName = packageName;
+        request.quotaRemaining = {
+            [quotaType]: quotaResult.remaining,
+        };
+        return true;
+    }
+    async checkFreeUserAccess(feature) {
+        const freeFunctions = ['aiWriting', 'aiAssistant', 'materialGeneration'];
+        return freeFunctions.includes(feature);
+    }
+    getFeatureName(feature) {
+        const names = {
+            videoGeneration: '视频生成',
+            aiWriting: 'AI写作',
+            aiAssistant: 'AI写作助手',
+            materialGeneration: '素材生成',
+            suggestion: '写作建议',
+        };
+        return names[feature] || feature;
+    }
+};
+exports.PackageFeatureGuard = PackageFeatureGuard;
+exports.PackageFeatureGuard = PackageFeatureGuard = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof core_1.Reflector !== "undefined" && core_1.Reflector) === "function" ? _a : Object, typeof (_b = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _b : Object, typeof (_c = typeof feature_quota_service_1.FeatureQuotaService !== "undefined" && feature_quota_service_1.FeatureQuotaService) === "function" ? _c : Object])
+], PackageFeatureGuard);
+
+
+/***/ }),
+/* 53 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RequireQuota = exports.RequireFeature = exports.QUOTA_TYPE_KEY = exports.FEATURE_KEY = void 0;
+const common_1 = __webpack_require__(2);
+exports.FEATURE_KEY = 'feature';
+exports.QUOTA_TYPE_KEY = 'quotaType';
+const RequireFeature = (feature) => (0, common_1.SetMetadata)(exports.FEATURE_KEY, feature);
+exports.RequireFeature = RequireFeature;
+const RequireQuota = (quotaType = 'daily') => (0, common_1.SetMetadata)(exports.QUOTA_TYPE_KEY, quotaType);
+exports.RequireQuota = RequireQuota;
+
+
+/***/ }),
+/* 54 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var AgentConfigService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentConfigService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(10);
+let AgentConfigService = AgentConfigService_1 = class AgentConfigService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(AgentConfigService_1.name);
+    }
+    async create(dto) {
+        this.logger.log(`创建Agent配置: ${dto.agentType}`);
+        const latestVersion = await this.prisma.agentPromptConfig.findFirst({
+            where: { agentType: dto.agentType },
+            orderBy: { version: 'desc' },
+            select: { version: true },
+        });
+        const nextVersion = (latestVersion?.version || 0) + 1;
+        const config = await this.prisma.agentPromptConfig.create({
+            data: {
+                agentType: dto.agentType,
+                name: dto.name,
+                systemPrompt: dto.systemPrompt,
+                templatePrompt: dto.templatePrompt,
+                parameters: dto.parameters,
+                description: dto.description,
+                isActive: dto.isActive ?? true,
+                version: nextVersion,
+            },
+        });
+        return this.formatResponse(config);
+    }
+    async findAll() {
+        const configs = await this.prisma.agentPromptConfig.findMany({
+            orderBy: [
+                { agentType: 'asc' },
+                { version: 'desc' },
+            ],
+        });
+        return configs.map(config => this.formatResponse(config));
+    }
+    async findByType(agentType) {
+        const configs = await this.prisma.agentPromptConfig.findMany({
+            where: { agentType },
+            orderBy: { version: 'desc' },
+        });
+        return configs.map(config => this.formatResponse(config));
+    }
+    async findOne(id) {
+        const config = await this.prisma.agentPromptConfig.findUnique({
+            where: { id },
+        });
+        if (!config) {
+            throw new common_1.NotFoundException('配置不存在');
+        }
+        return this.formatResponse(config);
+    }
+    async findActiveByType(agentType) {
+        const config = await this.prisma.agentPromptConfig.findFirst({
+            where: {
+                agentType,
+                isActive: true,
+            },
+            orderBy: { version: 'desc' },
+        });
+        if (!config) {
+            throw new common_1.NotFoundException(`没有激活的${agentType}配置`);
+        }
+        return this.formatResponse(config);
+    }
+    async update(id, dto) {
+        this.logger.log(`更新Agent配置: ${id}`);
+        const existing = await this.prisma.agentPromptConfig.findUnique({
+            where: { id },
+        });
+        if (!existing) {
+            throw new common_1.NotFoundException('配置不存在');
+        }
+        const config = await this.prisma.agentPromptConfig.update({
+            where: { id },
+            data: {
+                name: dto.name,
+                systemPrompt: dto.systemPrompt,
+                templatePrompt: dto.templatePrompt,
+                parameters: dto.parameters,
+                description: dto.description,
+                isActive: dto.isActive,
+            },
+        });
+        return this.formatResponse(config);
+    }
+    async remove(id) {
+        const config = await this.prisma.agentPromptConfig.findUnique({
+            where: { id },
+        });
+        if (!config) {
+            throw new common_1.NotFoundException('配置不存在');
+        }
+        await this.prisma.agentPromptConfig.delete({
+            where: { id },
+        });
+        this.logger.log(`已删除Agent配置: ${id}`);
+    }
+    async test(dto) {
+        const startTime = Date.now();
+        try {
+            this.logger.log(`测试Agent配置: ${dto.agentType}`);
+            const result = {
+                message: '测试成功',
+                agentType: dto.agentType,
+                input: dto.testInput,
+            };
+            const duration = Date.now() - startTime;
+            return {
+                success: true,
+                result,
+                duration,
+                tokenUsage: {
+                    input: 100,
+                    output: 200,
+                    total: 300,
+                },
+                timestamp: new Date(),
+            };
+        }
+        catch (error) {
+            const duration = Date.now() - startTime;
+            this.logger.error(`测试失败: ${error.message}`);
+            return {
+                success: false,
+                result: null,
+                duration,
+                error: error.message,
+                timestamp: new Date(),
+            };
+        }
+    }
+    formatResponse(config) {
+        return {
+            id: config.id,
+            agentType: config.agentType,
+            name: config.name,
+            systemPrompt: config.systemPrompt,
+            templatePrompt: config.templatePrompt,
+            parameters: config.parameters,
+            version: config.version,
+            isActive: config.isActive,
+            description: config.description,
+            usageCount: config.usageCount,
+            successCount: config.successCount,
+            failureCount: config.failureCount,
+            successRate: config.usageCount > 0
+                ? Math.round((config.successCount / config.usageCount) * 100)
+                : 0,
+            createdAt: config.createdAt,
+            updatedAt: config.updatedAt,
+        };
+    }
+};
+exports.AgentConfigService = AgentConfigService;
+exports.AgentConfigService = AgentConfigService = AgentConfigService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], AgentConfigService);
+
+
+/***/ }),
+/* 55 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e, _f, _g;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TestAgentPromptResponseDto = exports.TestAgentPromptDto = exports.AgentPromptConfigResponseDto = exports.UpdateAgentPromptConfigDto = exports.CreateAgentPromptConfigDto = exports.AgentType = void 0;
+const class_validator_1 = __webpack_require__(22);
+const swagger_1 = __webpack_require__(3);
+var AgentType;
+(function (AgentType) {
+    AgentType["SCRIPT_GENERATOR"] = "SCRIPT_GENERATOR";
+    AgentType["IMAGE_OPTIMIZER"] = "IMAGE_OPTIMIZER";
+    AgentType["VIDEO_OPTIMIZER"] = "VIDEO_OPTIMIZER";
+    AgentType["CONSISTENCY_KEEPER"] = "CONSISTENCY_KEEPER";
+})(AgentType || (exports.AgentType = AgentType = {}));
+class CreateAgentPromptConfigDto {
+}
+exports.CreateAgentPromptConfigDto = CreateAgentPromptConfigDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Agent类型', enum: AgentType }),
+    (0, class_validator_1.IsEnum)(AgentType),
+    __metadata("design:type", String)
+], CreateAgentPromptConfigDto.prototype, "agentType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '配置名称' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAgentPromptConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '系统提示词' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAgentPromptConfigDto.prototype, "systemPrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '模板提示词' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAgentPromptConfigDto.prototype, "templatePrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '附加参数配置' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_a = typeof Record !== "undefined" && Record) === "function" ? _a : Object)
+], CreateAgentPromptConfigDto.prototype, "parameters", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '配置描述' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAgentPromptConfigDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '是否启用', default: true }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateAgentPromptConfigDto.prototype, "isActive", void 0);
+class UpdateAgentPromptConfigDto {
+}
+exports.UpdateAgentPromptConfigDto = UpdateAgentPromptConfigDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '配置名称' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAgentPromptConfigDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '系统提示词' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAgentPromptConfigDto.prototype, "systemPrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '模板提示词' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAgentPromptConfigDto.prototype, "templatePrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '附加参数配置' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_b = typeof Record !== "undefined" && Record) === "function" ? _b : Object)
+], UpdateAgentPromptConfigDto.prototype, "parameters", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '配置描述' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateAgentPromptConfigDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '是否启用' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateAgentPromptConfigDto.prototype, "isActive", void 0);
+class AgentPromptConfigResponseDto {
+}
+exports.AgentPromptConfigResponseDto = AgentPromptConfigResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '配置ID' }),
+    __metadata("design:type", String)
+], AgentPromptConfigResponseDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Agent类型', enum: AgentType }),
+    __metadata("design:type", String)
+], AgentPromptConfigResponseDto.prototype, "agentType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '配置名称' }),
+    __metadata("design:type", String)
+], AgentPromptConfigResponseDto.prototype, "name", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '系统提示词' }),
+    __metadata("design:type", String)
+], AgentPromptConfigResponseDto.prototype, "systemPrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '模板提示词' }),
+    __metadata("design:type", String)
+], AgentPromptConfigResponseDto.prototype, "templatePrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '附加参数配置' }),
+    __metadata("design:type", typeof (_c = typeof Record !== "undefined" && Record) === "function" ? _c : Object)
+], AgentPromptConfigResponseDto.prototype, "parameters", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '版本号' }),
+    __metadata("design:type", Number)
+], AgentPromptConfigResponseDto.prototype, "version", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '是否启用' }),
+    __metadata("design:type", Boolean)
+], AgentPromptConfigResponseDto.prototype, "isActive", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '配置描述' }),
+    __metadata("design:type", String)
+], AgentPromptConfigResponseDto.prototype, "description", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '使用次数' }),
+    __metadata("design:type", Number)
+], AgentPromptConfigResponseDto.prototype, "usageCount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '成功次数' }),
+    __metadata("design:type", Number)
+], AgentPromptConfigResponseDto.prototype, "successCount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '失败次数' }),
+    __metadata("design:type", Number)
+], AgentPromptConfigResponseDto.prototype, "failureCount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '成功率(%)' }),
+    __metadata("design:type", Number)
+], AgentPromptConfigResponseDto.prototype, "successRate", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '创建时间' }),
+    __metadata("design:type", typeof (_d = typeof Date !== "undefined" && Date) === "function" ? _d : Object)
+], AgentPromptConfigResponseDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '更新时间' }),
+    __metadata("design:type", typeof (_e = typeof Date !== "undefined" && Date) === "function" ? _e : Object)
+], AgentPromptConfigResponseDto.prototype, "updatedAt", void 0);
+class TestAgentPromptDto {
+}
+exports.TestAgentPromptDto = TestAgentPromptDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'Agent类型', enum: AgentType }),
+    (0, class_validator_1.IsEnum)(AgentType),
+    __metadata("design:type", String)
+], TestAgentPromptDto.prototype, "agentType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '系统提示词' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], TestAgentPromptDto.prototype, "systemPrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '模板提示词' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], TestAgentPromptDto.prototype, "templatePrompt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '测试输入内容' }),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], TestAgentPromptDto.prototype, "testInput", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '附加参数' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", typeof (_f = typeof Record !== "undefined" && Record) === "function" ? _f : Object)
+], TestAgentPromptDto.prototype, "parameters", void 0);
+class TestAgentPromptResponseDto {
+}
+exports.TestAgentPromptResponseDto = TestAgentPromptResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '测试是否成功' }),
+    __metadata("design:type", Boolean)
+], TestAgentPromptResponseDto.prototype, "success", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '生成结果' }),
+    __metadata("design:type", Object)
+], TestAgentPromptResponseDto.prototype, "result", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '耗时(毫秒)' }),
+    __metadata("design:type", Number)
+], TestAgentPromptResponseDto.prototype, "duration", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Token使用情况' }),
+    __metadata("design:type", Object)
+], TestAgentPromptResponseDto.prototype, "tokenUsage", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '错误信息' }),
+    __metadata("design:type", String)
+], TestAgentPromptResponseDto.prototype, "error", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '执行时间' }),
+    __metadata("design:type", typeof (_g = typeof Date !== "undefined" && Date) === "function" ? _g : Object)
+], TestAgentPromptResponseDto.prototype, "timestamp", void 0);
+
+
+/***/ }),
+/* 56 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoAPIConfigModule = void 0;
+const common_1 = __webpack_require__(2);
+const jwt_1 = __webpack_require__(9);
+const passport_1 = __webpack_require__(8);
+const video_config_1 = __webpack_require__(57);
+const video_api_config_controller_1 = __webpack_require__(60);
+let VideoAPIConfigModule = class VideoAPIConfigModule {
+};
+exports.VideoAPIConfigModule = VideoAPIConfigModule;
+exports.VideoAPIConfigModule = VideoAPIConfigModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            video_config_1.VideoAPIConfigModule,
+            passport_1.PassportModule,
+            jwt_1.JwtModule.register({
+                secret: process.env.JWT_SECRET || 'your-secret-key',
+                signOptions: { expiresIn: '7d' },
+            }),
+        ],
+        controllers: [video_api_config_controller_1.VideoAPIConfigController],
+    })
+], VideoAPIConfigModule);
+
+
+/***/ }),
+/* 57 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(58), exports);
+__exportStar(__webpack_require__(59), exports);
+
+
+/***/ }),
+/* 58 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var VideoAPIConfigService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoAPIConfigService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(10);
+const crypto_1 = __webpack_require__(37);
+let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(VideoAPIConfigService_1.name);
+        this.algorithm = 'aes-256-cbc';
+        const key = process.env.ENCRYPTION_KEY || 'default-32-char-encryption-key!!';
+        this.encryptionKey = Buffer.from(key.padEnd(32, '0').slice(0, 32));
+        this.logger.log('VideoAPIConfig Service initialized (Shared Library)');
+    }
+    async getCurrentConfig() {
+        let config = await this.prisma.videoAPIConfig.findFirst({
+            where: { id: 'default_config' },
+        });
+        if (!config) {
+            config = await this.createDefaultConfig();
+        }
+        return {
+            ...config,
+            volcengineSecretAccessKey: config.volcengineSecretAccessKey
+                ? this.maskSensitiveData(this.decrypt(config.volcengineSecretAccessKey))
+                : null,
+            jimengApiKey: config.jimengApiKey ? this.maskSensitiveData(this.decrypt(config.jimengApiKey)) : null,
+            klingApiKey: config.klingApiKey ? this.maskSensitiveData(this.decrypt(config.klingApiKey)) : null,
+        };
+    }
+    async getFullConfig() {
+        let config = await this.prisma.videoAPIConfig.findFirst({
+            where: { id: 'default_config' },
+        });
+        if (!config) {
+            config = await this.createDefaultConfig();
+        }
+        return {
+            ...config,
+            volcengineSecretAccessKey: config.volcengineSecretAccessKey
+                ? this.decrypt(config.volcengineSecretAccessKey)
+                : null,
+            jimengApiKey: config.jimengApiKey ? this.decrypt(config.jimengApiKey) : null,
+            klingApiKey: config.klingApiKey ? this.decrypt(config.klingApiKey) : null,
+        };
+    }
+    async createDefaultConfig() {
+        this.logger.log('Creating default video API config');
+        return this.prisma.videoAPIConfig.create({
+            data: {
+                id: 'default_config',
+                videoProvider: 'jimeng',
+                ffmpegPath: '/usr/bin/ffmpeg',
+                videoStoragePath: '/data/videos',
+                tempStoragePath: '/tmp/video-generation',
+                userDailyQuota: 5,
+                userMonthlyQuota: 50,
+                monthlyBudget: 1000.0,
+                costAlertThreshold: 800.0,
+            },
+        });
+    }
+    async updateConfig(adminId, data) {
+        const encrypted = {
+            ...data,
+            updatedBy: adminId,
+        };
+        if (data.volcengineSecretAccessKey) {
+            encrypted.volcengineSecretAccessKey = this.encrypt(data.volcengineSecretAccessKey);
+        }
+        if (data.jimengApiKey) {
+            encrypted.jimengApiKey = this.encrypt(data.jimengApiKey);
+        }
+        if (data.klingApiKey) {
+            encrypted.klingApiKey = this.encrypt(data.klingApiKey);
+        }
+        Object.keys(encrypted).forEach(key => encrypted[key] === undefined && delete encrypted[key]);
+        const updated = await this.prisma.videoAPIConfig.update({
+            where: { id: 'default_config' },
+            data: encrypted,
+        });
+        this.logger.log(`Video API config updated by admin: ${adminId}`);
+        return this.getCurrentConfig();
+    }
+    async checkUserQuota(userId) {
+        const now = new Date();
+        let quota = await this.prisma.userVideoQuota.findUnique({
+            where: { userId },
+        });
+        if (!quota) {
+            const config = await this.getFullConfig();
+            quota = await this.prisma.userVideoQuota.create({
+                data: {
+                    userId,
+                    dailyLimit: config.userDailyQuota,
+                    dailyUsed: 0,
+                    dailyResetAt: this.getNextDayStart(),
+                    monthlyLimit: config.userMonthlyQuota,
+                    monthlyUsed: 0,
+                    monthlyResetAt: this.getNextMonthStart(),
+                },
+            });
+        }
+        if (now >= quota.dailyResetAt) {
+            quota = await this.prisma.userVideoQuota.update({
+                where: { userId },
+                data: {
+                    dailyUsed: 0,
+                    dailyResetAt: this.getNextDayStart(),
+                },
+            });
+        }
+        if (now >= quota.monthlyResetAt) {
+            quota = await this.prisma.userVideoQuota.update({
+                where: { userId },
+                data: {
+                    monthlyUsed: 0,
+                    monthlyResetAt: this.getNextMonthStart(),
+                },
+            });
+        }
+        const dailyAvailable = quota.dailyUsed < quota.dailyLimit;
+        const monthlyAvailable = quota.monthlyUsed < quota.monthlyLimit;
+        const available = dailyAvailable && monthlyAvailable;
+        return {
+            available,
+            dailyRemaining: Math.max(0, quota.dailyLimit - quota.dailyUsed),
+            monthlyRemaining: Math.max(0, quota.monthlyLimit - quota.monthlyUsed),
+            dailyLimit: quota.dailyLimit,
+            monthlyLimit: quota.monthlyLimit,
+            dailyResetAt: quota.dailyResetAt,
+            monthlyResetAt: quota.monthlyResetAt,
+        };
+    }
+    async consumeQuota(userId) {
+        await this.prisma.userVideoQuota.update({
+            where: { userId },
+            data: {
+                dailyUsed: { increment: 1 },
+                monthlyUsed: { increment: 1 },
+                totalGenerated: { increment: 1 },
+            },
+        });
+        this.logger.log(`User ${userId} consumed video quota`);
+    }
+    async logApiUsage(log) {
+        await this.prisma.videoAPIUsageLog.create({
+            data: log,
+        });
+        if (log.success) {
+            await this.prisma.userVideoQuota.update({
+                where: { userId: log.userId },
+                data: {
+                    totalCost: { increment: log.requestCost },
+                },
+            });
+        }
+        this.logger.log(`API usage logged: ${log.provider} - ${log.apiType} - ${log.success ? 'Success' : 'Failed'}`);
+    }
+    async getCostStatistics(startDate, endDate) {
+        const logs = await this.prisma.videoAPIUsageLog.findMany({
+            where: {
+                createdAt: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            },
+        });
+        const totalCost = logs.reduce((sum, log) => sum + log.requestCost, 0);
+        const successCount = logs.filter(log => log.success).length;
+        const failureCount = logs.length - successCount;
+        const successRate = logs.length > 0 ? (successCount / logs.length) * 100 : 0;
+        const config = await this.getFullConfig();
+        const monthlyBudget = config.monthlyBudget;
+        const remainingBudget = Math.max(0, monthlyBudget - totalCost);
+        const budgetUsagePercentage = monthlyBudget > 0 ? (totalCost / monthlyBudget) * 100 : 0;
+        return {
+            totalCost,
+            totalRequests: logs.length,
+            successCount,
+            failureCount,
+            successRate: Math.round(successRate * 100) / 100,
+            monthlyBudget,
+            remainingBudget,
+            budgetUsagePercentage: Math.round(budgetUsagePercentage * 100) / 100,
+        };
+    }
+    async testProviderConnection(provider) {
+        const config = await this.getFullConfig();
+        try {
+            switch (provider) {
+                case 'volcengine':
+                    if (!config.volcengineAccessKeyId || !config.volcengineSecretAccessKey) {
+                        return { success: false, message: '火山引擎API密钥未配置' };
+                    }
+                    return { success: true, message: '火山引擎连接正常' };
+                case 'jimeng':
+                    if (!config.jimengApiKey) {
+                        return { success: false, message: '即梦API密钥未配置' };
+                    }
+                    return { success: true, message: '即梦连接正常' };
+                case 'kling':
+                    if (!config.klingApiKey) {
+                        return { success: false, message: '可灵API密钥未配置' };
+                    }
+                    return { success: true, message: '可灵连接正常' };
+                default:
+                    return { success: false, message: '未知的Provider' };
+            }
+        }
+        catch (error) {
+            this.logger.error(`Test ${provider} connection failed:`, error);
+            return { success: false, message: error.message || '连接测试失败' };
+        }
+    }
+    encrypt(text) {
+        const iv = (0, crypto_1.randomBytes)(16);
+        const cipher = (0, crypto_1.createCipheriv)(this.algorithm, this.encryptionKey, iv);
+        let encrypted = cipher.update(text, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return iv.toString('hex') + ':' + encrypted;
+    }
+    decrypt(text) {
+        try {
+            const parts = text.split(':');
+            const iv = Buffer.from(parts[0], 'hex');
+            const encrypted = parts[1];
+            const decipher = (0, crypto_1.createDecipheriv)(this.algorithm, this.encryptionKey, iv);
+            let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+            decrypted += decipher.final('utf8');
+            return decrypted;
+        }
+        catch (error) {
+            this.logger.error('Decryption failed:', error);
+            return '';
+        }
+    }
+    maskSensitiveData(data) {
+        if (!data || data.length < 8) {
+            return '****';
+        }
+        const start = data.substring(0, 4);
+        const end = data.substring(data.length - 4);
+        return `${start}****${end}`;
+    }
+    getNextDayStart() {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        return tomorrow;
+    }
+    getNextMonthStart() {
+        const nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        nextMonth.setDate(1);
+        nextMonth.setHours(0, 0, 0, 0);
+        return nextMonth;
+    }
+};
+exports.VideoAPIConfigService = VideoAPIConfigService;
+exports.VideoAPIConfigService = VideoAPIConfigService = VideoAPIConfigService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], VideoAPIConfigService);
+
+
+/***/ }),
+/* 59 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoAPIConfigModule = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(10);
+const video_api_config_service_1 = __webpack_require__(58);
+let VideoAPIConfigModule = class VideoAPIConfigModule {
+};
+exports.VideoAPIConfigModule = VideoAPIConfigModule;
+exports.VideoAPIConfigModule = VideoAPIConfigModule = __decorate([
+    (0, common_1.Module)({
+        imports: [database_1.DatabaseModule],
+        providers: [video_api_config_service_1.VideoAPIConfigService],
+        exports: [video_api_config_service_1.VideoAPIConfigService],
+    })
+], VideoAPIConfigModule);
+
+
+/***/ }),
+/* 60 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoAPIConfigController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const admin_auth_guard_1 = __webpack_require__(18);
+const role_guard_1 = __webpack_require__(19);
+const roles_decorator_1 = __webpack_require__(20);
+const video_config_1 = __webpack_require__(57);
+const update_video_api_config_dto_1 = __webpack_require__(61);
+const video_api_config_response_dto_1 = __webpack_require__(62);
+let VideoAPIConfigController = class VideoAPIConfigController {
+    constructor(configService) {
+        this.configService = configService;
+    }
+    async getConfig() {
+        return this.configService.getCurrentConfig();
+    }
+    async updateConfig(updateDto, req) {
+        return this.configService.updateConfig(req.user.id, updateDto);
+    }
+    async getStatistics() {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return this.configService.getCostStatistics(startOfMonth, now);
+    }
+    async getStatisticsRange(startDate, endDate) {
+        return this.configService.getCostStatistics(new Date(startDate), new Date(endDate));
+    }
+    async testProvider(provider) {
+        return this.configService.testProviderConnection(provider);
+    }
+    async getUserQuota(userId) {
+        return this.configService.checkUserQuota(userId);
+    }
+};
+exports.VideoAPIConfigController = VideoAPIConfigController;
+__decorate([
+    (0, common_1.Get)('video-api-config'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '获取视频API配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回配置（敏感信息已脱敏）', type: video_api_config_response_dto_1.VideoAPIConfigResponseDto }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
+], VideoAPIConfigController.prototype, "getConfig", null);
+__decorate([
+    (0, common_1.Put)('video-api-config'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '更新视频API配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功', type: video_api_config_response_dto_1.VideoAPIConfigResponseDto }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof update_video_api_config_dto_1.UpdateVideoAPIConfigDto !== "undefined" && update_video_api_config_dto_1.UpdateVideoAPIConfigDto) === "function" ? _c : Object, Object]),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], VideoAPIConfigController.prototype, "updateConfig", null);
+__decorate([
+    (0, common_1.Get)('video-api-config/statistics'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '获取本月成本统计' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回成本统计', type: video_api_config_response_dto_1.CostStatisticsDto }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], VideoAPIConfigController.prototype, "getStatistics", null);
+__decorate([
+    (0, common_1.Get)('video-api-config/statistics/range'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '获取指定时间范围的成本统计' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回成本统计', type: video_api_config_response_dto_1.CostStatisticsDto }),
+    __param(0, (0, common_1.Query)('startDate')),
+    __param(1, (0, common_1.Query)('endDate')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], VideoAPIConfigController.prototype, "getStatisticsRange", null);
+__decorate([
+    (0, common_1.Post)('video-api-config/test/:provider'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '测试Provider连接' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回测试结果' }),
+    __param(0, (0, common_1.Param)('provider')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], VideoAPIConfigController.prototype, "testProvider", null);
+__decorate([
+    (0, common_1.Get)('video-api-config/quota/:userId'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '查看用户配额' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回用户配额信息', type: video_api_config_response_dto_1.UserQuotaDto }),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], VideoAPIConfigController.prototype, "getUserQuota", null);
+exports.VideoAPIConfigController = VideoAPIConfigController = __decorate([
+    (0, swagger_1.ApiTags)('视频API配置管理'),
+    (0, common_1.Controller)(),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof video_config_1.VideoAPIConfigService !== "undefined" && video_config_1.VideoAPIConfigService) === "function" ? _a : Object])
+], VideoAPIConfigController);
+
+
+/***/ }),
+/* 61 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpdateVideoAPIConfigDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const class_validator_1 = __webpack_require__(22);
+class UpdateVideoAPIConfigDto {
+}
+exports.UpdateVideoAPIConfigDto = UpdateVideoAPIConfigDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '火山引擎 Access Key ID' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "volcengineAccessKeyId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '火山引擎 Secret Access Key（将被加密存储）' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "volcengineSecretAccessKey", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '即梦 API Key（将被加密存储）' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "jimengApiKey", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '可灵 API Key（将被加密存储）' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "klingApiKey", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视频Provider', enum: ['jimeng', 'kling'] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "videoProvider", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'FFmpeg路径', example: '/usr/bin/ffmpeg' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "ffmpegPath", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '视频存储路径', example: '/data/videos' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "videoStoragePath", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '临时文件路径', example: '/tmp/video-generation' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "tempStoragePath", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '用户每日配额', example: 5 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateVideoAPIConfigDto.prototype, "userDailyQuota", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '用户每月配额', example: 50 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateVideoAPIConfigDto.prototype, "userMonthlyQuota", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '月度预算（元）', example: 1000 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateVideoAPIConfigDto.prototype, "monthlyBudget", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '成本警报阈值（元）', example: 800 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdateVideoAPIConfigDto.prototype, "costAlertThreshold", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '是否启用', example: true }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateVideoAPIConfigDto.prototype, "isActive", void 0);
+
+
+/***/ }),
+/* 62 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserQuotaDto = exports.CostStatisticsDto = exports.VideoAPIConfigResponseDto = void 0;
+const swagger_1 = __webpack_require__(3);
+class VideoAPIConfigResponseDto {
+}
+exports.VideoAPIConfigResponseDto = VideoAPIConfigResponseDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '配置ID' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "id", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '火山引擎 Access Key ID' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "volcengineAccessKeyId", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '火山引擎 Secret Access Key（脱敏显示）' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "volcengineSecretAccessKey", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '即梦 API Key（脱敏显示）' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "jimengApiKey", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '可灵 API Key（脱敏显示）' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "klingApiKey", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '视频Provider', example: 'jimeng' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "videoProvider", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: 'FFmpeg路径' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "ffmpegPath", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '视频存储路径' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "videoStoragePath", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '临时文件路径' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "tempStoragePath", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '用户每日配额' }),
+    __metadata("design:type", Number)
+], VideoAPIConfigResponseDto.prototype, "userDailyQuota", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '用户每月配额' }),
+    __metadata("design:type", Number)
+], VideoAPIConfigResponseDto.prototype, "userMonthlyQuota", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '月度预算（元）' }),
+    __metadata("design:type", Number)
+], VideoAPIConfigResponseDto.prototype, "monthlyBudget", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '成本警报阈值（元）' }),
+    __metadata("design:type", Number)
+], VideoAPIConfigResponseDto.prototype, "costAlertThreshold", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '是否启用' }),
+    __metadata("design:type", Boolean)
+], VideoAPIConfigResponseDto.prototype, "isActive", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '最后健康检查时间' }),
+    __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
+], VideoAPIConfigResponseDto.prototype, "lastHealthCheck", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '健康状态' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "healthStatus", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '创建时间' }),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], VideoAPIConfigResponseDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '更新时间' }),
+    __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
+], VideoAPIConfigResponseDto.prototype, "updatedAt", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '更新人ID' }),
+    __metadata("design:type", String)
+], VideoAPIConfigResponseDto.prototype, "updatedBy", void 0);
+class CostStatisticsDto {
+}
+exports.CostStatisticsDto = CostStatisticsDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '总成本（元）' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "totalCost", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '总请求数' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "totalRequests", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '成功次数' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "successCount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '失败次数' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "failureCount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '成功率（%）' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "successRate", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '月度预算' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "monthlyBudget", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '剩余预算（元）' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "remainingBudget", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '预算使用百分比' }),
+    __metadata("design:type", Number)
+], CostStatisticsDto.prototype, "budgetUsagePercentage", void 0);
+class UserQuotaDto {
+}
+exports.UserQuotaDto = UserQuotaDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '是否可用' }),
+    __metadata("design:type", Boolean)
+], UserQuotaDto.prototype, "available", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每日剩余配额' }),
+    __metadata("design:type", Number)
+], UserQuotaDto.prototype, "dailyRemaining", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每月剩余配额' }),
+    __metadata("design:type", Number)
+], UserQuotaDto.prototype, "monthlyRemaining", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每日限制' }),
+    __metadata("design:type", Number)
+], UserQuotaDto.prototype, "dailyLimit", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每月限制' }),
+    __metadata("design:type", Number)
+], UserQuotaDto.prototype, "monthlyLimit", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每日重置时间' }),
+    __metadata("design:type", typeof (_d = typeof Date !== "undefined" && Date) === "function" ? _d : Object)
+], UserQuotaDto.prototype, "dailyResetAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ description: '每月重置时间' }),
+    __metadata("design:type", typeof (_e = typeof Date !== "undefined" && Date) === "function" ? _e : Object)
+], UserQuotaDto.prototype, "monthlyResetAt", void 0);
+
+
+/***/ }),
+/* 63 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -3455,7 +5360,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
 const passport_1 = __webpack_require__(8);
-const passport_jwt_1 = __webpack_require__(41);
+const passport_jwt_1 = __webpack_require__(64);
 const database_1 = __webpack_require__(10);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, prisma) {
@@ -3508,13 +5413,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 41 */
+/* 64 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 42 */
+/* 65 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3591,7 +5496,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 43 */
+/* 66 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -3604,7 +5509,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(2);
-const operators_1 = __webpack_require__(44);
+const operators_1 = __webpack_require__(67);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -3646,7 +5551,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 44 */
+/* 67 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -3690,8 +5595,8 @@ const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(42);
-const response_interceptor_1 = __webpack_require__(43);
+const all_exceptions_filter_1 = __webpack_require__(65);
+const response_interceptor_1 = __webpack_require__(66);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);

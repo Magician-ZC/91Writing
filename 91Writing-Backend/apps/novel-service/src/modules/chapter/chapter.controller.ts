@@ -409,9 +409,9 @@ export class ChapterController {
   })
   @ApiParam({ name: 'novelId', description: '小说ID' })
   @ApiParam({ name: 'id', description: '章节ID' })
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @ApiResponse({
-    status: 204,
+    status: 200,
     description: '视频删除成功',
   })
   async deleteVideo(
@@ -419,6 +419,7 @@ export class ChapterController {
     @Param('id') id: string,
     @Request() req,
   ) {
-    return this.chapterService.deleteVideo(novelId, id, req.user.id);
+    await this.chapterService.deleteVideo(novelId, id, req.user.id);
+    return { message: '视频删除成功' };
   }
 }

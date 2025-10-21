@@ -41,6 +41,7 @@ export class StoryboardAgentService {
         novel: {
           select: {
             id: true,
+            userId: true,
             title: true,
             genre: true,
             settings: true,

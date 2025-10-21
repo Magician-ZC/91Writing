@@ -98,8 +98,14 @@ const routes = [
       {
         path: 'packages',
         name: 'AdminPackages',
-        component: () => import('../views/admin/packages/PackageManagement.vue'),
+        component: () => import('../views/admin/packages/PackageManagementComplete.vue'),
         meta: { title: '套餐管理 - 91Writing' }
+      },
+      {
+        path: 'video-api-config',
+        name: 'VideoAPIConfig',
+        component: () => import('../views/admin/settings/VideoGenerationConfig.vue'),
+        meta: { title: '视频API配置 - 91Writing' }
       },
       {
         path: 'analytics',
@@ -263,8 +269,8 @@ const routes = [
       {
         path: 'subscription',
         name: 'SubscriptionPlans',
-        component: () => import('../views/SubscriptionPlans.vue'),
-        meta: { title: '套餐订阅 - 91Writing' }
+        component: () => import('../views/SubscriptionPlansNew.vue'),
+        meta: { title: '订阅套餐 - 91Writing' }
       },
       {
         path: 'payment/success',

@@ -1,224 +1,333 @@
 <template>
-  <div class="agent-config">
-    <el-card>
+  <div class="agent-prompt-config">
+    <el-card class="config-card">
       <template #header>
         <div class="card-header">
-          <span class="title">
-            <el-icon><Setting /></el-icon>
-            Agent提示词配置
+          <span class="header-title">
+            <el-icon><cpu /></el-icon>
+            Agent提示词配置管理
           </span>
-          <el-button type="primary" :icon="Plus" @click="createNew">
+          <el-button type="primary" :icon="Plus" @click="showCreateDialog">
             创建新配置
           </el-button>
         </div>
       </template>
 
-      <!-- Agent类型过滤 -->
-      <el-radio-group v-model="filterAgentType" class="filter-group">
-        <el-radio-button label="all">全部</el-radio-button>
-        <el-radio-button label="SCRIPT_GENERATOR">分镜脚本</el-radio-button>
-        <el-radio-button label="IMAGE_OPTIMIZER">文生图</el-radio-button>
-        <el-radio-button label="VIDEO_OPTIMIZER">图生视频</el-radio-button>
-        <el-radio-button label="CONSISTENCY_KEEPER">一致性</el-radio-button>
-      </el-radio-group>
-
-      <!-- 配置列表 -->
-      <el-table 
-        :data="filteredConfigs" 
-        v-loading="loading"
-        class="config-table"
-      >
-        <el-table-column prop="name" label="配置名称" min-width="200" />
-        <el-table-column prop="agentType" label="Agent类型" width="150">
-          <template #default="{ row }">
-            <el-tag :type="agentTypeColor(row.agentType)">
-              {{ agentTypeName(row.agentType) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="version" label="版本" width="80" />
-        <el-table-column prop="isActive" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.isActive ? 'success' : 'info'" size="small">
-              {{ row.isActive ? '启用' : '停用' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="使用统计" width="180">
-          <template #default="{ row }">
-            <div class="stats">
-              <span>总计: {{ row.usageCount }}</span>
-              <el-tag type="success" size="small">成功: {{ row.successCount }}</el-tag>
-              <el-tag type="danger" size="small">失败: {{ row.failureCount }}</el-tag>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column prop="successRate" label="成功率" width="100">
-          <template #default="{ row }">
-            <span :class="{ 'high-rate': row.successRate >= 90 }">
-              {{ row.successRate }}%
+      <!-- Agent类型选择 -->
+      <el-tabs v-model="selectedAgentType" @tab-change="loadConfigs">
+        <el-tab-pane label="分镜脚本Agent" name="SCRIPT_GENERATOR">
+          <template #label>
+            <span class="tab-label">
+              <el-icon><Film /></el-icon>
+              分镜脚本Agent
             </span>
           </template>
-        </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="viewConfig(row)">查看</el-button>
-            <el-button size="small" type="primary" @click="editConfig(row)">编辑</el-button>
-            <el-button size="small" type="warning" @click="testConfig(row)">测试</el-button>
-            <el-button 
-              size="small" 
-              :type="row.isActive ? 'info' : 'success'"
-              @click="toggleActive(row)"
-            >
-              {{ row.isActive ? '停用' : '启用' }}
-            </el-button>
+        </el-tab-pane>
+        
+        <el-tab-pane label="文生图Agent" name="IMAGE_OPTIMIZER">
+          <template #label>
+            <span class="tab-label">
+              <el-icon><Picture /></el-icon>
+              文生图Agent
+            </span>
           </template>
-        </el-table-column>
-      </el-table>
+        </el-tab-pane>
+        
+        <el-tab-pane label="图生视频Agent" name="VIDEO_OPTIMIZER">
+          <template #label>
+            <span class="tab-label">
+              <el-icon><VideoCamera /></el-icon>
+              图生视频Agent
+            </span>
+          </template>
+        </el-tab-pane>
+        
+        <el-tab-pane label="一致性Agent" name="CONSISTENCY_KEEPER">
+          <template #label>
+            <span class="tab-label">
+              <el-icon><Connection /></el-icon>
+              一致性Agent
+            </span>
+          </template>
+        </el-tab-pane>
+      </el-tabs>
+
+      <!-- 配置列表 -->
+      <div class="configs-list" v-loading="loading">
+        <el-empty v-if="configs.length === 0" description="暂无配置" />
+        
+        <el-collapse v-else v-model="activeConfigs" accordion>
+          <el-collapse-item 
+            v-for="config in configs" 
+            :key="config.id" 
+            :name="config.id"
+          >
+            <template #title>
+              <div class="config-title">
+                <div class="title-left">
+                  <el-tag v-if="config.isActive" type="success" size="small">
+                    <el-icon><Select /></el-icon>
+                    当前激活
+                  </el-tag>
+                  <span class="config-name">{{ config.name }}</span>
+                  <el-tag type="info" size="small">v{{ config.version }}</el-tag>
+                </div>
+                <div class="title-right">
+                  <el-statistic 
+                    :value="config.successRate" 
+                    suffix="%" 
+                    title="成功率"
+                    :value-style="{ fontSize: '14px', color: config.successRate >= 90 ? '#67c23a' : '#e6a23c' }"
+                  />
+                  <el-statistic 
+                    :value="config.usageCount" 
+                    title="使用次数"
+                    :value-style="{ fontSize: '14px' }"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <!-- 配置详情 -->
+            <div class="config-detail">
+              <!-- 系统提示词 -->
+              <el-form label-width="120px">
+                <el-form-item label="配置描述">
+                  <div class="description-text">{{ config.description || '无描述' }}</div>
+                </el-form-item>
+
+                <el-form-item label="系统提示词">
+                  <el-input
+                    :model-value="config.systemPrompt"
+                    type="textarea"
+                    :rows="8"
+                    readonly
+                    class="readonly-textarea"
+                  />
+                </el-form-item>
+
+                <el-form-item label="模板提示词">
+                  <el-input
+                    :model-value="config.templatePrompt"
+                    type="textarea"
+                    :rows="6"
+                    readonly
+                    class="readonly-textarea"
+                  />
+                </el-form-item>
+
+                <el-form-item label="参数配置">
+                  <el-input
+                    :model-value="JSON.stringify(config.parameters, null, 2)"
+                    type="textarea"
+                    :rows="4"
+                    readonly
+                    class="readonly-textarea"
+                  />
+                </el-form-item>
+
+                <el-form-item label="统计信息">
+                  <el-row :gutter="20">
+                    <el-col :span="6">
+                      <el-statistic title="使用次数" :value="config.usageCount" />
+                    </el-col>
+                    <el-col :span="6">
+                      <el-statistic title="成功次数" :value="config.successCount" />
+                    </el-col>
+                    <el-col :span="6">
+                      <el-statistic title="失败次数" :value="config.failureCount" />
+                    </el-col>
+                    <el-col :span="6">
+                      <el-statistic title="成功率" :value="config.successRate" suffix="%" />
+                    </el-col>
+                  </el-row>
+                </el-form-item>
+
+                <el-form-item label="时间信息">
+                  <div class="time-info">
+                    <span>创建时间: {{ formatDate(config.createdAt) }}</span>
+                    <span>更新时间: {{ formatDate(config.updatedAt) }}</span>
+                  </div>
+                </el-form-item>
+              </el-form>
+
+              <!-- 操作按钮 -->
+              <div class="config-actions">
+                <el-button 
+                  type="primary" 
+                  :icon="Edit" 
+                  @click="showEditDialog(config)"
+                >
+                  编辑配置
+                </el-button>
+                <el-button 
+                  type="success" 
+                  :icon="CircleCheck" 
+                  @click="activateConfig(config)"
+                  :disabled="config.isActive"
+                >
+                  {{ config.isActive ? '已激活' : '设为激活' }}
+                </el-button>
+                <el-button 
+                  type="info" 
+                  :icon="DocumentCopy" 
+                  @click="duplicateConfig(config)"
+                >
+                  复制版本
+                </el-button>
+                <el-button 
+                  type="warning" 
+                  :icon="Testing" 
+                  @click="showTestDialog(config)"
+                >
+                  测试效果
+                </el-button>
+                <el-button 
+                  type="danger" 
+                  :icon="Delete" 
+                  @click="deleteConfig(config)"
+                  :disabled="config.isActive"
+                >
+                  删除
+                </el-button>
+              </div>
+            </div>
+          </el-collapse-item>
+        </el-collapse>
+      </div>
     </el-card>
 
-    <!-- 编辑对话框 -->
+    <!-- 创建/编辑对话框 -->
     <el-dialog
-      v-model="showEditDialog"
-      :title="editMode === 'create' ? '创建Agent配置' : '编辑Agent配置'"
+      v-model="showDialog"
+      :title="dialogMode === 'create' ? '创建Agent配置' : '编辑Agent配置'"
       width="900px"
       :close-on-click-modal="false"
     >
-      <el-form :model="editForm" label-width="120px">
-        <el-form-item label="Agent类型">
-          <el-select v-model="editForm.agentType" :disabled="editMode === 'edit'">
-            <el-option label="分镜脚本生成" value="SCRIPT_GENERATOR" />
-            <el-option label="文生图优化" value="IMAGE_OPTIMIZER" />
-            <el-option label="图生视频优化" value="VIDEO_OPTIMIZER" />
-            <el-option label="一致性管理" value="CONSISTENCY_KEEPER" />
+      <el-form :model="configForm" :rules="formRules" ref="formRef" label-width="120px">
+        <el-form-item label="Agent类型" prop="agentType">
+          <el-select 
+            v-model="configForm.agentType" 
+            placeholder="选择Agent类型"
+            :disabled="dialogMode === 'edit'"
+            style="width: 100%"
+          >
+            <el-option label="分镜脚本生成Agent" value="SCRIPT_GENERATOR">
+              <span class="option-item">
+                <el-icon><Film /></el-icon>
+                分镜脚本生成Agent
+              </span>
+            </el-option>
+            <el-option label="文生图优化Agent" value="IMAGE_OPTIMIZER">
+              <span class="option-item">
+                <el-icon><Picture /></el-icon>
+                文生图优化Agent
+              </span>
+            </el-option>
+            <el-option label="图生视频优化Agent" value="VIDEO_OPTIMIZER">
+              <span class="option-item">
+                <el-icon><VideoCamera /></el-icon>
+                图生视频优化Agent
+              </span>
+            </el-option>
+            <el-option label="一致性管理Agent" value="CONSISTENCY_KEEPER">
+              <span class="option-item">
+                <el-icon><Connection /></el-icon>
+                一致性管理Agent
+              </span>
+            </el-option>
           </el-select>
         </el-form-item>
 
-        <el-form-item label="配置名称">
-          <el-input v-model="editForm.name" placeholder="例如：分镜脚本生成器 v2" />
-        </el-form-item>
-
-        <el-form-item label="系统提示词">
-          <el-input
-            v-model="editForm.systemPrompt"
-            type="textarea"
-            :rows="8"
-            placeholder="输入系统提示词..."
-            class="monospace-input"
+        <el-form-item label="配置名称" prop="name">
+          <el-input 
+            v-model="configForm.name" 
+            placeholder="例如: 优化的分镜生成v2"
           />
-          <div class="form-tip">
-            系统提示词定义了Agent的角色和基本能力
-          </div>
         </el-form-item>
 
-        <el-form-item label="模板提示词">
-          <el-input
-            v-model="editForm.templatePrompt"
-            type="textarea"
-            :rows="6"
-            placeholder="输入模板提示词，支持变量..."
-            class="monospace-input"
-          />
-          <div class="form-tip">
-            模板提示词支持变量替换，如 {sceneCount}, {totalDuration}
-          </div>
-        </el-form-item>
-
-        <el-form-item label="附加参数">
-          <el-input
-            v-model="editForm.parametersJson"
-            type="textarea"
-            :rows="3"
-            placeholder='{"temperature": 0.7, "maxTokens": 2000}'
-            class="monospace-input"
-          />
-          <div class="form-tip">
-            JSON格式的附加参数配置
-          </div>
-        </el-form-item>
-
-        <el-form-item label="配置描述">
-          <el-input
-            v-model="editForm.description"
+        <el-form-item label="配置描述" prop="description">
+          <el-input 
+            v-model="configForm.description" 
             type="textarea"
             :rows="2"
-            placeholder="简要描述这个配置的用途和特点"
+            placeholder="简要描述此配置的特点和改进"
           />
         </el-form-item>
 
-        <el-form-item label="启用状态">
-          <el-switch v-model="editForm.isActive" />
+        <el-form-item label="系统提示词" prop="systemPrompt">
+          <el-input
+            v-model="configForm.systemPrompt"
+            type="textarea"
+            :rows="10"
+            placeholder="Agent的角色定义和基本指令"
+          />
+          <div class="form-tip">定义Agent的角色、能力和行为准则</div>
+        </el-form-item>
+
+        <el-form-item label="模板提示词" prop="templatePrompt">
+          <el-input
+            v-model="configForm.templatePrompt"
+            type="textarea"
+            :rows="8"
+            placeholder="具体任务的提示词模板，可使用变量如 {content}, {chapter}"
+          />
+          <div class="form-tip">具体任务的提示词模板，支持变量替换</div>
+        </el-form-item>
+
+        <el-form-item label="参数配置" prop="parameters">
+          <el-input
+            v-model="parametersJson"
+            type="textarea"
+            :rows="5"
+            placeholder='{"temperature": 0.7, "maxTokens": 2000}'
+          />
+          <div class="form-tip">JSON格式的附加参数（temperature、maxTokens等）</div>
+        </el-form-item>
+
+        <el-form-item label="是否启用">
+          <el-switch 
+            v-model="configForm.isActive"
+            active-text="启用"
+            inactive-text="禁用"
+          />
+          <div class="form-tip">启用后将立即替换当前激活的配置</div>
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveEdit" :loading="saving">
-          保存
+        <el-button @click="showDialog = false">取消</el-button>
+        <el-button 
+          type="primary" 
+          @click="handleSubmit"
+          :loading="saving"
+        >
+          {{ dialogMode === 'create' ? '创建' : '保存' }}
         </el-button>
       </template>
     </el-dialog>
 
-    <!-- 查看对话框 -->
-    <el-dialog
-      v-model="showViewDialog"
-      title="配置详情"
-      width="900px"
-    >
-      <el-descriptions :column="2" border v-if="viewingConfig">
-        <el-descriptions-item label="配置ID">{{ viewingConfig.id }}</el-descriptions-item>
-        <el-descriptions-item label="Agent类型">
-          <el-tag :type="agentTypeColor(viewingConfig.agentType)">
-            {{ agentTypeName(viewingConfig.agentType) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="配置名称" :span="2">{{ viewingConfig.name }}</el-descriptions-item>
-        <el-descriptions-item label="版本">v{{ viewingConfig.version }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="viewingConfig.isActive ? 'success' : 'info'">
-            {{ viewingConfig.isActive ? '启用' : '停用' }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="创建时间" :span="2">
-          {{ formatDate(viewingConfig.createdAt) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="更新时间" :span="2">
-          {{ formatDate(viewingConfig.updatedAt) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="系统提示词" :span="2">
-          <pre class="prompt-display">{{ viewingConfig.systemPrompt }}</pre>
-        </el-descriptions-item>
-        <el-descriptions-item label="模板提示词" :span="2">
-          <pre class="prompt-display">{{ viewingConfig.templatePrompt }}</pre>
-        </el-descriptions-item>
-        <el-descriptions-item label="附加参数" :span="2" v-if="viewingConfig.parameters">
-          <pre class="prompt-display">{{ JSON.stringify(viewingConfig.parameters, null, 2) }}</pre>
-        </el-descriptions-item>
-        <el-descriptions-item label="描述" :span="2" v-if="viewingConfig.description">
-          {{ viewingConfig.description }}
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
-
     <!-- 测试对话框 -->
     <el-dialog
-      v-model="showTestDialog"
-      title="测试Agent配置"
-      width="900px"
+      v-model="showTestDialog_"
+      title="测试Agent效果"
+      width="1000px"
+      :close-on-click-modal="false"
     >
       <el-form label-width="120px">
         <el-form-item label="测试输入">
           <el-input
-            v-model="testInput"
+            v-model="testForm.testInput"
             type="textarea"
             :rows="8"
-            placeholder="输入测试内容..."
+            placeholder="输入测试内容（如章节内容、场景描述等）"
           />
         </el-form-item>
 
         <el-form-item>
           <el-button 
             type="primary" 
+            :icon="Testing" 
             @click="runTest"
             :loading="testing"
           >
@@ -226,233 +335,341 @@
           </el-button>
         </el-form-item>
 
-        <el-divider v-if="testResult" />
-
-        <el-form-item label="测试结果" v-if="testResult">
+        <!-- 测试结果 -->
+        <el-divider v-if="testResult">测试结果</el-divider>
+        
+        <div v-if="testResult" class="test-result">
           <el-alert
             :title="testResult.success ? '测试成功' : '测试失败'"
             :type="testResult.success ? 'success' : 'error'"
             :closable="false"
             show-icon
           >
-            <div v-if="testResult.success">
-              <div>耗时: {{ testResult.duration }}ms</div>
-              <div v-if="testResult.tokenUsage">
-                Token使用: 输入{{ testResult.tokenUsage.input }} + 
-                输出{{ testResult.tokenUsage.output }} = 
-                总计{{ testResult.tokenUsage.total }}
-              </div>
-            </div>
-            <div v-else>
-              {{ testResult.error }}
+            <div>耗时: {{ testResult.duration }}ms</div>
+            <div v-if="testResult.tokenUsage">
+              Token使用: 
+              输入{{ testResult.tokenUsage.input }} + 
+              输出{{ testResult.tokenUsage.output }} = 
+              总计{{ testResult.tokenUsage.total }}
             </div>
           </el-alert>
 
-          <pre v-if="testResult.result" class="test-result">{{ JSON.stringify(testResult.result, null, 2) }}</pre>
-        </el-form-item>
+          <el-form-item label="生成结果" v-if="testResult.success">
+            <el-input
+              :model-value="JSON.stringify(testResult.result, null, 2)"
+              type="textarea"
+              :rows="15"
+              readonly
+              class="result-textarea"
+            />
+          </el-form-item>
+
+          <el-form-item label="错误信息" v-if="!testResult.success">
+            <el-alert type="error" :title="testResult.error" :closable="false" />
+          </el-form-item>
+        </div>
       </el-form>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Setting, Plus } from '@element-plus/icons-vue'
+import { 
+  Cpu, 
+  Plus, 
+  Edit, 
+  Delete, 
+  CircleCheck, 
+  DocumentCopy, 
+  Testing,
+  Film,
+  Picture,
+  VideoCamera,
+  Connection,
+  Select
+} from '@element-plus/icons-vue'
 import apiManager from '@/services/apiManager'
 
 // 状态
 const loading = ref(false)
 const saving = ref(false)
 const testing = ref(false)
+const selectedAgentType = ref('SCRIPT_GENERATOR')
 const configs = ref([])
-const filterAgentType = ref('all')
-const showEditDialog = ref(false)
-const showViewDialog = ref(false)
-const showTestDialog = ref(false)
-const editMode = ref('create')
-const viewingConfig = ref(null)
-const testingConfig = ref(null)
-const testInput = ref('')
-const testResult = ref(null)
+const activeConfigs = ref([])
+const showDialog = ref(false)
+const showTestDialog_ = ref(false)
+const dialogMode = ref('create') // 'create' | 'edit'
+const formRef = ref(null)
 
-// 编辑表单
-const editForm = ref({
+// 配置表单
+const configForm = reactive({
+  id: '',
   agentType: 'SCRIPT_GENERATOR',
   name: '',
   systemPrompt: '',
   templatePrompt: '',
-  parametersJson: '{}',
+  parameters: {},
   description: '',
   isActive: true
 })
 
-// 计算属性
-const filteredConfigs = computed(() => {
-  if (filterAgentType.value === 'all') {
-    return configs.value
-  }
-  return configs.value.filter(c => c.agentType === filterAgentType.value)
+// 测试表单
+const testForm = reactive({
+  agentType: 'SCRIPT_GENERATOR',
+  systemPrompt: '',
+  templatePrompt: '',
+  testInput: '',
+  parameters: {}
 })
+
+const testResult = ref(null)
+
+// 参数JSON字符串
+const parametersJson = computed({
+  get: () => JSON.stringify(configForm.parameters || {}, null, 2),
+  set: (val) => {
+    try {
+      configForm.parameters = JSON.parse(val)
+    } catch (e) {
+      // 保持原值
+    }
+  }
+})
+
+// 表单验证规则
+const formRules = {
+  agentType: [
+    { required: true, message: '请选择Agent类型', trigger: 'change' }
+  ],
+  name: [
+    { required: true, message: '请输入配置名称', trigger: 'blur' },
+    { min: 2, max: 100, message: '长度在 2 到 100 个字符', trigger: 'blur' }
+  ],
+  systemPrompt: [
+    { required: true, message: '请输入系统提示词', trigger: 'blur' },
+    { min: 10, message: '系统提示词至少10个字符', trigger: 'blur' }
+  ],
+  templatePrompt: [
+    { required: true, message: '请输入模板提示词', trigger: 'blur' },
+    { min: 10, message: '模板提示词至少10个字符', trigger: 'blur' }
+  ]
+}
+
+// Agent类型信息
+const agentTypeInfo = {
+  'SCRIPT_GENERATOR': {
+    icon: 'Film',
+    name: '分镜脚本生成Agent',
+    description: '负责分析章节内容，生成3-8个分镜场景描述'
+  },
+  'IMAGE_OPTIMIZER': {
+    icon: 'Picture',
+    name: '文生图优化Agent',
+    description: '负责将分镜描述优化为文生图提示词'
+  },
+  'VIDEO_OPTIMIZER': {
+    icon: 'VideoCamera',
+    name: '图生视频优化Agent',
+    description: '负责生成视频运动提示词'
+  },
+  'CONSISTENCY_KEEPER': {
+    icon: 'Connection',
+    name: '一致性管理Agent',
+    description: '负责管理角色、场景的视觉一致性'
+  }
+}
 
 // 方法
 const loadConfigs = async () => {
   loading.value = true
   try {
-    const response = await apiManager.get('/admin/agent-prompts')
-    configs.value = response.data.map(config => ({
-      ...config,
-      successRate: config.usageCount > 0 
-        ? Math.round((config.successCount / config.usageCount) * 100)
-        : 0
-    }))
+    const response = await apiManager.get('/admin/agent-prompts', {
+      params: { agentType: selectedAgentType.value }
+    })
+    configs.value = response.data
   } catch (error) {
-    ElMessage.error('加载配置失败')
+    ElMessage.error(error.message || '加载配置失败')
   } finally {
     loading.value = false
   }
 }
 
-const createNew = () => {
-  editMode.value = 'create'
-  editForm.value = {
-    agentType: 'SCRIPT_GENERATOR',
+const showCreateDialog = () => {
+  dialogMode.value = 'create'
+  Object.assign(configForm, {
+    id: '',
+    agentType: selectedAgentType.value,
     name: '',
     systemPrompt: '',
     templatePrompt: '',
-    parametersJson: '{}',
+    parameters: {
+      temperature: 0.7,
+      maxTokens: 2000
+    },
     description: '',
     isActive: true
-  }
-  showEditDialog.value = true
+  })
+  showDialog.value = true
 }
 
-const editConfig = (config) => {
-  editMode.value = 'edit'
-  editForm.value = {
+const showEditDialog = (config) => {
+  dialogMode.value = 'edit'
+  Object.assign(configForm, {
     id: config.id,
     agentType: config.agentType,
     name: config.name,
     systemPrompt: config.systemPrompt,
     templatePrompt: config.templatePrompt,
-    parametersJson: JSON.stringify(config.parameters || {}, null, 2),
-    description: config.description || '',
+    parameters: config.parameters || {},
+    description: config.description,
     isActive: config.isActive
-  }
-  showEditDialog.value = true
+  })
+  showDialog.value = true
 }
 
-const viewConfig = (config) => {
-  viewingConfig.value = config
-  showViewDialog.value = true
-}
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  
+  await formRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    saving.value = true
+    try {
+      // 解析参数JSON
+      let params = configForm.parameters
+      if (typeof params === 'string') {
+        params = JSON.parse(params)
+      }
 
-const testConfig = (config) => {
-  testingConfig.value = config
-  testInput.value = ''
-  testResult.value = null
-  showTestDialog.value = true
-}
+      const data = {
+        ...configForm,
+        parameters: params
+      }
+      delete data.id
 
-const saveEdit = async () => {
-  // 验证参数JSON
-  let parameters = {}
-  try {
-    parameters = JSON.parse(editForm.value.parametersJson)
-  } catch (error) {
-    ElMessage.error('附加参数格式错误，请检查JSON格式')
-    return
-  }
+      if (dialogMode.value === 'create') {
+        await apiManager.post('/admin/agent-prompts', data)
+        ElMessage.success('配置创建成功')
+      } else {
+        await apiManager.put(`/admin/agent-prompts/${configForm.id}`, data)
+        ElMessage.success('配置更新成功')
+      }
 
-  saving.value = true
-  try {
-    const data = {
-      ...editForm.value,
-      parameters
+      showDialog.value = false
+      await loadConfigs()
+    } catch (error) {
+      ElMessage.error(error.message || '操作失败')
+    } finally {
+      saving.value = false
     }
-    delete data.parametersJson
+  })
+}
 
-    if (editMode.value === 'create') {
-      await apiManager.post('/admin/agent-prompts', data)
-      ElMessage.success('创建成功')
-    } else {
-      await apiManager.put(`/admin/agent-prompts/${data.id}`, data)
-      ElMessage.success('更新成功')
-    }
+const activateConfig = async (config) => {
+  try {
+    await ElMessageBox.confirm(
+      `设为激活后，将立即应用此配置。是否继续？`,
+      '确认激活',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
 
-    showEditDialog.value = false
+    await apiManager.put(`/admin/agent-prompts/${config.id}`, {
+      isActive: true
+    })
+    ElMessage.success('配置已激活')
     await loadConfigs()
   } catch (error) {
-    ElMessage.error(error.response?.data?.message || '保存失败')
-  } finally {
-    saving.value = false
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '激活失败')
+    }
   }
 }
 
-const toggleActive = async (config) => {
+const duplicateConfig = (config) => {
+  dialogMode.value = 'create'
+  Object.assign(configForm, {
+    id: '',
+    agentType: config.agentType,
+    name: `${config.name} (副本)`,
+    systemPrompt: config.systemPrompt,
+    templatePrompt: config.templatePrompt,
+    parameters: config.parameters || {},
+    description: config.description,
+    isActive: false
+  })
+  showDialog.value = true
+}
+
+const deleteConfig = async (config) => {
   try {
-    await apiManager.put(`/admin/agent-prompts/${config.id}`, {
-      isActive: !config.isActive
-    })
-    config.isActive = !config.isActive
-    ElMessage.success(config.isActive ? '已启用' : '已停用')
+    await ElMessageBox.confirm(
+      `确定删除配置"${config.name}"吗？此操作不可恢复。`,
+      '确认删除',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    await apiManager.delete(`/admin/agent-prompts/${config.id}`)
+    ElMessage.success('配置已删除')
+    await loadConfigs()
   } catch (error) {
-    ElMessage.error('操作失败')
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
+    }
   }
+}
+
+const showTestDialog = (config) => {
+  Object.assign(testForm, {
+    agentType: config.agentType,
+    systemPrompt: config.systemPrompt,
+    templatePrompt: config.templatePrompt,
+    parameters: config.parameters || {},
+    testInput: getDefaultTestInput(config.agentType)
+  })
+  testResult.value = null
+  showTestDialog_.value = true
 }
 
 const runTest = async () => {
-  if (!testInput.value.trim()) {
+  if (!testForm.testInput.trim()) {
     ElMessage.warning('请输入测试内容')
     return
   }
 
   testing.value = true
-  testResult.value = null
-
   try {
-    const response = await apiManager.post('/admin/agent-prompts/test', {
-      agentType: testingConfig.value.agentType,
-      systemPrompt: testingConfig.value.systemPrompt,
-      templatePrompt: testingConfig.value.templatePrompt,
-      testInput: testInput.value,
-      parameters: testingConfig.value.parameters
-    })
-
+    const response = await apiManager.post('/admin/agent-prompts/test', testForm)
     testResult.value = response.data
     ElMessage.success('测试完成')
   } catch (error) {
-    testResult.value = {
-      success: false,
-      error: error.response?.data?.message || '测试失败'
-    }
+    ElMessage.error(error.message || '测试失败')
   } finally {
     testing.value = false
   }
 }
 
-const agentTypeName = (type) => {
-  const names = {
-    'SCRIPT_GENERATOR': '分镜脚本',
-    'IMAGE_OPTIMIZER': '文生图优化',
-    'VIDEO_OPTIMIZER': '图生视频',
-    'CONSISTENCY_KEEPER': '一致性管理'
+const getDefaultTestInput = (agentType) => {
+  const testInputs = {
+    'SCRIPT_GENERATOR': '李明走进了古老的图书馆，阳光透过彩色玻璃窗洒在书架上...',
+    'IMAGE_OPTIMIZER': '李明站在图书馆中央，周围是高耸的书架',
+    'VIDEO_OPTIMIZER': '李明缓缓转头，目光扫过书架上的古籍',
+    'CONSISTENCY_KEEPER': '李明，25岁男性，黑色短发，深邃的眼睛'
   }
-  return names[type] || type
-}
-
-const agentTypeColor = (type) => {
-  const colors = {
-    'SCRIPT_GENERATOR': 'primary',
-    'IMAGE_OPTIMIZER': 'success',
-    'VIDEO_OPTIMIZER': 'warning',
-    'CONSISTENCY_KEEPER': 'info'
-  }
-  return colors[type] || ''
+  return testInputs[agentType] || '测试内容...'
 }
 
 const formatDate = (date) => {
-  if (!date) return '-'
   return new Date(date).toLocaleString('zh-CN')
 }
 
@@ -463,45 +680,92 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.agent-config {
+.agent-prompt-config {
   padding: 20px;
 
-  .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    .title {
+  .config-card {
+    .card-header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 500;
+
+      .header-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 500;
+      }
     }
   }
 
-  .filter-group {
-    margin-bottom: 20px;
+  .tab-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  .config-table {
-    .stats {
+  .configs-list {
+    margin-top: 20px;
+
+    .config-title {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-right: 20px;
+
+      .title-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .config-name {
+          font-size: 16px;
+          font-weight: 500;
+        }
+      }
+
+      .title-right {
+        display: flex;
+        gap: 30px;
+      }
+    }
+  }
+
+  .config-detail {
+    padding: 20px;
+    background: #f5f7fa;
+    border-radius: 4px;
+
+    .description-text {
+      color: #606266;
+      line-height: 1.6;
+    }
+
+    .readonly-textarea {
+      :deep(.el-textarea__inner) {
+        background: #fff;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 13px;
+      }
+    }
+
+    .time-info {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      font-size: 12px;
+      gap: 8px;
+      color: #606266;
+      font-size: 14px;
     }
 
-    .high-rate {
-      color: #67c23a;
-      font-weight: 500;
-    }
-  }
-
-  .monospace-input {
-    :deep(textarea) {
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-      font-size: 13px;
+    .config-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #dcdfe6;
+      justify-content: center;
     }
   }
 
@@ -511,28 +775,21 @@ onMounted(() => {
     margin-top: 4px;
   }
 
-  .prompt-display {
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 13px;
-    background: #f5f7fa;
-    padding: 12px;
-    border-radius: 4px;
-    max-height: 300px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+  .option-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .test-result {
-    margin-top: 12px;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 13px;
-    background: #f5f7fa;
-    padding: 12px;
-    border-radius: 4px;
-    max-height: 400px;
-    overflow-y: auto;
+    margin-top: 20px;
+
+    .result-textarea {
+      :deep(.el-textarea__inner) {
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-size: 13px;
+      }
+    }
   }
 }
 </style>
-

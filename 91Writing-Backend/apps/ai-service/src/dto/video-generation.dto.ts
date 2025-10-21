@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 
 /**
  * 视频生成请求DTO
+ * 用户可自定义所有参数，未指定则使用系统默认配置
  */
 export class GenerateVideoDto {
   @ApiProperty({ description: '章节ID' })
@@ -29,10 +30,76 @@ export class GenerateVideoDto {
   @Max(30)
   videoDuration?: number;
 
-  @ApiPropertyOptional({ description: '视觉风格', enum: ['realistic', 'anime', 'fantasy', 'scifi'] })
+  @ApiPropertyOptional({ description: '视觉风格', enum: ['realistic', 'anime', 'fantasy', 'scifi', 'ink-painting', 'oil-painting'] })
   @IsOptional()
   @IsString()
   visualStyle?: string;
+
+  // ========== 文生图自定义参数 ==========
+  @ApiPropertyOptional({ description: '图片分辨率', example: '1024x576' })
+  @IsOptional()
+  @IsString()
+  imageResolution?: string;
+
+  @ApiPropertyOptional({ description: '图片质量', enum: ['standard', 'high', 'ultra'] })
+  @IsOptional()
+  @IsString()
+  imageQuality?: string;
+
+  @ApiPropertyOptional({ description: '采样步数', minimum: 20, maximum: 50 })
+  @IsOptional()
+  @IsInt()
+  @Min(20)
+  @Max(50)
+  samplingSteps?: number;
+
+  @ApiPropertyOptional({ description: 'CFG Scale', minimum: 1, maximum: 20 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  cfgScale?: number;
+
+  @ApiPropertyOptional({ description: '负向提示词' })
+  @IsOptional()
+  @IsString()
+  negativePrompt?: string;
+
+  // ========== 图生视频自定义参数 ==========
+  @ApiPropertyOptional({ description: '视频分辨率', example: '1024x576' })
+  @IsOptional()
+  @IsString()
+  videoResolution?: string;
+
+  @ApiPropertyOptional({ description: '帧率（FPS）', enum: [24, 30, 60] })
+  @IsOptional()
+  @IsInt()
+  fps?: number;
+
+  @ApiPropertyOptional({ description: '运动幅度', enum: ['low', 'medium', 'high'] })
+  @IsOptional()
+  @IsString()
+  motionIntensity?: string;
+
+  @ApiPropertyOptional({ description: '视频质量', enum: ['standard', 'high', 'ultra'] })
+  @IsOptional()
+  @IsString()
+  videoQuality?: string;
+
+  @ApiPropertyOptional({ description: '压缩级别', enum: ['low', 'medium', 'high'] })
+  @IsOptional()
+  @IsString()
+  compressionLevel?: string;
+
+  @ApiPropertyOptional({ description: '转场效果', enum: ['none', 'fade', 'crossfade', 'slide', 'zoom'] })
+  @IsOptional()
+  @IsString()
+  transitionEffect?: string;
+
+  @ApiPropertyOptional({ description: '是否添加标题帧', default: true })
+  @IsOptional()
+  @IsBoolean()
+  addTitleFrame?: boolean;
 }
 
 /**
@@ -148,7 +215,7 @@ export class VideoPromptDto {
 
   @ApiProperty({ description: '运动幅度', enum: ['low', 'medium', 'high'], default: 'medium' })
   @IsString()
-  motionIntensity: string;
+  motionIntensity: 'low' | 'medium' | 'high';
 
   @ApiProperty({ description: '人物一致性ID' })
   @IsOptional()

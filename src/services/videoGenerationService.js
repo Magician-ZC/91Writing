@@ -5,20 +5,44 @@ import apiManager from './apiManager'
  */
 class VideoGenerationService {
   /**
-   * 生成章节视频
+   * 生成章节视频（支持完整参数）
    * @param {Object} params 生成参数
    * @param {string} params.chapterId 章节ID
    * @param {number} params.sceneCount 分镜数量
    * @param {number} params.videoDuration 视频时长
    * @param {string} params.visualStyle 视觉风格
    * @param {boolean} params.forceRegenerate 是否强制重新生成
+   * @param {string} params.imageResolution 图片分辨率
+   * @param {string} params.imageQuality 图片质量
+   * @param {number} params.samplingSteps 采样步数
+   * @param {number} params.cfgScale CFG Scale
+   * @param {string} params.negativePrompt 负向提示词
+   * @param {string} params.videoResolution 视频分辨率
+   * @param {number} params.fps 帧率
+   * @param {string} params.motionIntensity 运动幅度
+   * @param {string} params.videoQuality 视频质量
+   * @param {string} params.compressionLevel 压缩级别
+   * @param {string} params.transitionEffect 转场效果
+   * @param {boolean} params.addTitleFrame 是否添加标题帧
    */
   async generateVideo(params) {
     try {
-      const response = await apiManager.post('/ai/video-generation/generate', params)
+      const response = await apiManager.post('/ai/generate', params)
       return response.data
     } catch (error) {
       throw new Error(error.response?.data?.message || '视频生成请求失败')
+    }
+  }
+
+  /**
+   * 获取当前用户的视频生成权限
+   */
+  async getUserPermissions() {
+    try {
+      const response = await apiManager.get('/ai/permissions')
+      return response.data
+    } catch (error) {
+      throw new Error(error.response?.data?.message || '获取权限失败')
     }
   }
 
