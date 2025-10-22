@@ -1,19 +1,28 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { VideoAPIConfigModule as SharedVideoAPIConfigModule } from '@app/video-config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DatabaseModule } from '@app/database';
 import { VideoAPIConfigController } from './video-api-config.controller';
+import { VideoAPIConfigService } from './video-api-config.service';
 
 @Module({
   imports: [
-    SharedVideoAPIConfigModule,  // 使用共享库
+    DatabaseModule,
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET || 'your-secret-key',
-      signOptions: { expiresIn: '7d' },
+    ConfigModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET') || '91writing_jwt_secret_dev_2024',
+        signOptions: { expiresIn: '7d' },
+      }),
     }),
   ],
   controllers: [VideoAPIConfigController],
+  providers: [VideoAPIConfigService],
+  exports: [VideoAPIConfigService],
 })
 export class VideoAPIConfigModule {}
 

@@ -4,6 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { ExtractFeaturesDto } from './dto/extract-features.dto';
 
+/**
+ * TODO: 此服务目前直接使用 OpenAI，未来应该：
+ * 1. 迁移到 ai-service 中统一管理
+ * 2. 或者通过微服务调用 ai-service 的接口
+ * 3. 或者在 novel-service 中实现类似 AICallerService 的功能支持用户自定义配置
+ * 
+ * 当前限制：只能使用环境变量配置的 OpenAI，不支持用户自定义配置
+ */
 @Injectable()
 export class CharacterConsistencyService {
   private openai: OpenAI;
@@ -12,6 +20,8 @@ export class CharacterConsistencyService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
+    // 临时方案：使用环境变量配置
+    // ⚠️ 注意：这不支持用户自定义AI配置
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
       baseURL: this.configService.get<string>('OPENAI_API_BASE_URL'),
@@ -49,15 +59,20 @@ export class CharacterConsistencyService {
       extractedFeatures.map(feature =>
         this.prisma.characterFeature.create({
           data: {
+            // 必需字段
+            novelId: character.novelId,
+            chapterNumber: chapter.chapterNumber,
+            characterName: character.name,
             characterId,
             featureType: feature.type,
             featureName: feature.name,
             featureValue: feature.value,
+            // 可选字段
             extractedFrom: 'ai_extracted',
             sourceChapterId: chapter.id,
             locationInText: feature.location,
             confidence: feature.confidence,
-            isConfirmed: extractDto.autoConfirm,
+            isConfirmed: extractDto.autoConfirm || false,
           },
         })
       )
@@ -134,10 +149,9 @@ ${chapter.content}
           },
         },
       },
-      orderBy: [
-        { featureType: 'asc' },
-        { firstMentioned: 'desc' },
-      ],
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 
@@ -250,6 +264,14 @@ ${chapter.content}
         characterId: character.id,
         isConfirmed: true,
       },
+      include: {
+        sourceChapter: {
+          select: {
+            id: true,
+            chapterNumber: true,
+          },
+        },
+      },
     });
 
     if (existingFeatures.length === 0) {
@@ -341,6 +363,7 @@ ${chapter.content}
       create: {
         characterId,
         chapterId,
+        novelId: (await this.prisma.chapter.findUnique({ where: { id: chapterId }, select: { novelId: true } }))?.novelId || '',
         ...counts,
       },
       update: counts,

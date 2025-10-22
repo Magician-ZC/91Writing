@@ -8709,6 +8709,11 @@ open@^10.1.0:
     is-inside-container "^1.0.0"
     wsl-utils "^0.1.0"
 
+openai@^6.6.0:
+  version "6.6.0"
+  resolved "https://registry.npmmirror.com/openai/-/openai-6.6.0.tgz"
+  integrity sha512-1yWk4cBsHF5Bq9TreHYOHY7pbqdlT74COnm8vPx7WKn36StS+Hyk8DdAitnLaw67a5Cudkz5EmlFQjSrNnrA2w==
+
 opentracing@^0.14.5:
   version "0.14.7"
   resolved "https://registry.npmjs.org/opentracing/-/opentracing-0.14.7.tgz"

@@ -82,6 +82,7 @@ export class CharacterExtractionService {
             },
           },
           update: {
+            featureValue: char.appearance,
             appearance: char.appearance,
             clothing: char.clothing,
             state: char.state || null,
@@ -95,6 +96,12 @@ export class CharacterExtractionService {
             novelId,
             chapterNumber,
             characterName: char.name,
+            // 必需字段（使用虚拟值）
+            characterId: 'temp', // 视频生成场景不需要关联具体角色
+            featureType: 'appearance',
+            featureName: 'visual_description',
+            featureValue: char.appearance,
+            // 视频生成相关字段
             appearance: char.appearance,
             clothing: char.clothing,
             state: char.state || null,

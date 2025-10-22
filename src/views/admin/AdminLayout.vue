@@ -94,6 +94,11 @@
             <template #title>数据分析</template>
           </el-menu-item>
 
+          <el-menu-item index="/admin/video-api-config">
+            <el-icon><VideoCamera /></el-icon>
+            <template #title>视频API配置</template>
+          </el-menu-item>
+
           <el-menu-item index="/admin/settings">
             <el-icon><Setting /></el-icon>
             <template #title>系统设置</template>
@@ -133,7 +138,8 @@ import {
   ShoppingCart,
   Box,
   TrendCharts,
-  Setting
+  Setting,
+  VideoCamera
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/authStore'
 

@@ -16,6 +16,7 @@ import { AICallerService } from '../../services/ai-caller.service';
 import { VideoGenerationQueue } from '../../queues/video-generation.queue';
 import { VideoGenerationProcessor } from '../../queues/video-generation.processor';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { FeatureQuotaService } from '@app/common';
 
 @Module({
   imports: [
@@ -62,6 +63,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
     KlingVideoProvider,
     FFmpegService,
     AICallerService,
+    FeatureQuotaService,
   ],
   exports: [VideoGenerationService, VideoGenerationQueue],
 })

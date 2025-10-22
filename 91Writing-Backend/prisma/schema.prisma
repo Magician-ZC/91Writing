@@ -225,6 +225,9 @@ model Chapter {
   comments    ChapterComment[]
   suggestions WritingSuggestion[]
   videoLogs   VideoGenerationLog[]
+  appearances CharacterAppearance[] @relation("AppearanceChapter")
+  featureSources CharacterFeature[] @relation("FeatureSourceChapter")
+  consistencyWarnings CharacterConsistencyWarning[]
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -906,18 +909,121 @@ model CharacterAppearance {
   novelId     String @map("novel_id")
   scenes      Json? // 出场场景描述
   importance  Int    @default(50) // 此次出场重要性
+  
+  // 统计字段
+  mentionCount Int @default(0) @map("mention_count") // 提及次数
+  dialogueCount Int @default(0) @map("dialogue_count") // 对话次数
+  actionCount Int @default(0) @map("action_count") // 动作次数
 
   // 关联
   character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  chapter   Chapter   @relation("AppearanceChapter", fields: [chapterId], references: [id], onDelete: Cascade)
   novel     Novel     @relation(fields: [novelId], references: [id], onDelete: Cascade)
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@unique([characterId, chapterId])
   @@index([characterId])
   @@index([chapterId])
   @@index([novelId])
   @@map("character_appearances")
+}
+
+// 角色一致性警告表
+model CharacterConsistencyWarning {
+  id           String   @id @default(cuid())
+  characterId  String   @map("character_id")
+  chapterId    String   @map("chapter_id")
+  
+  warningType  String   @map("warning_type") @db.VarChar(50) // 警告类型
+  severity     String   @default("medium") // high/medium/low
+  description  String   @db.Text // 警告描述
+  suggestion   String?  @db.Text // 修改建议
+  locationText String?  @map("location_text") @db.Text // 出现位置文本
+  conflictWith String?  @map("conflict_with") @db.Text // 冲突来源
+  status       String   @default("active") // active/resolved/ignored
+  
+  // 关联
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([characterId])
+  @@index([chapterId])
+  @@index([status])
+  @@index([severity])
+  @@map("character_consistency_warnings")
+}
+
+// 一致性检测记录表
+model ConsistencyCheck {
+  id          String   @id @default(cuid())
+  novelId     String   @map("novel_id")
+  userId      String   @map("user_id")
+  checkType   String   @map("check_type") @db.VarChar(50) // character/plot/world/all
+  status      String   @default("pending") // pending/processing/completed/failed
+  chapterIds  Json?    @map("chapter_ids") // 检测的章节ID列表
+  
+  // 统计信息
+  totalIssues    Int @default(0) @map("total_issues")
+  criticalIssues Int @default(0) @map("critical_issues")
+  warningIssues  Int @default(0) @map("warning_issues")
+  infoIssues     Int @default(0) @map("info_issues")
+  
+  // 关联
+  issues ConsistencyIssue[]
+  
+  // 时间戳
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  @@index([novelId])
+  @@index([userId])
+  @@index([status])
+  @@map("consistency_checks")
+}
+
+// 一致性问题表
+model ConsistencyIssue {
+  id          String   @id @default(cuid())
+  checkId     String   @map("check_id")
+  category    String   @db.VarChar(50) // character/plot/world
+  severity    String   // critical/warning/info
+  title       String   @db.VarChar(200)
+  description String   @db.Text
+  
+  // 位置信息
+  chapterId      String? @map("chapter_id")
+  chapterNumber  Int?    @map("chapter_number")
+  locationText   String? @map("location_text") @db.Text
+  conflictWith   String? @map("conflict_with") @db.Text
+  
+  // AI分析
+  suggestions   Json?  // 修复建议
+  aiConfidence  Float? @map("ai_confidence") // AI置信度
+  
+  // 处理状态
+  status       String  @default("active") // active/resolved/ignored
+  resolvedNote String? @map("resolved_note") @db.Text
+  resolvedAt   DateTime? @map("resolved_at")
+  
+  // 关联
+  check ConsistencyCheck @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  
+  // 时间戳
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([checkId])
+  @@index([category])
+  @@index([severity])
+  @@index([status])
+  @@map("consistency_issues")
 }
 
 // ===== 世界观系统 =====
@@ -1075,17 +1181,26 @@ model ConsistencyProfile {
 model CharacterFeature {
   id          String   @id @default(cuid())
   
+  // 角色关联
+  characterId String   @map("character_id")
+  
+  // 原有字段（保留用于视频生成）
   novelId     String   @map("novel_id")
   chapterNumber Int    @map("chapter_number")
   characterName String @map("character_name")
   
-  // 自动提取的特征
-  appearance  String   @db.Text  // 外貌描述（AI生成）
-  clothing    String   @db.Text  // 服饰描述（AI生成）
+  // 特征字段（用于角色一致性检查）
+  featureType String   @map("feature_type") @db.VarChar(50) // appearance/personality/behavior/speech
+  featureName String   @map("feature_name") @db.VarChar(100) // 特征名称
+  featureValue String  @map("feature_value") @db.Text // 特征值
+  
+  // 自动提取的特征（视频生成用，可选）
+  appearance  String?   @db.Text  // 外貌描述（AI生成）
+  clothing    String?   @db.Text  // 服饰描述（AI生成）
   state       String?  @db.Text  // 状态描述（受伤、疲惫等）
   
-  // 视觉化提示词（由Agent优化）
-  visualPrompt   String  @map("visual_prompt") @db.Text
+  // 视觉化提示词（由Agent优化，可选）
+  visualPrompt   String?  @map("visual_prompt") @db.Text
   negativePrompt String? @map("negative_prompt") @db.Text
   keywords       Json?   // 关键词列表
   
@@ -1093,15 +1208,29 @@ model CharacterFeature {
   referenceImageUrl String? @map("reference_image_url") @db.VarChar(500)  // 生成的参考图
   referenceId       String? @map("reference_id")  // Provider的人物ID
   
+  // 来源信息
+  extractedFrom String  @map("extracted_from") @default("ai_extracted") // ai_extracted | manual | video_gen
+  sourceChapterId String? @map("source_chapter_id") // 来源章节
+  locationInText String? @map("location_in_text") @db.Text // 文本位置
+  firstMentioned DateTime? @map("first_mentioned") @default(now()) // 首次提及时间
+  
+  // 确认状态
+  isConfirmed Boolean @default(false) @map("is_confirmed") // 是否已确认
+  
   // 自动提取标记
-  extractedBy String  @map("extracted_by")  // storyboard-agent | image-agent
+  extractedBy String  @map("extracted_by") @default("ai")  // storyboard-agent | image-agent | ai
   confidence  Float   @default(0.8)  // 提取置信度 0-1
+  
+  // 关联
+  sourceChapter Chapter? @relation("FeatureSourceChapter", fields: [sourceChapterId], references: [id], onDelete: SetNull)
   
   createdAt   DateTime @default(now()) @map("created_at")
   
   @@unique([novelId, chapterNumber, characterName])
   @@index([novelId, characterName])
   @@index([novelId, chapterNumber])
+  @@index([characterId])
+  @@index([sourceChapterId])
   @@map("character_features")
 }
 

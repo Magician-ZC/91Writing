@@ -400,7 +400,7 @@ const progressColor = computed(() => {
 const loadConfig = async () => {
   loading.value = true
   try {
-    const response = await apiManager.get('/admin/video-api-config')
+    const response = await apiManager.get('/api/v1/admin/video-api-config')
     Object.assign(configForm, response.data)
     ElMessage.success('配置加载成功')
   } catch (error) {
@@ -413,7 +413,7 @@ const loadConfig = async () => {
 const saveConfig = async () => {
   saving.value = true
   try {
-    await apiManager.put('/admin/video-api-config', configForm)
+    await apiManager.put('/api/v1/admin/video-api-config', configForm)
     ElMessage.success('配置保存成功')
     await loadConfig()
   } catch (error) {
@@ -425,10 +425,10 @@ const saveConfig = async () => {
 
 const loadStatistics = async () => {
   try {
-    let url = '/admin/video-api-config/statistics'
+    let url = '/api/v1/admin/video-api-config/statistics'
     if (dateRange.value && dateRange.value.length === 2) {
       const [start, end] = dateRange.value
-      url = `/admin/video-api-config/statistics/range?startDate=${start.toISOString()}&endDate=${end.toISOString()}`
+      url = `/api/v1/admin/video-api-config/statistics/range?startDate=${start.toISOString()}&endDate=${end.toISOString()}`
     }
     
     const response = await apiManager.get(url)
@@ -463,7 +463,7 @@ const loadLogs = async () => {
 const testConnection = async (provider) => {
   testingConnection.value = provider
   try {
-    const response = await apiManager.post(`/admin/video-api-config/test/${provider}`)
+    const response = await apiManager.post(`/api/v1/admin/video-api-config/test/${provider}`)
     if (response.data.success) {
       ElMessage.success(response.data.message)
     } else {

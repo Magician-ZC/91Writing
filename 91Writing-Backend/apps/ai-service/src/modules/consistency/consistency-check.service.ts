@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@app/database';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
 import { CreateConsistencyCheckDto } from './dto/create-consistency-check.dto';
 import { ResolveIssueDto } from './dto/resolve-issue.dto';
+import { AICallerService } from '../../services/ai-caller.service';
+import { AIChatMessage } from '../../providers/base.provider';
 
 interface DetectionResult {
   category: string;
@@ -20,17 +21,11 @@ interface DetectionResult {
 
 @Injectable()
 export class ConsistencyCheckService {
-  private openai: OpenAI;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-      baseURL: this.configService.get<string>('OPENAI_API_BASE_URL'),
-    });
-  }
+    private readonly aiCallerService: AICallerService,
+  ) {}
 
   /**
    * 创建一致性检测
@@ -104,6 +99,7 @@ export class ConsistencyCheckService {
       if (createDto.checkType === 'worldview' || createDto.checkType === 'full') {
         const worldviewIssues = await this.detectWorldviewIssues(
           check.novelId,
+          check.userId,
           chapters,
           settings,
           createDto.aiEnhanced,
@@ -167,6 +163,7 @@ export class ConsistencyCheckService {
    */
   private async detectWorldviewIssues(
     novelId: string,
+    userId: string,
     chapters: any[],
     settings: any[],
     aiEnhanced: boolean,
@@ -210,6 +207,7 @@ export class ConsistencyCheckService {
     // 3. AI增强检测
     if (aiEnhanced && settings.length > 0) {
       const aiIssues = await this.detectSemanticIssues(
+        userId,
         chapters,
         settings,
       );
@@ -333,6 +331,7 @@ export class ConsistencyCheckService {
    * AI语义一致性检测
    */
   private async detectSemanticIssues(
+    userId: string,
     chapters: any[],
     settings: any[],
   ): Promise<DetectionResult[]> {
@@ -340,7 +339,7 @@ export class ConsistencyCheckService {
 
     // 构建世界观上下文
     const worldviewContext = settings
-      .map(s => `${s.category} - ${s.title}: ${s.description}`)
+      .map(s => `${s.category} - ${s.name}: ${s.description}`)
       .join('\n');
 
     // 批量检测（每次3章）
@@ -349,7 +348,7 @@ export class ConsistencyCheckService {
       const batch = chapters.slice(i, i + batchSize);
       
       try {
-        const batchIssues = await this.aiDetectBatch(batch, worldviewContext);
+        const batchIssues = await this.aiDetectBatch(userId, batch, worldviewContext);
         issues.push(...batchIssues);
       } catch (error) {
         console.error('AI检测批次失败:', error);
@@ -363,6 +362,7 @@ export class ConsistencyCheckService {
    * AI批量检测
    */
   private async aiDetectBatch(
+    userId: string,
     chapters: any[],
     worldviewContext: string,
   ): Promise<DetectionResult[]> {
@@ -404,17 +404,21 @@ ${chaptersText}
 `;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: this.configService.get<string>('OPENAI_MODEL_NAME') || 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: '你是专业的小说一致性检查助手，返回JSON格式结果。' },
-          { role: 'user', content: prompt }
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.2,
+      const messages: AIChatMessage[] = [
+        { role: 'system', content: '你是专业的小说一致性检查助手，返回JSON格式结果。' },
+        { role: 'user', content: prompt }
+      ];
+
+      const response = await this.aiCallerService.callAI({
+        userId,
+        messages,
+        parameters: {
+          temperature: 0.2,
+          maxTokens: 4000,
+        },
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{"issues":[]}');
+      const result = JSON.parse(response.content || '{"issues":[]}');
       
       return result.issues.map((issue: any) => {
         const chapter = chapters.find(c => c.chapterNumber === issue.chapter_number);
@@ -557,7 +561,7 @@ ${chaptersText}
       where: { id: issueId },
       data: {
         status: resolveDto.status,
-        userNote: resolveDto.userNote,
+        resolvedNote: resolveDto.userNote,
         resolvedAt: new Date(),
       },
     });
@@ -605,7 +609,7 @@ ${chaptersText}
       select: {
         id: true,
         category: true,
-        title: true,
+        name: true,
         description: true,
       },
     });

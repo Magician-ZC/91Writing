@@ -22,37 +22,60 @@ export class VideoAPIConfigService {
    * 获取当前配置
    */
   async getCurrentConfig(): Promise<VideoAPIConfigResponseDto> {
-    let config = await this.prisma.videoAPIConfig.findFirst({
-      where: { id: 'default_config' },
-    });
-
-    if (!config) {
-      // 创建默认配置
-      config = await this.prisma.videoAPIConfig.create({
-        data: {
-          id: 'default_config',
-          videoProvider: 'jimeng',
-          ffmpegPath: '/usr/bin/ffmpeg',
-          videoStoragePath: '/data/videos',
-          tempStoragePath: '/tmp/video-generation',
-          userDailyQuota: 5,
-          userMonthlyQuota: 50,
-          monthlyBudget: 1000.0,
-          costAlertThreshold: 800.0,
-        },
+    try {
+      this.logger.log('===== 开始获取视频API配置 =====');
+      this.logger.log('查询数据库...');
+      
+      let config = await this.prisma.videoAPIConfig.findFirst({
+        where: { id: 'default_config' },
       });
-      this.logger.log('Created default video API config');
-    }
 
-    // 解密敏感信息并脱敏显示
-    return {
-      ...config,
-      volcengineSecretAccessKey: config.volcengineSecretAccessKey
-        ? this.maskSensitiveData(this.decrypt(config.volcengineSecretAccessKey))
-        : null,
-      jimengApiKey: config.jimengApiKey ? this.maskSensitiveData(this.decrypt(config.jimengApiKey)) : null,
-      klingApiKey: config.klingApiKey ? this.maskSensitiveData(this.decrypt(config.klingApiKey)) : null,
-    };
+      this.logger.log(`查询结果: ${config ? '找到配置' : '未找到配置'}`);
+
+      if (!config) {
+        // 创建默认配置
+        this.logger.log('配置不存在，创建默认配置...');
+        config = await this.prisma.videoAPIConfig.create({
+          data: {
+            id: 'default_config',
+            videoProvider: 'jimeng',
+            ffmpegPath: '/usr/bin/ffmpeg',
+            ffmpegPreset: 'medium',
+            videoStoragePath: '/data/videos',
+            tempStoragePath: '/tmp/video-generation',
+            autoCleanTemp: true,
+            userDailyQuota: 5,
+            userMonthlyQuota: 50,
+            monthlyBudget: 1000.0,
+            costAlertThreshold: 800.0,
+            costPerImage: 0.02,
+            costPerVideo: 1.5,
+            isActive: true,
+          },
+        });
+        this.logger.log('✅ 默认视频API配置创建成功');
+      }
+
+      this.logger.log('开始处理返回数据...');
+      this.logger.log(`配置ID: ${config.id}, Provider: ${config.videoProvider}`);
+      
+      // 解密敏感信息并脱敏显示
+      const result = {
+        ...config,
+        volcengineSecretAccessKey: config.volcengineSecretAccessKey
+          ? this.maskSensitiveData(this.decrypt(config.volcengineSecretAccessKey))
+          : null,
+        jimengApiKey: config.jimengApiKey ? this.maskSensitiveData(this.decrypt(config.jimengApiKey)) : null,
+        klingApiKey: config.klingApiKey ? this.maskSensitiveData(this.decrypt(config.klingApiKey)) : null,
+      };
+      
+      this.logger.log('===== 配置获取成功，准备返回 =====');
+      return result;
+    } catch (error) {
+      this.logger.error('❌❌❌ 获取配置失败:', error.message);
+      this.logger.error('错误栈:', error.stack);
+      throw error;
+    }
   }
 
   /**

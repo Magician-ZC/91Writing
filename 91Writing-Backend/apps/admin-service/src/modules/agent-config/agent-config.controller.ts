@@ -26,7 +26,7 @@ import {
 } from '../../dto/agent-config.dto';
 
 @ApiTags('Agent配置管理')
-@Controller()
+@Controller('agent-prompts')
 @UseGuards(JwtAuthGuard, RoleGuard)
 @Roles('ADMIN')
 @ApiBearerAuth('JWT-auth')

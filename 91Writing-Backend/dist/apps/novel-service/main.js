@@ -47,12 +47,12 @@ const novel_module_1 = __webpack_require__(13);
 const chapter_module_1 = __webpack_require__(23);
 const memory_module_1 = __webpack_require__(28);
 const suggestion_module_1 = __webpack_require__(33);
-const character_module_1 = __webpack_require__(37);
-const world_module_1 = __webpack_require__(41);
-const material_module_1 = __webpack_require__(45);
-const migration_module_1 = __webpack_require__(49);
-const prompt_module_1 = __webpack_require__(53);
-const collaboration_module_1 = __webpack_require__(57);
+const character_module_1 = __webpack_require__(49);
+const world_module_1 = __webpack_require__(53);
+const material_module_1 = __webpack_require__(57);
+const migration_module_1 = __webpack_require__(61);
+const prompt_module_1 = __webpack_require__(65);
+const collaboration_module_1 = __webpack_require__(69);
 const version_module_1 = __webpack_require__(73);
 const comment_module_1 = __webpack_require__(77);
 const health_module_1 = __webpack_require__(81);
@@ -3319,13 +3319,14 @@ exports.SuggestionModule = void 0;
 const common_1 = __webpack_require__(3);
 const suggestion_controller_1 = __webpack_require__(34);
 const suggestion_service_1 = __webpack_require__(35);
+const common_2 = __webpack_require__(37);
 let SuggestionModule = class SuggestionModule {
 };
 exports.SuggestionModule = SuggestionModule;
 exports.SuggestionModule = SuggestionModule = __decorate([
     (0, common_1.Module)({
         controllers: [suggestion_controller_1.SuggestionController],
-        providers: [suggestion_service_1.SuggestionService],
+        providers: [suggestion_service_1.SuggestionService, common_2.FeatureQuotaService],
         exports: [suggestion_service_1.SuggestionService],
     })
 ], SuggestionModule);
@@ -4508,6 +4509,564 @@ __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(38), exports);
+__exportStar(__webpack_require__(16), exports);
+__exportStar(__webpack_require__(41), exports);
+__exportStar(__webpack_require__(42), exports);
+__exportStar(__webpack_require__(43), exports);
+__exportStar(__webpack_require__(44), exports);
+__exportStar(__webpack_require__(45), exports);
+__exportStar(__webpack_require__(46), exports);
+__exportStar(__webpack_require__(47), exports);
+__exportStar(__webpack_require__(48), exports);
+
+
+/***/ }),
+/* 38 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__webpack_require__(39), exports);
+__exportStar(__webpack_require__(40), exports);
+
+
+/***/ }),
+/* 39 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TenantId = exports.Tenant = void 0;
+const common_1 = __webpack_require__(3);
+exports.Tenant = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.tenantId || request.headers['x-tenant-id'];
+});
+exports.TenantId = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user?.tenantId || request.headers['x-tenant-id'];
+});
+
+
+/***/ }),
+/* 40 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CurrentUser = exports.User = void 0;
+const common_1 = __webpack_require__(3);
+exports.User = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+});
+exports.CurrentUser = (0, common_1.createParamDecorator)((data, ctx) => {
+    const request = ctx.switchToHttp().getRequest();
+    const user = request.user;
+    return data ? user?.[data] : user;
+});
+
+
+/***/ }),
+/* 41 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 42 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 43 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 44 */
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+
+/***/ }),
+/* 45 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var PackagePermissionService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PackagePermissionService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let PackagePermissionService = PackagePermissionService_1 = class PackagePermissionService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(PackagePermissionService_1.name);
+    }
+    async checkVideoGenerationPermission(userId) {
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: {
+                package: true,
+            },
+        });
+        if (!subscription || subscription.status !== 'ACTIVE') {
+            this.logger.log(`用户${userId}无有效订阅，使用免费限制`);
+            return {
+                allowed: false,
+                limits: this.getFreeLimits(),
+                packageName: '免费套餐',
+                message: '请升级套餐以使用视频生成功能'
+            };
+        }
+        const features = subscription.package.features;
+        const videoFeatures = features?.videoGeneration;
+        if (!videoFeatures || !videoFeatures.enabled) {
+            this.logger.log(`用户${userId}套餐不包含视频生成功能`);
+            return {
+                allowed: false,
+                limits: this.getFreeLimits(),
+                packageName: subscription.package.name,
+                message: '当前套餐不包含视频生成功能'
+            };
+        }
+        this.logger.log(`用户${userId}套餐: ${subscription.package.name}, 视频配额: ${videoFeatures.dailyQuota}/${videoFeatures.monthlyQuota}`);
+        return {
+            allowed: true,
+            limits: {
+                dailyQuota: videoFeatures.dailyQuota || 5,
+                monthlyQuota: videoFeatures.monthlyQuota || 50,
+                maxSceneCount: videoFeatures.maxSceneCount || 5,
+                maxVideoDuration: videoFeatures.maxVideoDuration || 30,
+                allowedQualities: videoFeatures.allowedQualities || ['standard'],
+                allowedResolutions: videoFeatures.allowedResolutions || ['1024x576'],
+                enableAdvancedParams: videoFeatures.enableAdvancedParams || false,
+                enableCustomPrompts: videoFeatures.enableCustomPrompts || false,
+                priority: videoFeatures.priority || 'normal'
+            },
+            packageName: subscription.package.name
+        };
+    }
+    validateUserParams(userParams, limits) {
+        const errors = [];
+        if (userParams.sceneCount && userParams.sceneCount > limits.maxSceneCount) {
+            errors.push(`分镜数量超出限制（最多${limits.maxSceneCount}个，请升级套餐）`);
+        }
+        const totalDuration = (userParams.sceneCount || 5) * (userParams.videoDuration || 5);
+        if (totalDuration > limits.maxVideoDuration) {
+            errors.push(`视频总时长超出限制（最多${limits.maxVideoDuration}秒，请升级套餐）`);
+        }
+        if (userParams.imageQuality && !limits.allowedQualities.includes(userParams.imageQuality)) {
+            errors.push(`图片质量"${userParams.imageQuality}"不在允许范围内（允许：${limits.allowedQualities.join(', ')}），请升级套餐`);
+        }
+        if (userParams.imageResolution && !limits.allowedResolutions.includes(userParams.imageResolution)) {
+            errors.push(`图片分辨率不在允许范围内（允许：${limits.allowedResolutions.join(', ')}），请升级套餐`);
+        }
+        if (!limits.enableAdvancedParams) {
+            const advancedParams = ['samplingSteps', 'cfgScale', 'negativePrompt'];
+            const usedAdvanced = advancedParams.filter(param => userParams[param] !== undefined);
+            if (usedAdvanced.length > 0) {
+                errors.push(`当前套餐不支持高级参数配置（${usedAdvanced.join(', ')}），请升级到专业版或企业版`);
+            }
+        }
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    }
+    getFreeLimits() {
+        return {
+            dailyQuota: 0,
+            monthlyQuota: 0,
+            maxSceneCount: 0,
+            maxVideoDuration: 0,
+            allowedQualities: [],
+            allowedResolutions: [],
+            enableAdvancedParams: false,
+            enableCustomPrompts: false,
+            priority: 'low'
+        };
+    }
+};
+exports.PackagePermissionService = PackagePermissionService;
+exports.PackagePermissionService = PackagePermissionService = PackagePermissionService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], PackagePermissionService);
+
+
+/***/ }),
+/* 46 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var FeatureQuotaService_1;
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FeatureQuotaService = void 0;
+const common_1 = __webpack_require__(3);
+const database_1 = __webpack_require__(9);
+let FeatureQuotaService = FeatureQuotaService_1 = class FeatureQuotaService {
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.logger = new common_1.Logger(FeatureQuotaService_1.name);
+    }
+    async checkAndConsumeQuota(userId, feature, quotaType = 'daily') {
+        this.logger.log(`检查用户${userId}的${feature}配额（${quotaType}）`);
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let limit = 0;
+        let packageName = '免费套餐';
+        if (subscription && subscription.status === 'ACTIVE') {
+            packageName = subscription.package.name;
+            const features = subscription.package.features;
+            const featureConfig = features?.[feature];
+            if (featureConfig && featureConfig.enabled) {
+                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
+                if (limit === -1) {
+                    this.logger.log(`用户${userId}套餐${packageName}的${feature}不限配额`);
+                    return {
+                        allowed: true,
+                        remaining: -1,
+                        limit: -1,
+                    };
+                }
+            }
+        }
+        else {
+            const freeLimit = this.getFreeFunctionLimit(feature, quotaType);
+            limit = freeLimit;
+            if (limit === 0) {
+                this.logger.log(`免费用户不允许使用${feature}`);
+                return {
+                    allowed: false,
+                    remaining: 0,
+                    limit: 0,
+                    message: `${this.getFeatureName(feature)}功能需要订阅套餐，请升级`
+                };
+            }
+        }
+        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
+        let quota = await this.prisma.featureQuota.findUnique({
+            where: {
+                userId_feature_quotaType_date: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                },
+            },
+        });
+        if (!quota) {
+            quota = await this.prisma.featureQuota.create({
+                data: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                    usedCount: 0,
+                    limit,
+                },
+            });
+        }
+        const remaining = Math.max(0, limit - quota.usedCount);
+        if (remaining <= 0) {
+            this.logger.log(`用户${userId}的${feature}配额已用尽（${quota.usedCount}/${limit}）`);
+            return {
+                allowed: false,
+                remaining: 0,
+                limit,
+                message: `已达${quotaType === 'daily' ? '每日' : '每月'}配额限制（${limit}次），请升级套餐`
+            };
+        }
+        await this.prisma.featureQuota.update({
+            where: { id: quota.id },
+            data: {
+                usedCount: { increment: 1 },
+                lastUsedAt: new Date(),
+            },
+        });
+        this.logger.log(`用户${userId}消费${feature}配额，剩余${remaining - 1}/${limit}`);
+        return {
+            allowed: true,
+            remaining: remaining - 1,
+            limit,
+        };
+    }
+    async getQuotaStatus(userId, feature) {
+        const daily = await this.getQuotaRemaining(userId, feature, 'daily');
+        const monthly = await this.getQuotaRemaining(userId, feature, 'monthly');
+        return {
+            daily,
+            monthly,
+        };
+    }
+    async getQuotaRemaining(userId, feature, quotaType) {
+        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
+        const quota = await this.prisma.featureQuota.findUnique({
+            where: {
+                userId_feature_quotaType_date: {
+                    userId,
+                    feature,
+                    quotaType,
+                    date,
+                },
+            },
+        });
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let limit = 0;
+        if (subscription && subscription.status === 'ACTIVE') {
+            const features = subscription.package.features;
+            const featureConfig = features?.[feature];
+            if (featureConfig && featureConfig.enabled) {
+                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
+            }
+        }
+        else {
+            limit = this.getFreeFunctionLimit(feature, quotaType);
+        }
+        const usedCount = quota?.usedCount || 0;
+        const remaining = limit === -1 ? -1 : Math.max(0, limit - usedCount);
+        return {
+            used: usedCount,
+            remaining,
+            limit,
+        };
+    }
+    getFreeFunctionLimit(feature, quotaType) {
+        const freeLimits = {
+            aiWriting: { daily: 100, monthly: 1000 },
+            aiAssistant: { daily: 50, monthly: 500 },
+            videoGeneration: { daily: 0, monthly: 0 },
+            materialGeneration: { daily: 10, monthly: 100 },
+        };
+        const featureLimits = freeLimits[feature];
+        if (!featureLimits) {
+            return 0;
+        }
+        return quotaType === 'daily' ? featureLimits.daily : featureLimits.monthly;
+    }
+    getFeatureName(feature) {
+        const names = {
+            videoGeneration: '视频生成',
+            aiWriting: 'AI写作',
+            aiAssistant: 'AI写作助手',
+            materialGeneration: '素材生成',
+        };
+        return names[feature] || feature;
+    }
+    getTodayDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+    }
+    getMonthStartDate() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+};
+exports.FeatureQuotaService = FeatureQuotaService;
+exports.FeatureQuotaService = FeatureQuotaService = FeatureQuotaService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
+], FeatureQuotaService);
+
+
+/***/ }),
+/* 47 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PackageFeatureGuard = void 0;
+const common_1 = __webpack_require__(3);
+const core_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(9);
+const feature_quota_service_1 = __webpack_require__(46);
+let PackageFeatureGuard = class PackageFeatureGuard {
+    constructor(reflector, prisma, featureQuotaService) {
+        this.reflector = reflector;
+        this.prisma = prisma;
+        this.featureQuotaService = featureQuotaService;
+    }
+    async canActivate(context) {
+        const requiredFeature = this.reflector.get('feature', context.getHandler());
+        const quotaType = this.reflector.get('quotaType', context.getHandler()) || 'daily';
+        if (!requiredFeature) {
+            return true;
+        }
+        const request = context.switchToHttp().getRequest();
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+            throw new common_1.ForbiddenException('未登录或token无效');
+        }
+        const subscription = await this.prisma.subscription.findUnique({
+            where: { userId },
+            include: { package: true },
+        });
+        let featureConfig = null;
+        let packageName = '免费套餐';
+        if (subscription && subscription.status === 'ACTIVE') {
+            packageName = subscription.package.name;
+            const features = subscription.package.features;
+            featureConfig = features?.[requiredFeature];
+            if (!featureConfig || !featureConfig.enabled) {
+                throw new common_1.ForbiddenException({
+                    message: `当前套餐（${packageName}）不包含${this.getFeatureName(requiredFeature)}功能`,
+                    feature: requiredFeature,
+                    packageName,
+                    upgradeRequired: true,
+                });
+            }
+        }
+        else {
+            const allowed = await this.checkFreeUserAccess(requiredFeature);
+            if (!allowed) {
+                throw new common_1.ForbiddenException({
+                    message: `${this.getFeatureName(requiredFeature)}功能需要订阅套餐，请升级`,
+                    feature: requiredFeature,
+                    packageName: '免费套餐',
+                    upgradeRequired: true,
+                });
+            }
+        }
+        const quotaResult = await this.featureQuotaService.checkAndConsumeQuota(userId, requiredFeature, quotaType);
+        if (!quotaResult.allowed) {
+            throw new common_1.ForbiddenException({
+                message: quotaResult.message,
+                feature: requiredFeature,
+                packageName,
+                quotaType,
+                used: quotaResult.limit,
+                limit: quotaResult.limit,
+                upgradeRequired: quotaResult.limit > 0,
+            });
+        }
+        request.packageLimits = featureConfig;
+        request.packageName = packageName;
+        request.quotaRemaining = {
+            [quotaType]: quotaResult.remaining,
+        };
+        return true;
+    }
+    async checkFreeUserAccess(feature) {
+        const freeFunctions = ['aiWriting', 'aiAssistant', 'materialGeneration'];
+        return freeFunctions.includes(feature);
+    }
+    getFeatureName(feature) {
+        const names = {
+            videoGeneration: '视频生成',
+            aiWriting: 'AI写作',
+            aiAssistant: 'AI写作助手',
+            materialGeneration: '素材生成',
+            suggestion: '写作建议',
+        };
+        return names[feature] || feature;
+    }
+};
+exports.PackageFeatureGuard = PackageFeatureGuard;
+exports.PackageFeatureGuard = PackageFeatureGuard = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof core_1.Reflector !== "undefined" && core_1.Reflector) === "function" ? _a : Object, typeof (_b = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _b : Object, typeof (_c = typeof feature_quota_service_1.FeatureQuotaService !== "undefined" && feature_quota_service_1.FeatureQuotaService) === "function" ? _c : Object])
+], PackageFeatureGuard);
+
+
+/***/ }),
+/* 48 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RequireQuota = exports.RequireFeature = exports.QUOTA_TYPE_KEY = exports.FEATURE_KEY = void 0;
+const common_1 = __webpack_require__(3);
+exports.FEATURE_KEY = 'feature';
+exports.QUOTA_TYPE_KEY = 'quotaType';
+const RequireFeature = (feature) => (0, common_1.SetMetadata)(exports.FEATURE_KEY, feature);
+exports.RequireFeature = RequireFeature;
+const RequireQuota = (quotaType = 'daily') => (0, common_1.SetMetadata)(exports.QUOTA_TYPE_KEY, quotaType);
+exports.RequireQuota = RequireQuota;
+
+
+/***/ }),
+/* 49 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -4517,8 +5076,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CharacterModule = void 0;
 const common_1 = __webpack_require__(3);
-const character_controller_1 = __webpack_require__(38);
-const character_service_1 = __webpack_require__(39);
+const character_controller_1 = __webpack_require__(50);
+const character_service_1 = __webpack_require__(51);
 let CharacterModule = class CharacterModule {
 };
 exports.CharacterModule = CharacterModule;
@@ -4532,7 +5091,7 @@ exports.CharacterModule = CharacterModule = __decorate([
 
 
 /***/ }),
-/* 38 */
+/* 50 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4554,8 +5113,8 @@ exports.CharacterController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const guards_1 = __webpack_require__(16);
-const character_service_1 = __webpack_require__(39);
-const character_dto_1 = __webpack_require__(40);
+const character_service_1 = __webpack_require__(51);
+const character_dto_1 = __webpack_require__(52);
 let CharacterController = class CharacterController {
     constructor(characterService) {
         this.characterService = characterService;
@@ -4647,7 +5206,7 @@ exports.CharacterController = CharacterController = __decorate([
 
 
 /***/ }),
-/* 39 */
+/* 51 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -4800,7 +5359,7 @@ exports.CharacterService = CharacterService = __decorate([
 
 
 /***/ }),
-/* 40 */
+/* 52 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5187,7 +5746,7 @@ __decorate([
 
 
 /***/ }),
-/* 41 */
+/* 53 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5200,8 +5759,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WorldModule = void 0;
 const common_1 = __webpack_require__(3);
-const world_controller_1 = __webpack_require__(42);
-const world_service_1 = __webpack_require__(43);
+const world_controller_1 = __webpack_require__(54);
+const world_service_1 = __webpack_require__(55);
 let WorldModule = class WorldModule {
 };
 exports.WorldModule = WorldModule;
@@ -5215,7 +5774,7 @@ exports.WorldModule = WorldModule = __decorate([
 
 
 /***/ }),
-/* 42 */
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5237,8 +5796,8 @@ exports.WorldController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const guards_1 = __webpack_require__(16);
-const world_service_1 = __webpack_require__(43);
-const world_dto_1 = __webpack_require__(44);
+const world_service_1 = __webpack_require__(55);
+const world_dto_1 = __webpack_require__(56);
 let WorldController = class WorldController {
     constructor(worldService) {
         this.worldService = worldService;
@@ -5330,7 +5889,7 @@ exports.WorldController = WorldController = __decorate([
 
 
 /***/ }),
-/* 43 */
+/* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5470,7 +6029,7 @@ exports.WorldService = WorldService = __decorate([
 
 
 /***/ }),
-/* 44 */
+/* 56 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5744,7 +6303,7 @@ __decorate([
 
 
 /***/ }),
-/* 45 */
+/* 57 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5757,8 +6316,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MaterialModule = void 0;
 const common_1 = __webpack_require__(3);
-const material_controller_1 = __webpack_require__(46);
-const material_service_1 = __webpack_require__(47);
+const material_controller_1 = __webpack_require__(58);
+const material_service_1 = __webpack_require__(59);
 const database_1 = __webpack_require__(9);
 const guards_1 = __webpack_require__(16);
 let MaterialModule = class MaterialModule {
@@ -5775,7 +6334,7 @@ exports.MaterialModule = MaterialModule = __decorate([
 
 
 /***/ }),
-/* 46 */
+/* 58 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5797,8 +6356,8 @@ exports.MaterialController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const guards_1 = __webpack_require__(16);
-const material_service_1 = __webpack_require__(47);
-const material_dto_1 = __webpack_require__(48);
+const material_service_1 = __webpack_require__(59);
+const material_dto_1 = __webpack_require__(60);
 let MaterialController = class MaterialController {
     constructor(materialService) {
         this.materialService = materialService;
@@ -6117,7 +6676,7 @@ exports.MaterialController = MaterialController = __decorate([
 
 
 /***/ }),
-/* 47 */
+/* 59 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -6679,7 +7238,7 @@ exports.MaterialService = MaterialService = __decorate([
 
 
 /***/ }),
-/* 48 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7045,7 +7604,7 @@ __decorate([
 
 
 /***/ }),
-/* 49 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7058,8 +7617,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MigrationModule = void 0;
 const common_1 = __webpack_require__(3);
-const migration_controller_1 = __webpack_require__(50);
-const migration_service_1 = __webpack_require__(51);
+const migration_controller_1 = __webpack_require__(62);
+const migration_service_1 = __webpack_require__(63);
 const database_1 = __webpack_require__(9);
 const guards_1 = __webpack_require__(16);
 let MigrationModule = class MigrationModule {
@@ -7076,7 +7635,7 @@ exports.MigrationModule = MigrationModule = __decorate([
 
 
 /***/ }),
-/* 50 */
+/* 62 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7098,8 +7657,8 @@ exports.MigrationController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const guards_1 = __webpack_require__(16);
-const migration_service_1 = __webpack_require__(51);
-const migration_dto_1 = __webpack_require__(52);
+const migration_service_1 = __webpack_require__(63);
+const migration_dto_1 = __webpack_require__(64);
 let MigrationController = class MigrationController {
     constructor(migrationService) {
         this.migrationService = migrationService;
@@ -7218,7 +7777,7 @@ exports.MigrationController = MigrationController = __decorate([
 
 
 /***/ }),
-/* 51 */
+/* 63 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7501,7 +8060,7 @@ exports.MigrationService = MigrationService = __decorate([
 
 
 /***/ }),
-/* 52 */
+/* 64 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7607,7 +8166,7 @@ __decorate([
 
 
 /***/ }),
-/* 53 */
+/* 65 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7620,8 +8179,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PromptModule = void 0;
 const common_1 = __webpack_require__(3);
-const prompt_controller_1 = __webpack_require__(54);
-const prompt_service_1 = __webpack_require__(55);
+const prompt_controller_1 = __webpack_require__(66);
+const prompt_service_1 = __webpack_require__(67);
 const database_1 = __webpack_require__(9);
 let PromptModule = class PromptModule {
 };
@@ -7637,7 +8196,7 @@ exports.PromptModule = PromptModule = __decorate([
 
 
 /***/ }),
-/* 54 */
+/* 66 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7658,8 +8217,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PromptController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const prompt_service_1 = __webpack_require__(55);
-const prompt_dto_1 = __webpack_require__(56);
+const prompt_service_1 = __webpack_require__(67);
+const prompt_dto_1 = __webpack_require__(68);
 const guards_1 = __webpack_require__(16);
 let PromptController = class PromptController {
     constructor(promptService) {
@@ -7808,7 +8367,7 @@ exports.PromptController = PromptController = __decorate([
 
 
 /***/ }),
-/* 55 */
+/* 67 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8076,7 +8635,7 @@ exports.PromptService = PromptService = __decorate([
 
 
 /***/ }),
-/* 56 */
+/* 68 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8211,7 +8770,7 @@ __decorate([
 
 
 /***/ }),
-/* 57 */
+/* 69 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8224,8 +8783,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CollaborationModule = void 0;
 const common_1 = __webpack_require__(3);
-const collaboration_controller_1 = __webpack_require__(58);
-const collaboration_service_1 = __webpack_require__(59);
+const collaboration_controller_1 = __webpack_require__(70);
+const collaboration_service_1 = __webpack_require__(71);
 const database_1 = __webpack_require__(9);
 let CollaborationModule = class CollaborationModule {
 };
@@ -8241,7 +8800,7 @@ exports.CollaborationModule = CollaborationModule = __decorate([
 
 
 /***/ }),
-/* 58 */
+/* 70 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8262,9 +8821,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CollaborationController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const collaboration_service_1 = __webpack_require__(59);
-const collaboration_dto_1 = __webpack_require__(60);
-const common_2 = __webpack_require__(61);
+const collaboration_service_1 = __webpack_require__(71);
+const collaboration_dto_1 = __webpack_require__(72);
+const common_2 = __webpack_require__(37);
 let CollaborationController = class CollaborationController {
     constructor(collaborationService) {
         this.collaborationService = collaborationService;
@@ -8410,7 +8969,7 @@ exports.CollaborationController = CollaborationController = __decorate([
 
 
 /***/ }),
-/* 59 */
+/* 71 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8428,7 +8987,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CollaborationService = void 0;
 const common_1 = __webpack_require__(3);
 const database_1 = __webpack_require__(9);
-const collaboration_dto_1 = __webpack_require__(60);
+const collaboration_dto_1 = __webpack_require__(72);
 let CollaborationService = class CollaborationService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -8693,7 +9252,7 @@ exports.CollaborationService = CollaborationService = __decorate([
 
 
 /***/ }),
-/* 60 */
+/* 72 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -8799,564 +9358,6 @@ __decorate([
 
 
 /***/ }),
-/* 61 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(62), exports);
-__exportStar(__webpack_require__(16), exports);
-__exportStar(__webpack_require__(65), exports);
-__exportStar(__webpack_require__(66), exports);
-__exportStar(__webpack_require__(67), exports);
-__exportStar(__webpack_require__(68), exports);
-__exportStar(__webpack_require__(69), exports);
-__exportStar(__webpack_require__(70), exports);
-__exportStar(__webpack_require__(71), exports);
-__exportStar(__webpack_require__(72), exports);
-
-
-/***/ }),
-/* 62 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(63), exports);
-__exportStar(__webpack_require__(64), exports);
-
-
-/***/ }),
-/* 63 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TenantId = exports.Tenant = void 0;
-const common_1 = __webpack_require__(3);
-exports.Tenant = (0, common_1.createParamDecorator)((data, ctx) => {
-    const request = ctx.switchToHttp().getRequest();
-    return request.tenantId || request.headers['x-tenant-id'];
-});
-exports.TenantId = (0, common_1.createParamDecorator)((data, ctx) => {
-    const request = ctx.switchToHttp().getRequest();
-    return request.user?.tenantId || request.headers['x-tenant-id'];
-});
-
-
-/***/ }),
-/* 64 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CurrentUser = exports.User = void 0;
-const common_1 = __webpack_require__(3);
-exports.User = (0, common_1.createParamDecorator)((data, ctx) => {
-    const request = ctx.switchToHttp().getRequest();
-    return request.user;
-});
-exports.CurrentUser = (0, common_1.createParamDecorator)((data, ctx) => {
-    const request = ctx.switchToHttp().getRequest();
-    const user = request.user;
-    return data ? user?.[data] : user;
-});
-
-
-/***/ }),
-/* 65 */
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-
-/***/ }),
-/* 66 */
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-
-/***/ }),
-/* 67 */
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-
-/***/ }),
-/* 68 */
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-
-/***/ }),
-/* 69 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var PackagePermissionService_1;
-var _a;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PackagePermissionService = void 0;
-const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(9);
-let PackagePermissionService = PackagePermissionService_1 = class PackagePermissionService {
-    constructor(prisma) {
-        this.prisma = prisma;
-        this.logger = new common_1.Logger(PackagePermissionService_1.name);
-    }
-    async checkVideoGenerationPermission(userId) {
-        const subscription = await this.prisma.subscription.findUnique({
-            where: { userId },
-            include: {
-                package: true,
-            },
-        });
-        if (!subscription || subscription.status !== 'ACTIVE') {
-            this.logger.log(`用户${userId}无有效订阅，使用免费限制`);
-            return {
-                allowed: false,
-                limits: this.getFreeLimits(),
-                packageName: '免费套餐',
-                message: '请升级套餐以使用视频生成功能'
-            };
-        }
-        const features = subscription.package.features;
-        const videoFeatures = features?.videoGeneration;
-        if (!videoFeatures || !videoFeatures.enabled) {
-            this.logger.log(`用户${userId}套餐不包含视频生成功能`);
-            return {
-                allowed: false,
-                limits: this.getFreeLimits(),
-                packageName: subscription.package.name,
-                message: '当前套餐不包含视频生成功能'
-            };
-        }
-        this.logger.log(`用户${userId}套餐: ${subscription.package.name}, 视频配额: ${videoFeatures.dailyQuota}/${videoFeatures.monthlyQuota}`);
-        return {
-            allowed: true,
-            limits: {
-                dailyQuota: videoFeatures.dailyQuota || 5,
-                monthlyQuota: videoFeatures.monthlyQuota || 50,
-                maxSceneCount: videoFeatures.maxSceneCount || 5,
-                maxVideoDuration: videoFeatures.maxVideoDuration || 30,
-                allowedQualities: videoFeatures.allowedQualities || ['standard'],
-                allowedResolutions: videoFeatures.allowedResolutions || ['1024x576'],
-                enableAdvancedParams: videoFeatures.enableAdvancedParams || false,
-                enableCustomPrompts: videoFeatures.enableCustomPrompts || false,
-                priority: videoFeatures.priority || 'normal'
-            },
-            packageName: subscription.package.name
-        };
-    }
-    validateUserParams(userParams, limits) {
-        const errors = [];
-        if (userParams.sceneCount && userParams.sceneCount > limits.maxSceneCount) {
-            errors.push(`分镜数量超出限制（最多${limits.maxSceneCount}个，请升级套餐）`);
-        }
-        const totalDuration = (userParams.sceneCount || 5) * (userParams.videoDuration || 5);
-        if (totalDuration > limits.maxVideoDuration) {
-            errors.push(`视频总时长超出限制（最多${limits.maxVideoDuration}秒，请升级套餐）`);
-        }
-        if (userParams.imageQuality && !limits.allowedQualities.includes(userParams.imageQuality)) {
-            errors.push(`图片质量"${userParams.imageQuality}"不在允许范围内（允许：${limits.allowedQualities.join(', ')}），请升级套餐`);
-        }
-        if (userParams.imageResolution && !limits.allowedResolutions.includes(userParams.imageResolution)) {
-            errors.push(`图片分辨率不在允许范围内（允许：${limits.allowedResolutions.join(', ')}），请升级套餐`);
-        }
-        if (!limits.enableAdvancedParams) {
-            const advancedParams = ['samplingSteps', 'cfgScale', 'negativePrompt'];
-            const usedAdvanced = advancedParams.filter(param => userParams[param] !== undefined);
-            if (usedAdvanced.length > 0) {
-                errors.push(`当前套餐不支持高级参数配置（${usedAdvanced.join(', ')}），请升级到专业版或企业版`);
-            }
-        }
-        return {
-            valid: errors.length === 0,
-            errors
-        };
-    }
-    getFreeLimits() {
-        return {
-            dailyQuota: 0,
-            monthlyQuota: 0,
-            maxSceneCount: 0,
-            maxVideoDuration: 0,
-            allowedQualities: [],
-            allowedResolutions: [],
-            enableAdvancedParams: false,
-            enableCustomPrompts: false,
-            priority: 'low'
-        };
-    }
-};
-exports.PackagePermissionService = PackagePermissionService;
-exports.PackagePermissionService = PackagePermissionService = PackagePermissionService_1 = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
-], PackagePermissionService);
-
-
-/***/ }),
-/* 70 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var FeatureQuotaService_1;
-var _a;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FeatureQuotaService = void 0;
-const common_1 = __webpack_require__(3);
-const database_1 = __webpack_require__(9);
-let FeatureQuotaService = FeatureQuotaService_1 = class FeatureQuotaService {
-    constructor(prisma) {
-        this.prisma = prisma;
-        this.logger = new common_1.Logger(FeatureQuotaService_1.name);
-    }
-    async checkAndConsumeQuota(userId, feature, quotaType = 'daily') {
-        this.logger.log(`检查用户${userId}的${feature}配额（${quotaType}）`);
-        const subscription = await this.prisma.subscription.findUnique({
-            where: { userId },
-            include: { package: true },
-        });
-        let limit = 0;
-        let packageName = '免费套餐';
-        if (subscription && subscription.status === 'ACTIVE') {
-            packageName = subscription.package.name;
-            const features = subscription.package.features;
-            const featureConfig = features?.[feature];
-            if (featureConfig && featureConfig.enabled) {
-                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
-                if (limit === -1) {
-                    this.logger.log(`用户${userId}套餐${packageName}的${feature}不限配额`);
-                    return {
-                        allowed: true,
-                        remaining: -1,
-                        limit: -1,
-                    };
-                }
-            }
-        }
-        else {
-            const freeLimit = this.getFreeFunctionLimit(feature, quotaType);
-            limit = freeLimit;
-            if (limit === 0) {
-                this.logger.log(`免费用户不允许使用${feature}`);
-                return {
-                    allowed: false,
-                    remaining: 0,
-                    limit: 0,
-                    message: `${this.getFeatureName(feature)}功能需要订阅套餐，请升级`
-                };
-            }
-        }
-        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
-        let quota = await this.prisma.featureQuota.findUnique({
-            where: {
-                userId_feature_quotaType_date: {
-                    userId,
-                    feature,
-                    quotaType,
-                    date,
-                },
-            },
-        });
-        if (!quota) {
-            quota = await this.prisma.featureQuota.create({
-                data: {
-                    userId,
-                    feature,
-                    quotaType,
-                    date,
-                    usedCount: 0,
-                    limit,
-                },
-            });
-        }
-        const remaining = Math.max(0, limit - quota.usedCount);
-        if (remaining <= 0) {
-            this.logger.log(`用户${userId}的${feature}配额已用尽（${quota.usedCount}/${limit}）`);
-            return {
-                allowed: false,
-                remaining: 0,
-                limit,
-                message: `已达${quotaType === 'daily' ? '每日' : '每月'}配额限制（${limit}次），请升级套餐`
-            };
-        }
-        await this.prisma.featureQuota.update({
-            where: { id: quota.id },
-            data: {
-                usedCount: { increment: 1 },
-                lastUsedAt: new Date(),
-            },
-        });
-        this.logger.log(`用户${userId}消费${feature}配额，剩余${remaining - 1}/${limit}`);
-        return {
-            allowed: true,
-            remaining: remaining - 1,
-            limit,
-        };
-    }
-    async getQuotaStatus(userId, feature) {
-        const daily = await this.getQuotaRemaining(userId, feature, 'daily');
-        const monthly = await this.getQuotaRemaining(userId, feature, 'monthly');
-        return {
-            daily,
-            monthly,
-        };
-    }
-    async getQuotaRemaining(userId, feature, quotaType) {
-        const date = quotaType === 'daily' ? this.getTodayDate() : this.getMonthStartDate();
-        const quota = await this.prisma.featureQuota.findUnique({
-            where: {
-                userId_feature_quotaType_date: {
-                    userId,
-                    feature,
-                    quotaType,
-                    date,
-                },
-            },
-        });
-        const subscription = await this.prisma.subscription.findUnique({
-            where: { userId },
-            include: { package: true },
-        });
-        let limit = 0;
-        if (subscription && subscription.status === 'ACTIVE') {
-            const features = subscription.package.features;
-            const featureConfig = features?.[feature];
-            if (featureConfig && featureConfig.enabled) {
-                limit = quotaType === 'daily' ? (featureConfig.dailyQuota || 0) : (featureConfig.monthlyQuota || 0);
-            }
-        }
-        else {
-            limit = this.getFreeFunctionLimit(feature, quotaType);
-        }
-        const usedCount = quota?.usedCount || 0;
-        const remaining = limit === -1 ? -1 : Math.max(0, limit - usedCount);
-        return {
-            used: usedCount,
-            remaining,
-            limit,
-        };
-    }
-    getFreeFunctionLimit(feature, quotaType) {
-        const freeLimits = {
-            aiWriting: { daily: 100, monthly: 1000 },
-            aiAssistant: { daily: 50, monthly: 500 },
-            videoGeneration: { daily: 0, monthly: 0 },
-            materialGeneration: { daily: 10, monthly: 100 },
-        };
-        const featureLimits = freeLimits[feature];
-        if (!featureLimits) {
-            return 0;
-        }
-        return quotaType === 'daily' ? featureLimits.daily : featureLimits.monthly;
-    }
-    getFeatureName(feature) {
-        const names = {
-            videoGeneration: '视频生成',
-            aiWriting: 'AI写作',
-            aiAssistant: 'AI写作助手',
-            materialGeneration: '素材生成',
-        };
-        return names[feature] || feature;
-    }
-    getTodayDate() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return today;
-    }
-    getMonthStartDate() {
-        const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-};
-exports.FeatureQuotaService = FeatureQuotaService;
-exports.FeatureQuotaService = FeatureQuotaService = FeatureQuotaService_1 = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object])
-], FeatureQuotaService);
-
-
-/***/ }),
-/* 71 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var _a, _b, _c;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PackageFeatureGuard = void 0;
-const common_1 = __webpack_require__(3);
-const core_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(9);
-const feature_quota_service_1 = __webpack_require__(70);
-let PackageFeatureGuard = class PackageFeatureGuard {
-    constructor(reflector, prisma, featureQuotaService) {
-        this.reflector = reflector;
-        this.prisma = prisma;
-        this.featureQuotaService = featureQuotaService;
-    }
-    async canActivate(context) {
-        const requiredFeature = this.reflector.get('feature', context.getHandler());
-        const quotaType = this.reflector.get('quotaType', context.getHandler()) || 'daily';
-        if (!requiredFeature) {
-            return true;
-        }
-        const request = context.switchToHttp().getRequest();
-        const userId = request.user?.userId || request.user?.id;
-        if (!userId) {
-            throw new common_1.ForbiddenException('未登录或token无效');
-        }
-        const subscription = await this.prisma.subscription.findUnique({
-            where: { userId },
-            include: { package: true },
-        });
-        let featureConfig = null;
-        let packageName = '免费套餐';
-        if (subscription && subscription.status === 'ACTIVE') {
-            packageName = subscription.package.name;
-            const features = subscription.package.features;
-            featureConfig = features?.[requiredFeature];
-            if (!featureConfig || !featureConfig.enabled) {
-                throw new common_1.ForbiddenException({
-                    message: `当前套餐（${packageName}）不包含${this.getFeatureName(requiredFeature)}功能`,
-                    feature: requiredFeature,
-                    packageName,
-                    upgradeRequired: true,
-                });
-            }
-        }
-        else {
-            const allowed = await this.checkFreeUserAccess(requiredFeature);
-            if (!allowed) {
-                throw new common_1.ForbiddenException({
-                    message: `${this.getFeatureName(requiredFeature)}功能需要订阅套餐，请升级`,
-                    feature: requiredFeature,
-                    packageName: '免费套餐',
-                    upgradeRequired: true,
-                });
-            }
-        }
-        const quotaResult = await this.featureQuotaService.checkAndConsumeQuota(userId, requiredFeature, quotaType);
-        if (!quotaResult.allowed) {
-            throw new common_1.ForbiddenException({
-                message: quotaResult.message,
-                feature: requiredFeature,
-                packageName,
-                quotaType,
-                used: quotaResult.limit,
-                limit: quotaResult.limit,
-                upgradeRequired: quotaResult.limit > 0,
-            });
-        }
-        request.packageLimits = featureConfig;
-        request.packageName = packageName;
-        request.quotaRemaining = {
-            [quotaType]: quotaResult.remaining,
-        };
-        return true;
-    }
-    async checkFreeUserAccess(feature) {
-        const freeFunctions = ['aiWriting', 'aiAssistant', 'materialGeneration'];
-        return freeFunctions.includes(feature);
-    }
-    getFeatureName(feature) {
-        const names = {
-            videoGeneration: '视频生成',
-            aiWriting: 'AI写作',
-            aiAssistant: 'AI写作助手',
-            materialGeneration: '素材生成',
-            suggestion: '写作建议',
-        };
-        return names[feature] || feature;
-    }
-};
-exports.PackageFeatureGuard = PackageFeatureGuard;
-exports.PackageFeatureGuard = PackageFeatureGuard = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof core_1.Reflector !== "undefined" && core_1.Reflector) === "function" ? _a : Object, typeof (_b = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _b : Object, typeof (_c = typeof feature_quota_service_1.FeatureQuotaService !== "undefined" && feature_quota_service_1.FeatureQuotaService) === "function" ? _c : Object])
-], PackageFeatureGuard);
-
-
-/***/ }),
-/* 72 */
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RequireQuota = exports.RequireFeature = exports.QUOTA_TYPE_KEY = exports.FEATURE_KEY = void 0;
-const common_1 = __webpack_require__(3);
-exports.FEATURE_KEY = 'feature';
-exports.QUOTA_TYPE_KEY = 'quotaType';
-const RequireFeature = (feature) => (0, common_1.SetMetadata)(exports.FEATURE_KEY, feature);
-exports.RequireFeature = RequireFeature;
-const RequireQuota = (quotaType = 'daily') => (0, common_1.SetMetadata)(exports.QUOTA_TYPE_KEY, quotaType);
-exports.RequireQuota = RequireQuota;
-
-
-/***/ }),
 /* 73 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -9410,7 +9411,7 @@ const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const version_service_1 = __webpack_require__(75);
 const version_dto_1 = __webpack_require__(76);
-const common_2 = __webpack_require__(61);
+const common_2 = __webpack_require__(37);
 let VersionController = class VersionController {
     constructor(versionService) {
         this.versionService = versionService;
@@ -10135,7 +10136,7 @@ const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
 const comment_service_1 = __webpack_require__(79);
 const comment_dto_1 = __webpack_require__(80);
-const common_2 = __webpack_require__(61);
+const common_2 = __webpack_require__(37);
 let CommentController = class CommentController {
     constructor(commentService) {
         this.commentService = commentService;
@@ -10754,7 +10755,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ConsistencyController = void 0;
 const common_1 = __webpack_require__(3);
 const swagger_1 = __webpack_require__(4);
-const common_2 = __webpack_require__(61);
+const common_2 = __webpack_require__(37);
 const consistency_service_1 = __webpack_require__(86);
 const consistency_dto_1 = __webpack_require__(87);
 let ConsistencyController = class ConsistencyController {

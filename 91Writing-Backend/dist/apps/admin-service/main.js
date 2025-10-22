@@ -51,7 +51,7 @@ const analytics_module_1 = __webpack_require__(27);
 const ai_config_module_1 = __webpack_require__(34);
 const agent_config_module_1 = __webpack_require__(40);
 const video_api_config_module_1 = __webpack_require__(56);
-const jwt_strategy_1 = __webpack_require__(63);
+const jwt_strategy_1 = __webpack_require__(61);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -3603,7 +3603,7 @@ __decorate([
 ], AgentConfigController.prototype, "test", null);
 exports.AgentConfigController = AgentConfigController = __decorate([
     (0, swagger_1.ApiTags)('Agent配置管理'),
-    (0, common_1.Controller)(),
+    (0, common_1.Controller)('agent-prompts'),
     (0, common_1.UseGuards)(common_2.JwtAuthGuard, role_guard_1.RoleGuard),
     (0, roles_decorator_1.Roles)('ADMIN'),
     (0, swagger_1.ApiBearerAuth)('JWT-auth'),
@@ -4593,22 +4593,31 @@ exports.VideoAPIConfigModule = void 0;
 const common_1 = __webpack_require__(2);
 const jwt_1 = __webpack_require__(9);
 const passport_1 = __webpack_require__(8);
-const video_config_1 = __webpack_require__(57);
-const video_api_config_controller_1 = __webpack_require__(60);
+const config_1 = __webpack_require__(4);
+const database_1 = __webpack_require__(10);
+const video_api_config_controller_1 = __webpack_require__(57);
+const video_api_config_service_1 = __webpack_require__(58);
 let VideoAPIConfigModule = class VideoAPIConfigModule {
 };
 exports.VideoAPIConfigModule = VideoAPIConfigModule;
 exports.VideoAPIConfigModule = VideoAPIConfigModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            video_config_1.VideoAPIConfigModule,
+            database_1.DatabaseModule,
             passport_1.PassportModule,
-            jwt_1.JwtModule.register({
-                secret: process.env.JWT_SECRET || 'your-secret-key',
-                signOptions: { expiresIn: '7d' },
+            config_1.ConfigModule,
+            jwt_1.JwtModule.registerAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET') || '91writing_jwt_secret_dev_2024',
+                    signOptions: { expiresIn: '7d' },
+                }),
             }),
         ],
         controllers: [video_api_config_controller_1.VideoAPIConfigController],
+        providers: [video_api_config_service_1.VideoAPIConfigService],
+        exports: [video_api_config_service_1.VideoAPIConfigService],
     })
 ], VideoAPIConfigModule);
 
@@ -4618,23 +4627,122 @@ exports.VideoAPIConfigModule = VideoAPIConfigModule = __decorate([
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-__exportStar(__webpack_require__(58), exports);
-__exportStar(__webpack_require__(59), exports);
+exports.VideoAPIConfigController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const admin_auth_guard_1 = __webpack_require__(18);
+const role_guard_1 = __webpack_require__(19);
+const roles_decorator_1 = __webpack_require__(20);
+const video_api_config_service_1 = __webpack_require__(58);
+const update_video_api_config_dto_1 = __webpack_require__(59);
+const video_api_config_response_dto_1 = __webpack_require__(60);
+let VideoAPIConfigController = class VideoAPIConfigController {
+    constructor(configService) {
+        this.configService = configService;
+    }
+    async getConfig() {
+        return this.configService.getCurrentConfig();
+    }
+    async updateConfig(updateDto, req) {
+        return this.configService.updateConfig(req.user.id, updateDto);
+    }
+    async getStatistics() {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return this.configService.getCostStatistics(startOfMonth, now);
+    }
+    async getStatisticsRange(startDate, endDate) {
+        return this.configService.getCostStatistics(new Date(startDate), new Date(endDate));
+    }
+    async testProvider(provider) {
+        return this.configService.testProviderConnection(provider);
+    }
+    async getUserQuota(userId) {
+        return this.configService.checkUserQuota(userId);
+    }
+};
+exports.VideoAPIConfigController = VideoAPIConfigController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '获取视频API配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回配置（敏感信息已脱敏）', type: video_api_config_response_dto_1.VideoAPIConfigResponseDto }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
+], VideoAPIConfigController.prototype, "getConfig", null);
+__decorate([
+    (0, common_1.Put)(),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '更新视频API配置' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功', type: video_api_config_response_dto_1.VideoAPIConfigResponseDto }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof update_video_api_config_dto_1.UpdateVideoAPIConfigDto !== "undefined" && update_video_api_config_dto_1.UpdateVideoAPIConfigDto) === "function" ? _c : Object, Object]),
+    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+], VideoAPIConfigController.prototype, "updateConfig", null);
+__decorate([
+    (0, common_1.Get)('statistics'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '获取本月成本统计' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回成本统计', type: video_api_config_response_dto_1.CostStatisticsDto }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], VideoAPIConfigController.prototype, "getStatistics", null);
+__decorate([
+    (0, common_1.Get)('statistics/range'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '获取指定时间范围的成本统计' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回成本统计', type: video_api_config_response_dto_1.CostStatisticsDto }),
+    __param(0, (0, common_1.Query)('startDate')),
+    __param(1, (0, common_1.Query)('endDate')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], VideoAPIConfigController.prototype, "getStatisticsRange", null);
+__decorate([
+    (0, common_1.Post)('test/:provider'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '测试Provider连接' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回测试结果' }),
+    __param(0, (0, common_1.Param)('provider')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], VideoAPIConfigController.prototype, "testProvider", null);
+__decorate([
+    (0, common_1.Get)('quota/:userId'),
+    (0, roles_decorator_1.Roles)('ADMIN'),
+    (0, swagger_1.ApiOperation)({ summary: '查看用户配额' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: '返回用户配额信息', type: video_api_config_response_dto_1.UserQuotaDto }),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], VideoAPIConfigController.prototype, "getUserQuota", null);
+exports.VideoAPIConfigController = VideoAPIConfigController = __decorate([
+    (0, swagger_1.ApiTags)('视频API配置管理'),
+    (0, common_1.Controller)('video-api-config'),
+    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof video_api_config_service_1.VideoAPIConfigService !== "undefined" && video_api_config_service_1.VideoAPIConfigService) === "function" ? _a : Object])
+], VideoAPIConfigController);
 
 
 /***/ }),
@@ -4665,30 +4773,68 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
         this.algorithm = 'aes-256-cbc';
         const key = process.env.ENCRYPTION_KEY || 'default-32-char-encryption-key!!';
         this.encryptionKey = Buffer.from(key.padEnd(32, '0').slice(0, 32));
-        this.logger.log('VideoAPIConfig Service initialized (Shared Library)');
+        this.logger.log('VideoAPIConfig Service initialized');
     }
     async getCurrentConfig() {
-        let config = await this.prisma.videoAPIConfig.findFirst({
-            where: { id: 'default_config' },
-        });
-        if (!config) {
-            config = await this.createDefaultConfig();
+        try {
+            this.logger.log('===== 开始获取视频API配置 =====');
+            this.logger.log('查询数据库...');
+            let config = await this.prisma.videoAPIConfig.findFirst({
+                where: { id: 'default_config' },
+            });
+            this.logger.log(`查询结果: ${config ? '找到配置' : '未找到配置'}`);
+            if (!config) {
+                this.logger.log('配置不存在，创建默认配置...');
+                config = await this.prisma.videoAPIConfig.create({
+                    data: {
+                        id: 'default_config',
+                        videoProvider: 'jimeng',
+                        ffmpegPath: '/usr/bin/ffmpeg',
+                        ffmpegPreset: 'medium',
+                        videoStoragePath: '/data/videos',
+                        tempStoragePath: '/tmp/video-generation',
+                        autoCleanTemp: true,
+                        userDailyQuota: 5,
+                        userMonthlyQuota: 50,
+                        monthlyBudget: 1000.0,
+                        costAlertThreshold: 800.0,
+                        costPerImage: 0.02,
+                        costPerVideo: 1.5,
+                        isActive: true,
+                    },
+                });
+                this.logger.log('✅ 默认视频API配置创建成功');
+            }
+            this.logger.log('开始处理返回数据...');
+            this.logger.log(`配置ID: ${config.id}, Provider: ${config.videoProvider}`);
+            const result = {
+                ...config,
+                volcengineSecretAccessKey: config.volcengineSecretAccessKey
+                    ? this.maskSensitiveData(this.decrypt(config.volcengineSecretAccessKey))
+                    : null,
+                jimengApiKey: config.jimengApiKey ? this.maskSensitiveData(this.decrypt(config.jimengApiKey)) : null,
+                klingApiKey: config.klingApiKey ? this.maskSensitiveData(this.decrypt(config.klingApiKey)) : null,
+            };
+            this.logger.log('===== 配置获取成功，准备返回 =====');
+            return result;
         }
-        return {
-            ...config,
-            volcengineSecretAccessKey: config.volcengineSecretAccessKey
-                ? this.maskSensitiveData(this.decrypt(config.volcengineSecretAccessKey))
-                : null,
-            jimengApiKey: config.jimengApiKey ? this.maskSensitiveData(this.decrypt(config.jimengApiKey)) : null,
-            klingApiKey: config.klingApiKey ? this.maskSensitiveData(this.decrypt(config.klingApiKey)) : null,
-        };
+        catch (error) {
+            this.logger.error('❌❌❌ 获取配置失败:', error.message);
+            this.logger.error('错误栈:', error.stack);
+            throw error;
+        }
     }
     async getFullConfig() {
         let config = await this.prisma.videoAPIConfig.findFirst({
             where: { id: 'default_config' },
         });
         if (!config) {
-            config = await this.createDefaultConfig();
+            config = await this.prisma.videoAPIConfig.create({
+                data: {
+                    id: 'default_config',
+                    videoProvider: 'jimeng',
+                },
+            });
         }
         return {
             ...config,
@@ -4698,22 +4844,6 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
             jimengApiKey: config.jimengApiKey ? this.decrypt(config.jimengApiKey) : null,
             klingApiKey: config.klingApiKey ? this.decrypt(config.klingApiKey) : null,
         };
-    }
-    async createDefaultConfig() {
-        this.logger.log('Creating default video API config');
-        return this.prisma.videoAPIConfig.create({
-            data: {
-                id: 'default_config',
-                videoProvider: 'jimeng',
-                ffmpegPath: '/usr/bin/ffmpeg',
-                videoStoragePath: '/data/videos',
-                tempStoragePath: '/tmp/video-generation',
-                userDailyQuota: 5,
-                userMonthlyQuota: 50,
-                monthlyBudget: 1000.0,
-                costAlertThreshold: 800.0,
-            },
-        });
     }
     async updateConfig(adminId, data) {
         const encrypted = {
@@ -4846,26 +4976,50 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
             switch (provider) {
                 case 'volcengine':
                     if (!config.volcengineAccessKeyId || !config.volcengineSecretAccessKey) {
-                        return { success: false, message: '火山引擎API密钥未配置' };
+                        return {
+                            success: false,
+                            message: '火山引擎API密钥未配置',
+                        };
                     }
-                    return { success: true, message: '火山引擎连接正常' };
+                    return {
+                        success: true,
+                        message: '火山引擎连接正常（模拟）',
+                    };
                 case 'jimeng':
                     if (!config.jimengApiKey) {
-                        return { success: false, message: '即梦API密钥未配置' };
+                        return {
+                            success: false,
+                            message: '即梦API密钥未配置',
+                        };
                     }
-                    return { success: true, message: '即梦连接正常' };
+                    return {
+                        success: true,
+                        message: '即梦连接正常（模拟）',
+                    };
                 case 'kling':
                     if (!config.klingApiKey) {
-                        return { success: false, message: '可灵API密钥未配置' };
+                        return {
+                            success: false,
+                            message: '可灵API密钥未配置',
+                        };
                     }
-                    return { success: true, message: '可灵连接正常' };
+                    return {
+                        success: true,
+                        message: '可灵连接正常（模拟）',
+                    };
                 default:
-                    return { success: false, message: '未知的Provider' };
+                    return {
+                        success: false,
+                        message: '未知的Provider',
+                    };
             }
         }
         catch (error) {
             this.logger.error(`Test ${provider} connection failed:`, error);
-            return { success: false, message: error.message || '连接测试失败' };
+            return {
+                success: false,
+                message: error.message || '连接测试失败',
+            };
         }
     }
     encrypt(text) {
@@ -4921,157 +5075,6 @@ exports.VideoAPIConfigService = VideoAPIConfigService = VideoAPIConfigService_1 
 
 /***/ }),
 /* 59 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.VideoAPIConfigModule = void 0;
-const common_1 = __webpack_require__(2);
-const database_1 = __webpack_require__(10);
-const video_api_config_service_1 = __webpack_require__(58);
-let VideoAPIConfigModule = class VideoAPIConfigModule {
-};
-exports.VideoAPIConfigModule = VideoAPIConfigModule;
-exports.VideoAPIConfigModule = VideoAPIConfigModule = __decorate([
-    (0, common_1.Module)({
-        imports: [database_1.DatabaseModule],
-        providers: [video_api_config_service_1.VideoAPIConfigService],
-        exports: [video_api_config_service_1.VideoAPIConfigService],
-    })
-], VideoAPIConfigModule);
-
-
-/***/ }),
-/* 60 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
-var _a, _b, _c, _d, _e, _f, _g, _h;
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.VideoAPIConfigController = void 0;
-const common_1 = __webpack_require__(2);
-const swagger_1 = __webpack_require__(3);
-const admin_auth_guard_1 = __webpack_require__(18);
-const role_guard_1 = __webpack_require__(19);
-const roles_decorator_1 = __webpack_require__(20);
-const video_config_1 = __webpack_require__(57);
-const update_video_api_config_dto_1 = __webpack_require__(61);
-const video_api_config_response_dto_1 = __webpack_require__(62);
-let VideoAPIConfigController = class VideoAPIConfigController {
-    constructor(configService) {
-        this.configService = configService;
-    }
-    async getConfig() {
-        return this.configService.getCurrentConfig();
-    }
-    async updateConfig(updateDto, req) {
-        return this.configService.updateConfig(req.user.id, updateDto);
-    }
-    async getStatistics() {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        return this.configService.getCostStatistics(startOfMonth, now);
-    }
-    async getStatisticsRange(startDate, endDate) {
-        return this.configService.getCostStatistics(new Date(startDate), new Date(endDate));
-    }
-    async testProvider(provider) {
-        return this.configService.testProviderConnection(provider);
-    }
-    async getUserQuota(userId) {
-        return this.configService.checkUserQuota(userId);
-    }
-};
-exports.VideoAPIConfigController = VideoAPIConfigController;
-__decorate([
-    (0, common_1.Get)('video-api-config'),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: '获取视频API配置' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '返回配置（敏感信息已脱敏）', type: video_api_config_response_dto_1.VideoAPIConfigResponseDto }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
-], VideoAPIConfigController.prototype, "getConfig", null);
-__decorate([
-    (0, common_1.Put)('video-api-config'),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: '更新视频API配置' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '更新成功', type: video_api_config_response_dto_1.VideoAPIConfigResponseDto }),
-    __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [typeof (_c = typeof update_video_api_config_dto_1.UpdateVideoAPIConfigDto !== "undefined" && update_video_api_config_dto_1.UpdateVideoAPIConfigDto) === "function" ? _c : Object, Object]),
-    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
-], VideoAPIConfigController.prototype, "updateConfig", null);
-__decorate([
-    (0, common_1.Get)('video-api-config/statistics'),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: '获取本月成本统计' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '返回成本统计', type: video_api_config_response_dto_1.CostStatisticsDto }),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
-], VideoAPIConfigController.prototype, "getStatistics", null);
-__decorate([
-    (0, common_1.Get)('video-api-config/statistics/range'),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: '获取指定时间范围的成本统计' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '返回成本统计', type: video_api_config_response_dto_1.CostStatisticsDto }),
-    __param(0, (0, common_1.Query)('startDate')),
-    __param(1, (0, common_1.Query)('endDate')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
-    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
-], VideoAPIConfigController.prototype, "getStatisticsRange", null);
-__decorate([
-    (0, common_1.Post)('video-api-config/test/:provider'),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: '测试Provider连接' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '返回测试结果' }),
-    __param(0, (0, common_1.Param)('provider')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
-], VideoAPIConfigController.prototype, "testProvider", null);
-__decorate([
-    (0, common_1.Get)('video-api-config/quota/:userId'),
-    (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: '查看用户配额' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '返回用户配额信息', type: video_api_config_response_dto_1.UserQuotaDto }),
-    __param(0, (0, common_1.Param)('userId')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
-], VideoAPIConfigController.prototype, "getUserQuota", null);
-exports.VideoAPIConfigController = VideoAPIConfigController = __decorate([
-    (0, swagger_1.ApiTags)('视频API配置管理'),
-    (0, common_1.Controller)(),
-    (0, common_1.UseGuards)(admin_auth_guard_1.AdminAuthGuard, role_guard_1.RoleGuard),
-    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
-    __metadata("design:paramtypes", [typeof (_a = typeof video_config_1.VideoAPIConfigService !== "undefined" && video_config_1.VideoAPIConfigService) === "function" ? _a : Object])
-], VideoAPIConfigController);
-
-
-/***/ }),
-/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5176,7 +5179,7 @@ __decorate([
 
 
 /***/ }),
-/* 62 */
+/* 60 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5341,7 +5344,7 @@ __decorate([
 
 
 /***/ }),
-/* 63 */
+/* 61 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5360,7 +5363,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(4);
 const passport_1 = __webpack_require__(8);
-const passport_jwt_1 = __webpack_require__(64);
+const passport_jwt_1 = __webpack_require__(62);
 const database_1 = __webpack_require__(10);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService, prisma) {
@@ -5413,13 +5416,13 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 64 */
+/* 62 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");
 
 /***/ }),
-/* 65 */
+/* 63 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5496,7 +5499,7 @@ exports.AllExceptionsFilter = AllExceptionsFilter = AllExceptionsFilter_1 = __de
 
 
 /***/ }),
-/* 66 */
+/* 64 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -5509,7 +5512,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResponseInterceptor = void 0;
 const common_1 = __webpack_require__(2);
-const operators_1 = __webpack_require__(67);
+const operators_1 = __webpack_require__(65);
 let ResponseInterceptor = class ResponseInterceptor {
     intercept(context, next) {
         return next.handle().pipe((0, operators_1.map)((data) => {
@@ -5551,7 +5554,7 @@ exports.ResponseInterceptor = ResponseInterceptor = __decorate([
 
 
 /***/ }),
-/* 67 */
+/* 65 */
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
@@ -5595,8 +5598,8 @@ const common_1 = __webpack_require__(2);
 const swagger_1 = __webpack_require__(3);
 const config_1 = __webpack_require__(4);
 const app_module_1 = __webpack_require__(5);
-const all_exceptions_filter_1 = __webpack_require__(65);
-const response_interceptor_1 = __webpack_require__(66);
+const all_exceptions_filter_1 = __webpack_require__(63);
+const response_interceptor_1 = __webpack_require__(64);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);

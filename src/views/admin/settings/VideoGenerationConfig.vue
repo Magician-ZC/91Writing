@@ -722,7 +722,7 @@ const loadAllConfigs = async () => {
   loading.value = true
   try {
     // 加载API配置
-    const apiResponse = await apiManager.get('/admin/video-api-config')
+    const apiResponse = await apiManager.get('/api/v1/admin/video-api-config')
     if (apiResponse.data) {
       Object.assign(apiKeysForm, apiResponse.data)
     }
@@ -744,7 +744,7 @@ const saveAllConfigs = async () => {
   saving.value = true
   try {
     // 保存API密钥配置
-    await apiManager.put('/admin/video-api-config', {
+    await apiManager.put('/api/v1/admin/video-api-config', {
       ...apiKeysForm,
       userDailyQuota: costForm.paidDailyQuota,
       userMonthlyQuota: costForm.paidMonthlyQuota,
@@ -769,7 +769,7 @@ const saveAllConfigs = async () => {
 
 const loadStatistics = async () => {
   try {
-    const response = await apiManager.get('/admin/video-api-config/statistics')
+    const response = await apiManager.get('/api/v1/admin/video-api-config/statistics')
     if (response.data) {
       Object.assign(costStats, response.data)
     }
@@ -781,7 +781,7 @@ const loadStatistics = async () => {
 const testConnection = async (provider) => {
   testingConnection.value = provider
   try {
-    const response = await apiManager.post(`/admin/video-api-config/test/${provider}`)
+    const response = await apiManager.post(`/api/v1/admin/video-api-config/test/${provider}`)
     if (response.data.success) {
       ElMessage.success(response.data.message)
     } else {

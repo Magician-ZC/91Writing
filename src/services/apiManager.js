@@ -1620,6 +1620,62 @@ class ApiManager {
     })
   }
 
+  // ===== 便捷方法 =====
+  
+  /**
+   * GET 请求
+   */
+  async get(endpoint, params = null) {
+    return await this.request(endpoint, {
+      method: 'GET',
+      params,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * POST 请求
+   */
+  async post(endpoint, data = null) {
+    return await this.request(endpoint, {
+      method: 'POST',
+      data,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * PUT 请求
+   */
+  async put(endpoint, data = null) {
+    return await this.request(endpoint, {
+      method: 'PUT',
+      data,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * PATCH 请求
+   */
+  async patch(endpoint, data = null) {
+    return await this.request(endpoint, {
+      method: 'PATCH',
+      data,
+      fallbackLocal: false
+    })
+  }
+
+  /**
+   * DELETE 请求
+   */
+  async delete(endpoint) {
+    return await this.request(endpoint, {
+      method: 'DELETE',
+      fallbackLocal: false
+    })
+  }
+
   // ===== 工具方法 =====
   
   /**

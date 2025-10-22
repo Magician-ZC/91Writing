@@ -5,6 +5,7 @@ import { AssistantService } from './assistant.service';
 import { AssistantController } from './assistant.controller';
 import { AICallerService } from '../../services/ai-caller.service';
 import { ContextManagerService } from '../../services/context-manager.service';
+import { FeatureQuotaService } from '@app/common';
 // 导入存在的AI提供商
 import { ClaudeProvider } from '../../providers/claude.provider';
 import { DeepSeekProvider } from '../../providers/deepseek.provider';
@@ -30,6 +31,7 @@ import { OpenAIProvider } from '../../providers/openai.provider';
     AssistantService,
     AICallerService,
     ContextManagerService,
+    FeatureQuotaService,
     ClaudeProvider,
     DeepSeekProvider,
     OpenAIProvider,

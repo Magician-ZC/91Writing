@@ -3,18 +3,18 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { AdminAuthGuard } from '../admin/guards/admin-auth.guard';
 import { RoleGuard } from '../admin/guards/role.guard';
 import { Roles } from '../admin/decorators/roles.decorator';
-import { VideoAPIConfigService } from '@app/video-config';
+import { VideoAPIConfigService } from './video-api-config.service';
 import { UpdateVideoAPIConfigDto } from './dto/update-video-api-config.dto';
 import { VideoAPIConfigResponseDto, CostStatisticsDto, UserQuotaDto } from './dto/video-api-config-response.dto';
 
 @ApiTags('视频API配置管理')
-@Controller()
+@Controller('video-api-config')
 @UseGuards(AdminAuthGuard, RoleGuard)
 @ApiBearerAuth('JWT-auth')
 export class VideoAPIConfigController {
   constructor(private readonly configService: VideoAPIConfigService) {}
 
-  @Get('video-api-config')
+  @Get()
   @Roles('ADMIN')
   @ApiOperation({ summary: '获取视频API配置' })
   @ApiResponse({ status: 200, description: '返回配置（敏感信息已脱敏）', type: VideoAPIConfigResponseDto })
@@ -22,7 +22,7 @@ export class VideoAPIConfigController {
     return this.configService.getCurrentConfig();
   }
 
-  @Put('video-api-config')
+  @Put()
   @Roles('ADMIN')
   @ApiOperation({ summary: '更新视频API配置' })
   @ApiResponse({ status: 200, description: '更新成功', type: VideoAPIConfigResponseDto })
@@ -33,7 +33,7 @@ export class VideoAPIConfigController {
     return this.configService.updateConfig(req.user.id, updateDto);
   }
 
-  @Get('video-api-config/statistics')
+  @Get('statistics')
   @Roles('ADMIN')
   @ApiOperation({ summary: '获取本月成本统计' })
   @ApiResponse({ status: 200, description: '返回成本统计', type: CostStatisticsDto })
@@ -43,7 +43,7 @@ export class VideoAPIConfigController {
     return this.configService.getCostStatistics(startOfMonth, now);
   }
 
-  @Get('video-api-config/statistics/range')
+  @Get('statistics/range')
   @Roles('ADMIN')
   @ApiOperation({ summary: '获取指定时间范围的成本统计' })
   @ApiResponse({ status: 200, description: '返回成本统计', type: CostStatisticsDto })
@@ -57,7 +57,7 @@ export class VideoAPIConfigController {
     );
   }
 
-  @Post('video-api-config/test/:provider')
+  @Post('test/:provider')
   @Roles('ADMIN')
   @ApiOperation({ summary: '测试Provider连接' })
   @ApiResponse({ status: 200, description: '返回测试结果' })
@@ -67,7 +67,7 @@ export class VideoAPIConfigController {
     return this.configService.testProviderConnection(provider);
   }
 
-  @Get('video-api-config/quota/:userId')
+  @Get('quota/:userId')
   @Roles('ADMIN')
   @ApiOperation({ summary: '查看用户配额' })
   @ApiResponse({ status: 200, description: '返回用户配额信息', type: UserQuotaDto })

@@ -4,6 +4,7 @@ import { GenerationService } from './generation.service';
 import { GenerationController } from './generation.controller';
 import { AICallerService } from '../../services/ai-caller.service';
 import { ContextManagerService } from '../../services/context-manager.service';
+import { FeatureQuotaService } from '@app/common';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { ContextManagerService } from '../../services/context-manager.service';
     ]),
   ],
   controllers: [GenerationController],
-  providers: [GenerationService, AICallerService, ContextManagerService],
+  providers: [GenerationService, AICallerService, ContextManagerService, FeatureQuotaService],
   exports: [GenerationService],
 })
 export class GenerationModule {}
