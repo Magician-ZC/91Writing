@@ -117,16 +117,34 @@ export class VideoGenerationAgentService {
       return agentConfig.systemPrompt;
     }
 
-    return `你是一个专业的视频运动描述专家。你的任务是为静态图片生成合适的运动提示词，使其转化为流畅的视频片段。
+    return `你是一个专业的视频运动描述专家。你的任务是为静态图片生成合适的运动提示词，使其转化为流畅的视频片段，用于seedance生视频模型。
 
-你需要：
-1. 根据场景描述生成自然的运动效果
-2. 考虑镜头运动（推拉摇移升降）
-3. 考虑主体运动（角色动作、表情变化）
-4. 考虑环境动态（风吹、光影变化等）
-5. 保持运动幅度适中，避免过于夸张
+# 技能要求
+1. 视频动作提示词详细描述：
+   - 镜头运镜方式与镜头变化
+   - 角色站位/角色动作/角色表情
+   - 说话人的角色名称（说话人的嘴有动作）
+   - 场景环境的变化描述
+   - 画面变化描述
+   - 物体和细节变化描述
+   - 参考首帧画面提示词进行风格描述
 
-输出简洁的英文运动描述，30词以内。`;
+2. 根据场景描述生成自然的运动效果
+3. 考虑镜头运动（推拉摇移升降）
+4. 考虑主体运动（角色动作、表情变化）
+5. 考虑环境动态（风吹、光影变化等）
+6. 保持运动幅度适中，避免过于夸张
+
+# 注意事项
+- 将画面中的物体细节的变化都描述清楚
+- 重点结合首帧图提示词进行画面动态过程的描述
+- 重点考虑多个分镜间前后的内容和效果连贯性
+- 特别明确画面主体的具体位置和详细状态
+- 不要用"这个""那个"等词指代
+- 内容100字以上
+- 检查并移除敏感词汇
+
+输出中文运动描述，详细且具体，至少100字。`;
   }
 
   /**
@@ -136,7 +154,7 @@ export class VideoGenerationAgentService {
     scene: StoryboardSceneDto,
     consistencyProfile: any,
   ): string {
-    let prompt = `请为以下场景生成视频运动描述：
+    let prompt = `请为以下场景生成详细的视频运动描述：
 
 【场景描述】
 ${scene.description}
@@ -147,12 +165,26 @@ ${scene.keyMoment}
 【镜头角度】
 ${scene.cameraAngle}
 
+【环境】
+${scene.environment}
+
 【时长】
 ${scene.duration}秒`;
 
     // 添加角色信息
     if (scene.characters.length > 0) {
       prompt += `\n\n【角色】\n${scene.characters.join(', ')}`;
+      
+      // 添加角色详细信息
+      if (consistencyProfile?.characters) {
+        prompt += `\n\n【角色详细信息】`;
+        scene.characters.forEach((charName) => {
+          const char = consistencyProfile.characters[charName];
+          if (char) {
+            prompt += `\n- ${char.name}: ${char.baseAppearance}`;
+          }
+        });
+      }
     }
 
     // 添加特殊效果
@@ -160,7 +192,15 @@ ${scene.duration}秒`;
       prompt += `\n\n【特殊效果】\n${scene.specialEffects}`;
     }
 
-    prompt += `\n\n请生成简洁的英文运动描述，描述镜头运动和主体动作。`;
+    prompt += `\n\n请生成详细的中文运动描述，确保：
+- 描述镜头运镜方式与镜头变化
+- 描述角色站位、角色动作、角色表情
+- 如有说话人，明确说话人的嘴部动作
+- 描述场景环境的变化
+- 描述画面整体变化和物体细节变化
+- 结合首帧画面提示词进行风格描述
+- 内容至少100字
+- 不使用指代词，明确具体位置和状态`;
 
     return prompt;
   }

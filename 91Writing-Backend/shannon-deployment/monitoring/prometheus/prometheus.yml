@@ -1,0 +1,74 @@
+# Prometheus 配置文件
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'shannon'
+    environment: 'development'
+
+# 告警规则文件
+rule_files:
+  - 'alerts.yml'
+
+# 告警管理器配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# 数据采集配置
+scrape_configs:
+  # Prometheus 自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Shannon Orchestrator
+  - job_name: 'shannon-orchestrator'
+    static_configs:
+      - targets: ['shannon-orchestrator:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Shannon Agent Core
+  - job_name: 'shannon-agent-core'
+    static_configs:
+      - targets: ['shannon-agent-core:8081']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Shannon LLM Service
+  - job_name: 'shannon-llm-service'
+    static_configs:
+      - targets: ['shannon-llm-service:8082']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # PostgreSQL Exporter（可选）
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres-exporter:9187']
+
+  # Redis Exporter（可选）
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['redis-exporter:9121']
+
+  # Qdrant
+  - job_name: 'qdrant'
+    static_configs:
+      - targets: ['qdrant:6333']
+    metrics_path: '/metrics'
+
+  # Node Exporter（如果部署）
+  # - job_name: 'node'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+
+  # Docker 容器监控（如果使用 cAdvisor）
+  # - job_name: 'cadvisor'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']
+

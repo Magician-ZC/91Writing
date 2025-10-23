@@ -464,10 +464,11 @@ const testConnection = async (provider) => {
   testingConnection.value = provider
   try {
     const response = await apiManager.post(`/api/v1/admin/video-api-config/test/${provider}`)
-    if (response.data.success) {
-      ElMessage.success(response.data.message)
+    // apiManager的拦截器已经返回了数据对象，不需要再访问.data
+    if (response.success) {
+      ElMessage.success(response.message)
     } else {
-      ElMessage.warning(response.data.message)
+      ElMessage.warning(response.message)
     }
   } catch (error) {
     ElMessage.error(error.message || '连接测试失败')

@@ -4,10 +4,14 @@ import { DatabaseModule } from '@app/database';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { VideoGenerationController } from './video-generation.controller';
+import { BatchVideoGenerationController } from './batch-video-generation.controller';
 import { VideoGenerationService } from './video-generation.service';
 import { StoryboardAgentService } from '../../services/storyboard-agent.service';
 import { ImageGenerationAgentService } from '../../services/image-generation-agent.service';
 import { VideoGenerationAgentService } from '../../services/video-generation-agent.service';
+import { BatchVideoGenerationService } from '../../services/batch-video-generation.service';
+import { VideoDurationCalculatorService } from '../../services/video-duration-calculator.service';
+import { LongVideoMergerService } from '../../services/long-video-merger.service';
 import { VolcengineVisualProvider } from '../../providers/volcengine-visual.provider';
 import { JimengVideoProvider } from '../../providers/jimeng-video.provider';
 import { KlingVideoProvider } from '../../providers/kling-video.provider';
@@ -50,7 +54,10 @@ import { FeatureQuotaService } from '@app/common';
       },
     ]),
   ],
-  controllers: [VideoGenerationController],
+  controllers: [
+    VideoGenerationController,
+    BatchVideoGenerationController,
+  ],
   providers: [
     VideoGenerationService,
     VideoGenerationQueue,
@@ -58,6 +65,11 @@ import { FeatureQuotaService } from '@app/common';
     StoryboardAgentService,
     ImageGenerationAgentService,
     VideoGenerationAgentService,
+    // 新增批量视频生成服务
+    BatchVideoGenerationService,
+    VideoDurationCalculatorService,
+    LongVideoMergerService,
+    // Provider
     VolcengineVisualProvider,
     JimengVideoProvider,
     KlingVideoProvider,
@@ -65,7 +77,12 @@ import { FeatureQuotaService } from '@app/common';
     AICallerService,
     FeatureQuotaService,
   ],
-  exports: [VideoGenerationService, VideoGenerationQueue],
+  exports: [
+    VideoGenerationService,
+    VideoGenerationQueue,
+    BatchVideoGenerationService,
+    LongVideoMergerService,
+  ],
 })
 export class VideoGenerationModule {}
 

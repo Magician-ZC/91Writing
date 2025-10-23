@@ -44,7 +44,7 @@ const suggestion_module_1 = __webpack_require__(51);
 const wizard_module_1 = __webpack_require__(55);
 const health_module_1 = __webpack_require__(56);
 const video_generation_module_1 = __webpack_require__(59);
-const jwt_strategy_1 = __webpack_require__(78);
+const jwt_strategy_1 = __webpack_require__(83);
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -5045,17 +5045,21 @@ const database_1 = __webpack_require__(9);
 const jwt_1 = __webpack_require__(6);
 const passport_1 = __webpack_require__(7);
 const video_generation_controller_1 = __webpack_require__(61);
+const batch_video_generation_controller_1 = __webpack_require__(75);
 const video_generation_service_1 = __webpack_require__(62);
 const storyboard_agent_service_1 = __webpack_require__(63);
 const image_generation_agent_service_1 = __webpack_require__(64);
 const video_generation_agent_service_1 = __webpack_require__(65);
+const batch_video_generation_service_1 = __webpack_require__(76);
+const video_duration_calculator_service_1 = __webpack_require__(78);
+const long_video_merger_service_1 = __webpack_require__(79);
 const volcengine_visual_provider_1 = __webpack_require__(66);
 const jimeng_video_provider_1 = __webpack_require__(69);
 const kling_video_provider_1 = __webpack_require__(70);
 const ffmpeg_service_1 = __webpack_require__(71);
 const ai_caller_service_1 = __webpack_require__(17);
-const video_generation_queue_1 = __webpack_require__(75);
-const video_generation_processor_1 = __webpack_require__(77);
+const video_generation_queue_1 = __webpack_require__(81);
+const video_generation_processor_1 = __webpack_require__(82);
 const microservices_1 = __webpack_require__(8);
 const common_2 = __webpack_require__(28);
 let VideoGenerationModule = class VideoGenerationModule {
@@ -5093,7 +5097,10 @@ exports.VideoGenerationModule = VideoGenerationModule = __decorate([
                 },
             ]),
         ],
-        controllers: [video_generation_controller_1.VideoGenerationController],
+        controllers: [
+            video_generation_controller_1.VideoGenerationController,
+            batch_video_generation_controller_1.BatchVideoGenerationController,
+        ],
         providers: [
             video_generation_service_1.VideoGenerationService,
             video_generation_queue_1.VideoGenerationQueue,
@@ -5101,6 +5108,9 @@ exports.VideoGenerationModule = VideoGenerationModule = __decorate([
             storyboard_agent_service_1.StoryboardAgentService,
             image_generation_agent_service_1.ImageGenerationAgentService,
             video_generation_agent_service_1.VideoGenerationAgentService,
+            batch_video_generation_service_1.BatchVideoGenerationService,
+            video_duration_calculator_service_1.VideoDurationCalculatorService,
+            long_video_merger_service_1.LongVideoMergerService,
             volcengine_visual_provider_1.VolcengineVisualProvider,
             jimeng_video_provider_1.JimengVideoProvider,
             kling_video_provider_1.KlingVideoProvider,
@@ -5108,7 +5118,12 @@ exports.VideoGenerationModule = VideoGenerationModule = __decorate([
             ai_caller_service_1.AICallerService,
             common_2.FeatureQuotaService,
         ],
-        exports: [video_generation_service_1.VideoGenerationService, video_generation_queue_1.VideoGenerationQueue],
+        exports: [
+            video_generation_service_1.VideoGenerationService,
+            video_generation_queue_1.VideoGenerationQueue,
+            batch_video_generation_service_1.BatchVideoGenerationService,
+            long_video_merger_service_1.LongVideoMergerService,
+        ],
     })
 ], VideoGenerationModule);
 
@@ -5643,23 +5658,123 @@ let StoryboardAgentService = StoryboardAgentService_1 = class StoryboardAgentSer
         if (agentConfig && agentConfig.systemPrompt) {
             return agentConfig.systemPrompt;
         }
-        return `你是一个专业的视频分镜脚本编写助手。你的任务是将小说章节内容转化为适合视频化的分镜脚本。
+        return `# 角色
+你是一名专业的短剧导演，具备丰富的视频创作经验和专业知识，能够精准理解用户输入，并将其转化为内容丰富的分镜、运镜、角色、配音旁白等，分镜的首帧图提示词将用于seedream生图模型，分镜的视频提示词将用于seedance生视频模型。
 
-你需要：
-1. 提取章节中的关键情节点和视觉化元素
-2. 识别出现的角色、场景和重要物品
-3. 为每个分镜场景生成详细描述，包括：
-   - 场景编号
-   - 场景描述（视觉化描述）
-   - 出现的角色列表
-   - 环境/场景
-   - 预计时长（秒）
-   - 关键情节点
-   - 镜头角度建议
-4. 确保分镜之间的时间线和逻辑连贯性
-5. 适当压缩和精炼，突出核心情节
+# 技能
+## 技能 1: 理解剧本并规划分镜
+1. 根据用户的剧本、人物角色信息、画面风格、提示词中的参考内容规划分镜。每集包含至少20个分镜，需要关注前后剧情的连贯性、人物的一致性。所有分镜输出内容不得超过2万字，达到2万字时结束输出。
 
-输出格式为JSON，包含scenes数组和摘要信息。`;
+## 技能 2: 生成视频的多个分镜提示词
+1. 针对剧集内容拆分编写分镜内容：
+- img_details：首帧图提示词
+详细描述：景别（全景/中景/近景/特写）、时间、地点、场景环境描述、画面描述、物体和细节（如形状/颜色/大小/位置）、风格描述、角色站位位置/角色动作/角色表情/说话人的角色名称（不要旁白内容）。
+将画面中的物体细节都描述清楚，重点关注**多个分镜见前后的内容和效果连贯性**，明确画面主体的位置和状态，不要用"这个""那个"等词指代。
+内容60字以上。
+
+- video_details: 视频动作提示词
+详细描述：镜头运镜方式与镜头变化、角色站位/角色动作/角色表情/说话人的角色名称（说话人的嘴有动作）、场景环境的变化描述、画面变化描述、物体和细节变化描述、参考本分镜的首帧画面提示词进行风格描述、。
+将画面中的物体细节的变化都描述清楚，重点**结合首帧图提示词进行画面动态过程的描述**，重点考虑**多个分镜见前后的内容和效果连贯性**，特别明确画面主体的具体位置和详细状态，不要用"这个""那个"等词指代。内容100字以上。
+
+- scriptLine: 语音内容
+信息包括：说话人角色名speaker（如用户要求第一人称解说则始终同一人读文案）、text口播文案、合适的角色音色voice_id、适当语速voice_speed、合理的说话情感emotion（emotion必须从音色库参考值或用户给到的范围中取，不可自己编造，无则为空）。
+**每个分镜的说话内容约15至40字，无text口播则为"空镜"，无角色名时角色为"旁白"，旁白音色优先用户输入（默认：7468512265134932019），无emotion时则为空。**
+
+- role_info: 角色信息
+基于角色信息，补全role和role_image。
+
+- ref_img: 参考图
+默认为空数组，分镜剧本中提供图片链接则按格式补充。
+
+3. 检查生成的提示词是否包含敏感信息，如有则进行调整：
+- 反复检查提示词，识别其中可能存在的敏感信息，包括涉政、涉黄、与民政局等相关涉政实体、军区等内容、低俗、不良画面、谩骂、引人不适、宗教、极端服饰、赌博、领导人、烈士陵园等信息。
+- 将识别出的敏感信息进行替换或调整，确保新生成的提示词不包含任何敏感信息，同时尽量保持原始提示词的核心内容和风格。
+- 最终输出优化后提示词，不包含任何其他内容。
+- 第一要务是去除敏感信息，第二要求才是保留原始内容。
+
+# 参考内容库
+## 可参考的风格词库
+1. 风格词
+绘本风格、古风插画、lo-fi插画、宫崎骏动漫、日漫风格、赛璐璐风格、儿童画、2D Cartoon、欧美动画、2D动画风格、国漫风格、中国风、Ancient China Illustration、新艺术派风、美漫风格、厚涂风格、半厚涂风格、奇幻风、奇幻风格、侘寂风、中式恐怖、日杂风、民国风、老钱风、森系、欧美杂志封面插画、拼贴风、小清新、Springtime Aesthetic、野性美、甜酷辣妹风、复古风、American retro style、波西米亚风、像素风、宫崎骏、京剧风格、乐高风格、Lowbrow art、丁丁历险记、flat style、轻酸性设计、扁平渐变风格、盲盒风格、Barbie style、港风、敦煌美学、Pastoral style、wasteland、老照片、国家地理风格、国画风格、水墨风、山水画、绢本画、工笔风格、花鸟画、版画、色粉画、后印象派、连环画、皮影、剪纸、极简主义、弥散风格、晕染风格、漆画风格
+
+## 生图提示词参考库
+1. 推文通用
+2d漫画，细线条，厚涂，简洁，柔和的灯光，平面插画，动漫美感，数字技术技艺，
+2. 新二次元
+二次元，平面插画，光影质感，原神
+3. 二次元漫画
+阴郁，灰暗的氛围，Anime, vibrant colors, anime aesthetic, digital illustration, masterpiece,sfw,highres,delicate
+4. 二次元经典
+阴郁，灰暗的环境，Anime, vibrant colors, anime aesthetic, digital illustration, masterpiece,sfw,highres,delicate,
+5. 国风漫画
+中国古风二次元风格, 参考苏摩画风, 赛璐珞着色，厚涂漫画, 散点透视
+6. 都市气质
+Josei, (modern:1.4) (modern city:1.3), modern and fashionable, cool_theme, metropolis, sumptuous, mature, painting, 动漫风格，灵活的构图，成熟，
+7. 现代都市
+动漫，配图，厚涂，韩国网络漫画风格，数字技术技艺，简洁的笔触，
+8. 2D古风
+女性向漫画，小说配图，平面插画，简洁的笔触，古风，2d，
+9. 仙侠古风
+仙侠古风，古风动漫，数字插画，
+10. 仙侠古风2
+2d漫画，细线条，柔和的灯光，平面插画，动漫美感，数字技术技艺，游戏CG，影视级画面，高质感，仙侠古风，古风
+11. 女频古风
+古风，动漫，动漫美学，数字插画，光影质感
+12. 水墨国风
+2.5D,bloom,ink washing,watercolor,realistic,gentle,Chinese painting, blush soft tones, ink, abstract ink, high saturation, niji, ((martial arts)),ink and watercolor, highly saturated tones, ultra-fine, gray smoke,gufeng,beauty,dramatic light,small_eyes,floating hair,ancient China, , 动漫风格，灵活的构图，成熟
+13. 国风水墨
+中国传统水墨风格,水墨风格插画, 参考张大千/吴冠中意境, 焦浓重淡清五色, 飞白笔触,  诗意留白, 手工宣纸纹理, 墨韵单色美学
+14. 恐怖悬疑
+平面插画，动漫，黑暗诡异风格，诡异氛围，惊悚，
+15. 恐怖漫画
+horror film, animate,  black background, anime inspired, niji, Gloomy atmosphere, dark, 动漫风格，灵活的构图，成熟
+
+## 音色和情感参考库
+| voice_id | emotion情感范围 |
+| 7524987545197756435 | angry,fear,neutral |
+| 7524987545197772819 | happy,sad,angry,surprised,fear,hate,excited,coldness,neutral |
+| 7524987545197789203 | coldness,angry,surprised,neutral |
+| 7524987545197805587 | happy,sad,angry,surprised,excited,coldness,neutral |
+| 7524987545197821971 | happy,sad,angry,surprised,fear,hate,excited,coldness,neutral |
+| 7524987545197838355 | happy,sad,angry,surprised,fear,hate,excited,coldness,neutral |
+| 7524987545197854739 | happy,angry,hate,neutral |
+| 7524987545197871123 | happy,sad,angry,surprised,fear,neutral |
+| 7524987545197887507 | sad,fear,neutral |
+| 7524987545197903891 | sad,fear,neutral |
+| 7524987545197920275 | sad,fear,neutral |
+| 7524987545197936659 | happy,sad,angry,fear,hate,excited,neutral |
+| 7524987545197953043 | happy,angry,hate,neutral |
+| 7524987545197969427 | angry,surprised,fear,excited,coldness,neutral |
+| 7468512265134932019 |  |
+| 7468512265151528987 |  |
+| 7468512265151561755 |  |
+| 7468512265151594523 |  |
+| 7481299960424792118 |  |
+| 7481299960424808502 |  |
+| 7468512265134817331 |  |
+| 7468512265134833715 |  |
+| 7468512265134850099 |  |
+| 7468512265134866483 |  |
+| 7468512265134882867 |  |
+| 7468512265134948403 |  |
+| 7426720361753968677 |  |
+| 7481299960428855335 |  |
+| 7481299960428871719 |  |
+| 7481299960428888103 |  |
+| 7481299960428904487 |  |
+| 7481299960428920871 |  |
+| 7468512265151741979 |  |
+
+# 输出要求
+将所有内容按 json 格式输出。
+
+# 注意
+- role_info需要把对应分镜内的相关角色信息都输出。
+- 选择音色的情感emotion时，一定要在该音色支持情感的范围内，否则会导致错误。
+- 每个剧集的分镜数量至少20个以上，每个分镜中的旁白文案字数介于15到40个字，提示词内容需要描述细节至少60字以上。
+- 检查生成的提示词文本是否包含敏感信息，如有则进行调整。
+- 严格按照给定的 json 格式进行输出，不能偏离框架要求。
+- 需确保分镜风格保持一致，分镜与分镜间的视频运镜和视频动画保持一致，保持前后分镜剧情的连贯性。`;
     }
     buildUserPrompt(chapter, consistencyProfile, options) {
         const sceneCount = options.sceneCount || 5;
@@ -5889,24 +6004,31 @@ let ImageGenerationAgentService = ImageGenerationAgentService_1 = class ImageGen
         return response.content.trim();
     }
     async optimizePrompt(basePrompt, scene) {
-        const systemPrompt = `你是一个AI绘图提示词优化专家。你的任务是优化现有提示词，使其更加精确、视觉化，适合Stable Diffusion等AI绘图模型。
+        const systemPrompt = `你是一个AI绘图提示词优化专家。你的任务是优化现有提示词，使其更加精确、视觉化，适合seedream等AI绘图模型。
 
 优化要点：
-1. 增强视觉细节描述
+1. 增强视觉细节描述（景别、环境、物体细节）
 2. 添加艺术风格和质量标签
-3. 优化描述顺序（主体→环境→风格→质量）
-4. 使用英文关键词
+3. 优化描述顺序（景别→场景→角色→动作→环境→风格→质量）
+4. 确保描述具体，不使用指代词
 5. 保持原意不变
+6. 检查并移除敏感词汇
 
-输出优化后的提示词（英文），用逗号分隔关键词。`;
+输出优化后的提示词（中文），详细且具体，至少60字。`;
         const userPrompt = `请优化以下提示词：
 
 ${basePrompt}
 
 场景描述：${scene.description}
 镜头角度：${scene.cameraAngle}
+环境：${scene.environment}
 
-请输出优化后的英文提示词。`;
+请输出优化后的中文提示词，确保：
+- 明确描述景别（全景/中景/近景/特写）
+- 详细描述场景环境
+- 清晰描述角色站位、动作、表情
+- 包含风格描述
+- 至少60字`;
         try {
             const response = await this.aiCaller.callAI({
                 userId: 'system',
@@ -5916,7 +6038,7 @@ ${basePrompt}
                 ],
                 parameters: {
                     temperature: 0.7,
-                    maxTokens: 400,
+                    maxTokens: 500,
                 },
             });
             return response.content.trim();
@@ -5930,16 +6052,43 @@ ${basePrompt}
         if (agentConfig && agentConfig.systemPrompt) {
             return agentConfig.systemPrompt;
         }
-        return `你是一个专业的AI绘图提示词生成专家。你的任务是将场景描述转化为详细的视觉化提示词。
+        return `你是一个专业的AI绘图提示词生成专家。你的任务是将场景描述转化为详细的视觉化提示词，用于seedream生图模型。
 
-你需要：
-1. 准确描述场景中的角色外貌和特征（确保一致性）
-2. 详细描述环境、氛围、光线
-3. 添加艺术风格、色调、质量标签
-4. 根据镜头角度调整构图描述
-5. 使用具体的视觉化词汇
+# 技能要求
+1. 详细描述场景要素：
+   - 景别（全景/中景/近景/特写）
+   - 时间、地点
+   - 场景环境描述
+   - 画面描述
+   - 物体和细节（如形状/颜色/大小/位置）
+   - 风格描述
+   - 角色站位位置/角色动作/角色表情
 
-输出英文提示词，用逗号分隔关键词。`;
+2. 准确描述角色外貌和特征（确保一致性）
+3. 详细描述环境、氛围、光线
+4. 添加艺术风格、色调、质量标签
+5. 根据镜头角度调整构图描述
+6. 使用具体的视觉化词汇
+
+# 风格词库参考
+绘本风格、古风插画、lo-fi插画、宫崎骏动漫、日漫风格、赛璐璐风格、儿童画、2D Cartoon、欧美动画、2D动画风格、国漫风格、中国风、Ancient China Illustration、新艺术派风、美漫风格、厚涂风格、半厚涂风格、奇幻风、奇幻风格、侘寂风、中式恐怖、日杂风、民国风、老钱风、森系、欧美杂志封面插画、拼贴风、小清新、Springtime Aesthetic、野性美、甜酷辣妹风、复古风、American retro style、波西米亚风、像素风、宫崎骏、京剧风格、乐高风格、Lowbrow art、丁丁历险记、flat style、轻酸性设计、扁平渐变风格、盲盒风格、Barbie style、港风、敦煌美学、Pastoral style、wasteland、老照片、国家地理风格、国画风格、水墨风、山水画、绢本画、工笔风格、花鸟画、版画、色粉画、后印象派、连环画、皮影、剪纸、极简主义、弥散风格、晕染风格、漆画风格
+
+# 生图提示词参考
+1. 推文通用: 2d漫画，细线条，厚涂，简洁，柔和的灯光，平面插画，动漫美感，数字技术技艺
+2. 新二次元: 二次元，平面插画，光影质感，原神
+3. 国风漫画: 中国古风二次元风格, 参考苏摩画风, 赛璐珞着色，厚涂漫画, 散点透视
+4. 都市气质: Josei, modern, modern city, modern and fashionable, cool_theme, metropolis, sumptuous, mature, painting, 动漫风格，灵活的构图，成熟
+5. 仙侠古风: 2d漫画，细线条，柔和的灯光，平面插画，动漫美感，数字技术技艺，游戏CG，影视级画面，高质感，仙侠古风，古风
+6. 水墨国风: 2.5D,bloom,ink washing,watercolor,realistic,gentle,Chinese painting, blush soft tones, ink, abstract ink, high saturation, niji, martial arts,ink and watercolor, highly saturated tones, ultra-fine, gray smoke,gufeng,beauty,dramatic light,small_eyes,floating hair,ancient China, 动漫风格，灵活的构图，成熟
+7. 恐怖悬疑: 平面插画，动漫，黑暗诡异风格，诡异氛围，惊悚
+
+# 注意事项
+- 将画面中的物体细节都描述清楚
+- 重点关注多个分镜间前后的内容和效果连贯性
+- 明确画面主体的位置和状态，不要用"这个""那个"等词指代
+- 内容60字以上
+- 检查并移除敏感词汇（涉政、涉黄、暴力、血腥等）
+- 输出中文描述，详细且具体`;
     }
     buildUserPrompt(scene, consistencyProfile, chapterNumber) {
         let prompt = `请为以下场景生成详细的AI绘图提示词：
@@ -6099,19 +6248,37 @@ let VideoGenerationAgentService = VideoGenerationAgentService_1 = class VideoGen
         if (agentConfig && agentConfig.systemPrompt) {
             return agentConfig.systemPrompt;
         }
-        return `你是一个专业的视频运动描述专家。你的任务是为静态图片生成合适的运动提示词，使其转化为流畅的视频片段。
+        return `你是一个专业的视频运动描述专家。你的任务是为静态图片生成合适的运动提示词，使其转化为流畅的视频片段，用于seedance生视频模型。
 
-你需要：
-1. 根据场景描述生成自然的运动效果
-2. 考虑镜头运动（推拉摇移升降）
-3. 考虑主体运动（角色动作、表情变化）
-4. 考虑环境动态（风吹、光影变化等）
-5. 保持运动幅度适中，避免过于夸张
+# 技能要求
+1. 视频动作提示词详细描述：
+   - 镜头运镜方式与镜头变化
+   - 角色站位/角色动作/角色表情
+   - 说话人的角色名称（说话人的嘴有动作）
+   - 场景环境的变化描述
+   - 画面变化描述
+   - 物体和细节变化描述
+   - 参考首帧画面提示词进行风格描述
 
-输出简洁的英文运动描述，30词以内。`;
+2. 根据场景描述生成自然的运动效果
+3. 考虑镜头运动（推拉摇移升降）
+4. 考虑主体运动（角色动作、表情变化）
+5. 考虑环境动态（风吹、光影变化等）
+6. 保持运动幅度适中，避免过于夸张
+
+# 注意事项
+- 将画面中的物体细节的变化都描述清楚
+- 重点结合首帧图提示词进行画面动态过程的描述
+- 重点考虑多个分镜间前后的内容和效果连贯性
+- 特别明确画面主体的具体位置和详细状态
+- 不要用"这个""那个"等词指代
+- 内容100字以上
+- 检查并移除敏感词汇
+
+输出中文运动描述，详细且具体，至少100字。`;
     }
     buildUserPrompt(scene, consistencyProfile) {
-        let prompt = `请为以下场景生成视频运动描述：
+        let prompt = `请为以下场景生成详细的视频运动描述：
 
 【场景描述】
 ${scene.description}
@@ -6122,15 +6289,35 @@ ${scene.keyMoment}
 【镜头角度】
 ${scene.cameraAngle}
 
+【环境】
+${scene.environment}
+
 【时长】
 ${scene.duration}秒`;
         if (scene.characters.length > 0) {
             prompt += `\n\n【角色】\n${scene.characters.join(', ')}`;
+            if (consistencyProfile?.characters) {
+                prompt += `\n\n【角色详细信息】`;
+                scene.characters.forEach((charName) => {
+                    const char = consistencyProfile.characters[charName];
+                    if (char) {
+                        prompt += `\n- ${char.name}: ${char.baseAppearance}`;
+                    }
+                });
+            }
         }
         if (scene.specialEffects) {
             prompt += `\n\n【特殊效果】\n${scene.specialEffects}`;
         }
-        prompt += `\n\n请生成简洁的英文运动描述，描述镜头运动和主体动作。`;
+        prompt += `\n\n请生成详细的中文运动描述，确保：
+- 描述镜头运镜方式与镜头变化
+- 描述角色站位、角色动作、角色表情
+- 如有说话人，明确说话人的嘴部动作
+- 描述场景环境的变化
+- 描述画面整体变化和物体细节变化
+- 结合首帧画面提示词进行风格描述
+- 内容至少100字
+- 不使用指代词，明确具体位置和状态`;
         return prompt;
     }
     determineMotionIntensity(scene) {
@@ -6988,6 +7175,39 @@ let FFmpegService = FFmpegService_1 = class FFmpegService {
             return 0;
         }
     }
+    async checkFFmpegAvailability() {
+        try {
+            const { stdout } = await execAsync(`${this.ffmpegPath} -version`);
+            this.logger.log(`FFmpeg版本: ${stdout.split('\n')[0]}`);
+            return true;
+        }
+        catch (error) {
+            this.logger.error(`FFmpeg不可用: ${error.message}`);
+            return false;
+        }
+    }
+    async createTitleVideo(title, duration, outputPath, options) {
+        const width = options?.width || 1920;
+        const height = options?.height || 1080;
+        const fontSize = options?.fontSize || 60;
+        const fontColor = options?.fontColor || 'white';
+        const backgroundColor = options?.backgroundColor || 'black';
+        this.logger.log(`创建标题视频: ${title}, 时长: ${duration}秒`);
+        try {
+            const escapedTitle = title.replace(/'/g, "'\\''").replace(/:/g, '\\:');
+            const command = `${this.ffmpegPath} -f lavfi -i color=c=${backgroundColor}:s=${width}x${height}:d=${duration} -vf "drawtext=text='${escapedTitle}':fontsize=${fontSize}:fontcolor=${fontColor}:x=(w-text_w)/2:y=(h-text_h)/2" -c:v libx264 -pix_fmt yuv420p "${outputPath}"`;
+            await execAsync(command);
+            if (!fs.existsSync(outputPath)) {
+                throw new Error('标题视频创建失败');
+            }
+            this.logger.log(`标题视频创建成功: ${outputPath}`);
+            return outputPath;
+        }
+        catch (error) {
+            this.logger.error(`创建标题视频失败: ${error.message}`);
+            throw error;
+        }
+    }
     async getVideoMetadata(videoPath) {
         try {
             const command = `${this.ffmpegPath} -i "${videoPath}" -f ffmetadata - 2>&1`;
@@ -7004,8 +7224,12 @@ let FFmpegService = FFmpegService_1 = class FFmpegService {
                 const seconds = parseFloat(durationMatch[3]);
                 duration = hours * 3600 + minutes * 60 + seconds;
             }
+            const width = resolutionMatch ? parseInt(resolutionMatch[1]) : 0;
+            const height = resolutionMatch ? parseInt(resolutionMatch[2]) : 0;
             return {
                 duration,
+                width,
+                height,
                 resolution: resolutionMatch ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : 'unknown',
                 fps: fpsMatch ? parseFloat(fpsMatch[1]) : 0,
                 bitrate: bitrateMatch ? parseInt(bitrateMatch[1]) : 0,
@@ -7015,18 +7239,16 @@ let FFmpegService = FFmpegService_1 = class FFmpegService {
         }
         catch (error) {
             this.logger.error(`获取视频元数据失败: ${error.message}`);
-            return null;
-        }
-    }
-    async checkFFmpegAvailability() {
-        try {
-            const { stdout } = await execAsync(`${this.ffmpegPath} -version`);
-            this.logger.log(`FFmpeg版本: ${stdout.split('\n')[0]}`);
-            return true;
-        }
-        catch (error) {
-            this.logger.error(`FFmpeg不可用: ${error.message}`);
-            return false;
+            return {
+                duration: 0,
+                width: 0,
+                height: 0,
+                resolution: 'unknown',
+                fps: 0,
+                bitrate: 0,
+                fileSize: 0,
+                format: 'unknown',
+            };
         }
     }
 };
@@ -7415,12 +7637,1268 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a, _b, _c, _d, _e;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BatchVideoGenerationController = void 0;
+const common_1 = __webpack_require__(2);
+const swagger_1 = __webpack_require__(3);
+const common_2 = __webpack_require__(28);
+const batch_video_generation_service_1 = __webpack_require__(76);
+const long_video_merger_service_1 = __webpack_require__(79);
+const batch_video_generation_dto_1 = __webpack_require__(80);
+let BatchVideoGenerationController = class BatchVideoGenerationController {
+    constructor(batchVideoService, videoMergerService) {
+        this.batchVideoService = batchVideoService;
+        this.videoMergerService = videoMergerService;
+    }
+    async batchGenerateByChapters(req, dto) {
+        const userId = req.user.userId || req.user.id;
+        return this.batchVideoService.batchGenerateByChapters(userId, dto.novelId, dto.chapterIds, dto.options);
+    }
+    async smartGenerate(req, dto) {
+        const userId = req.user.userId || req.user.id;
+        return this.batchVideoService.smartGenerateForTargetDuration(userId, dto.novelId, dto.startChapter, dto.targetDuration, dto.options);
+    }
+    async getBatchStatus(batchId) {
+        return this.batchVideoService.getBatchStatus(batchId);
+    }
+    async cancelBatch(batchId) {
+        return this.batchVideoService.cancelBatch(batchId);
+    }
+    async mergeBatchVideos(batchId, dto) {
+        return this.videoMergerService.mergeBatchVideos(batchId, dto.options);
+    }
+    async getMergeStatus(batchId) {
+        return this.videoMergerService.getMergeStatus(batchId);
+    }
+};
+exports.BatchVideoGenerationController = BatchVideoGenerationController;
+__decorate([
+    (0, common_1.Post)('generate-by-chapters'),
+    (0, common_2.RequireFeature)('videoGeneration'),
+    (0, common_2.RequireQuota)('daily'),
+    (0, swagger_1.ApiOperation)({
+        summary: '批量生成指定章节的视频',
+        description: '用户手动选择多个章节，系统批量生成视频并可选合并为长视频'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '批量任务已提交',
+        schema: {
+            example: {
+                batchId: 'batch-xxx',
+                totalChapters: 3,
+                estimatedDuration: 45,
+                estimatedScenes: 15,
+                jobs: [
+                    { chapterId: 'ch-1', jobId: 'job-1' },
+                    { chapterId: 'ch-2', jobId: 'job-2' },
+                    { chapterId: 'ch-3', jobId: 'job-3' }
+                ],
+                message: '已提交3个章节的视频生成任务，预计总时长0.8分钟'
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '请求参数错误' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '无权限或配额不足' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_c = typeof batch_video_generation_dto_1.BatchGenerateByChaptersDto !== "undefined" && batch_video_generation_dto_1.BatchGenerateByChaptersDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", Promise)
+], BatchVideoGenerationController.prototype, "batchGenerateByChapters", null);
+__decorate([
+    (0, common_1.Post)('smart-generate'),
+    (0, common_2.RequireFeature)('videoGeneration'),
+    (0, common_2.RequireQuota)('daily'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'AI智能规划生成目标时长视频',
+        description: 'AI自动计算需要多少章节才能生成指定时长（如5-10分钟）的视频'
+    }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: 'AI规划任务已提交',
+        schema: {
+            example: {
+                batchId: 'batch-xxx',
+                recommendedChapters: [1, 2, 3, 4, 5],
+                totalChapters: 5,
+                estimatedDuration: 600,
+                estimatedScenes: 25,
+                breakdown: [
+                    {
+                        chapterNumber: 1,
+                        chapterTitle: '第一章 开端',
+                        wordCount: 2000,
+                        estimatedScenes: 5,
+                        estimatedDuration: 120,
+                        aiReasoning: '包含2个重要场景转换和1个对话场景'
+                    }
+                ],
+                reasoning: '根据智能分析，推荐使用第1-5章（共5章）生成视频...',
+                jobs: []
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '请求参数错误' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: '无权限或配额不足' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '章节不存在' }),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof batch_video_generation_dto_1.SmartGenerateVideoDto !== "undefined" && batch_video_generation_dto_1.SmartGenerateVideoDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", Promise)
+], BatchVideoGenerationController.prototype, "smartGenerate", null);
+__decorate([
+    (0, common_1.Get)('status/:batchId'),
+    (0, swagger_1.ApiOperation)({ summary: '查询批量生成状态' }),
+    (0, swagger_1.ApiParam)({ name: 'batchId', description: '批次ID', example: 'batch-xxx' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '返回批量生成状态',
+        schema: {
+            example: {
+                batchId: 'batch-xxx',
+                status: 'PROCESSING',
+                totalChapters: 5,
+                completedChapters: 3,
+                failedChapters: 0,
+                processingChapters: 2,
+                progress: 60,
+                estimatedDuration: 600,
+                actualDuration: 580,
+                chapters: [
+                    {
+                        chapterId: 'ch-1',
+                        chapterNumber: 1,
+                        status: 'COMPLETED',
+                        videoUrl: 'https://cdn.example.com/ch-1.mp4'
+                    }
+                ],
+                mergedVideoUrl: 'https://cdn.example.com/merged-video.mp4'
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '批次不存在' }),
+    __param(0, (0, common_1.Param)('batchId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], BatchVideoGenerationController.prototype, "getBatchStatus", null);
+__decorate([
+    (0, common_1.Post)('cancel/:batchId'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: '取消批量生成任务' }),
+    (0, swagger_1.ApiParam)({ name: 'batchId', description: '批次ID', example: 'batch-xxx' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '任务已取消',
+        schema: {
+            example: {
+                message: '已取消批量任务，共取消3个待处理任务'
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '批次不存在' }),
+    __param(0, (0, common_1.Param)('batchId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], BatchVideoGenerationController.prototype, "cancelBatch", null);
+__decorate([
+    (0, common_1.Post)('merge/:batchId'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({
+        summary: '合并批量生成的视频为一个长视频',
+        description: '将多个章节的短视频合并为一个完整的长视频，可添加片头片尾和章节标题'
+    }),
+    (0, swagger_1.ApiParam)({ name: 'batchId', description: '批次ID', example: 'batch-xxx' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '视频合并成功',
+        schema: {
+            example: {
+                mergedVideoUrl: 'https://cdn.example.com/merged-final.mp4',
+                totalDuration: 620,
+                fileSize: 125000000,
+                resolution: '1920x1080',
+                chapterCount: 5
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: '请求参数错误' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '批次不存在' }),
+    __param(0, (0, common_1.Param)('batchId')),
+    __param(1, (0, common_1.Body)(common_1.ValidationPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, typeof (_e = typeof batch_video_generation_dto_1.MergeBatchVideosDto !== "undefined" && batch_video_generation_dto_1.MergeBatchVideosDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", Promise)
+], BatchVideoGenerationController.prototype, "mergeBatchVideos", null);
+__decorate([
+    (0, common_1.Get)('merge/status/:batchId'),
+    (0, swagger_1.ApiOperation)({ summary: '查询长视频合成状态' }),
+    (0, swagger_1.ApiParam)({ name: 'batchId', description: '批次ID', example: 'batch-xxx' }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '返回合成状态',
+        schema: {
+            example: {
+                status: 'COMPLETED',
+                progress: 100,
+                mergedVideoUrl: 'https://cdn.example.com/merged-final.mp4'
+            }
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: '批次不存在' }),
+    __param(0, (0, common_1.Param)('batchId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], BatchVideoGenerationController.prototype, "getMergeStatus", null);
+exports.BatchVideoGenerationController = BatchVideoGenerationController = __decorate([
+    (0, swagger_1.ApiTags)('批量视频生成'),
+    (0, common_1.Controller)('batch'),
+    (0, common_1.UseGuards)(common_2.JwtAuthGuard, common_2.PackageFeatureGuard),
+    (0, swagger_1.ApiBearerAuth)('JWT-auth'),
+    __metadata("design:paramtypes", [typeof (_a = typeof batch_video_generation_service_1.BatchVideoGenerationService !== "undefined" && batch_video_generation_service_1.BatchVideoGenerationService) === "function" ? _a : Object, typeof (_b = typeof long_video_merger_service_1.LongVideoMergerService !== "undefined" && long_video_merger_service_1.LongVideoMergerService) === "function" ? _b : Object])
+], BatchVideoGenerationController);
+
+
+/***/ }),
+/* 76 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var BatchVideoGenerationService_1;
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BatchVideoGenerationService = void 0;
+const common_1 = __webpack_require__(2);
+const bull_1 = __webpack_require__(60);
+const bull_2 = __webpack_require__(77);
+const database_1 = __webpack_require__(9);
+const video_duration_calculator_service_1 = __webpack_require__(78);
+let BatchVideoGenerationService = BatchVideoGenerationService_1 = class BatchVideoGenerationService {
+    constructor(prisma, durationCalculator, videoQueue) {
+        this.prisma = prisma;
+        this.durationCalculator = durationCalculator;
+        this.videoQueue = videoQueue;
+        this.logger = new common_1.Logger(BatchVideoGenerationService_1.name);
+    }
+    async batchGenerateByChapters(userId, novelId, chapterIds, options) {
+        this.logger.log(`批量生成视频，章节数: ${chapterIds.length}`);
+        await this.validateChapters(novelId, userId, chapterIds);
+        const estimation = await this.durationCalculator.quickEstimate(novelId, chapterIds);
+        const batch = await this.prisma.videoBatchGeneration.create({
+            data: {
+                novelId,
+                userId,
+                chapterIds,
+                totalChapters: chapterIds.length,
+                estimatedDuration: estimation.totalDuration,
+                estimatedScenes: estimation.totalScenes,
+                status: 'PENDING',
+                mergeIntoOne: options?.mergeIntoOne || false,
+                settings: options?.videoSettings || {},
+            },
+        });
+        const jobs = [];
+        const parallelTasks = options?.parallelTasks || 2;
+        for (let i = 0; i < chapterIds.length; i++) {
+            const chapterId = chapterIds[i];
+            const job = await this.videoQueue.add('generate-chapter-video', {
+                userId,
+                chapterId,
+                batchId: batch.id,
+                sceneCount: options?.videoSettings?.sceneCount,
+                videoDuration: options?.videoSettings?.videoDuration,
+            }, {
+                priority: i + 1,
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 5000,
+                },
+                jobId: `batch-${batch.id}-chapter-${chapterId}`,
+            });
+            jobs.push({
+                chapterId,
+                jobId: job.id.toString(),
+            });
+            if (i < chapterIds.length - 1) {
+                await this.delay(100);
+            }
+        }
+        await this.prisma.videoBatchGeneration.update({
+            where: { id: batch.id },
+            data: {
+                status: 'PROCESSING',
+                startedAt: new Date(),
+            },
+        });
+        return {
+            batchId: batch.id,
+            totalChapters: chapterIds.length,
+            estimatedDuration: estimation.totalDuration,
+            estimatedScenes: estimation.totalScenes,
+            jobs,
+            message: `已提交${chapterIds.length}个章节的视频生成任务，预计总时长${(estimation.totalDuration / 60).toFixed(1)}分钟`,
+        };
+    }
+    async smartGenerateForTargetDuration(userId, novelId, startChapter, targetDuration, options) {
+        this.logger.log(`智能规划视频生成，目标时长: ${targetDuration}秒`);
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: novelId, userId },
+        });
+        if (!novel) {
+            throw new Error('小说不存在或无权访问');
+        }
+        const calculation = await this.durationCalculator.calculateChapterGroupForTargetDuration(novelId, startChapter, targetDuration, options?.maxChapters);
+        const chapters = await this.prisma.chapter.findMany({
+            where: {
+                novelId,
+                chapterNumber: { in: calculation.recommendedChapters },
+            },
+            select: { id: true, chapterNumber: true },
+            orderBy: { chapterNumber: 'asc' },
+        });
+        const chapterIds = chapters.map(c => c.id);
+        const batch = await this.prisma.videoBatchGeneration.create({
+            data: {
+                novelId,
+                userId,
+                chapterIds,
+                totalChapters: chapters.length,
+                estimatedDuration: calculation.totalDuration,
+                estimatedScenes: calculation.totalScenes,
+                status: 'PENDING',
+                mergeIntoOne: options?.autoMerge !== false,
+                settings: {
+                    ...options?.videoSettings,
+                    targetDuration,
+                    aiPlanned: true,
+                },
+                aiReasoning: calculation.reasoning,
+            },
+        });
+        const jobs = [];
+        for (const chapter of chapters) {
+            const job = await this.videoQueue.add('generate-chapter-video', {
+                userId,
+                chapterId: chapter.id,
+                batchId: batch.id,
+                ...options?.videoSettings,
+            }, {
+                priority: chapter.chapterNumber,
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 5000,
+                },
+                jobId: `smart-batch-${batch.id}-chapter-${chapter.id}`,
+            });
+            jobs.push({
+                chapterId: chapter.id,
+                chapterNumber: chapter.chapterNumber,
+                jobId: job.id.toString(),
+            });
+        }
+        await this.prisma.videoBatchGeneration.update({
+            where: { id: batch.id },
+            data: {
+                status: 'PROCESSING',
+                startedAt: new Date(),
+            },
+        });
+        return {
+            batchId: batch.id,
+            recommendedChapters: calculation.recommendedChapters,
+            totalChapters: chapters.length,
+            estimatedDuration: calculation.totalDuration,
+            estimatedScenes: calculation.totalScenes,
+            breakdown: calculation.breakdown,
+            reasoning: calculation.reasoning,
+            jobs,
+        };
+    }
+    async getBatchStatus(batchId) {
+        const batch = await this.prisma.videoBatchGeneration.findUnique({
+            where: { id: batchId },
+            include: {
+                novel: {
+                    include: {
+                        chapters: {
+                            where: {
+                                id: { in: [] },
+                            },
+                            select: {
+                                id: true,
+                                chapterNumber: true,
+                                videoStatus: true,
+                                videoUrl: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!batch) {
+            throw new Error('批量任务不存在');
+        }
+        const chapters = await this.prisma.chapter.findMany({
+            where: { id: { in: batch.chapterIds } },
+            select: {
+                id: true,
+                chapterNumber: true,
+                videoStatus: true,
+                videoUrl: true,
+                videoGenerationLog: true,
+            },
+            orderBy: { chapterNumber: 'asc' },
+        });
+        const chapterStatus = chapters.map(chapter => ({
+            chapterId: chapter.id,
+            chapterNumber: chapter.chapterNumber,
+            status: chapter.videoStatus || 'PENDING',
+            videoUrl: chapter.videoUrl || undefined,
+            errorMessage: chapter.videoGenerationLog ? String(chapter.videoGenerationLog) : undefined,
+        }));
+        const completedChapters = chapterStatus.filter(c => c.status === 'COMPLETED').length;
+        const failedChapters = chapterStatus.filter(c => c.status === 'FAILED').length;
+        const processingChapters = chapterStatus.filter(c => c.status === 'GENERATING').length;
+        const progress = Math.floor((completedChapters / batch.totalChapters) * 100);
+        return {
+            batchId: batch.id,
+            status: batch.status,
+            totalChapters: batch.totalChapters,
+            completedChapters,
+            failedChapters,
+            processingChapters,
+            progress,
+            estimatedDuration: batch.estimatedDuration,
+            actualDuration: batch.actualDuration || undefined,
+            chapters: chapterStatus,
+            mergedVideoUrl: batch.mergedVideoUrl || undefined,
+        };
+    }
+    async cancelBatch(batchId) {
+        await this.prisma.videoBatchGeneration.update({
+            where: { id: batchId },
+            data: { status: 'CANCELLED' },
+        });
+        const jobs = await this.videoQueue.getJobs(['waiting', 'delayed', 'active']);
+        const batchJobs = jobs.filter(job => job.data.batchId === batchId);
+        for (const job of batchJobs) {
+            await job.remove();
+        }
+        return {
+            message: `已取消批量任务，共取消${batchJobs.length}个待处理任务`,
+        };
+    }
+    async validateChapters(novelId, userId, chapterIds) {
+        const novel = await this.prisma.novel.findFirst({
+            where: { id: novelId, userId },
+        });
+        if (!novel) {
+            throw new Error('小说不存在或无权访问');
+        }
+        const chapters = await this.prisma.chapter.findMany({
+            where: {
+                id: { in: chapterIds },
+                novelId,
+            },
+        });
+        if (chapters.length !== chapterIds.length) {
+            throw new Error('部分章节不存在或不属于该小说');
+        }
+    }
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+};
+exports.BatchVideoGenerationService = BatchVideoGenerationService;
+exports.BatchVideoGenerationService = BatchVideoGenerationService = BatchVideoGenerationService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __param(2, (0, bull_1.InjectQueue)('video-generation')),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof video_duration_calculator_service_1.VideoDurationCalculatorService !== "undefined" && video_duration_calculator_service_1.VideoDurationCalculatorService) === "function" ? _b : Object, typeof (_c = typeof bull_2.Queue !== "undefined" && bull_2.Queue) === "function" ? _c : Object])
+], BatchVideoGenerationService);
+
+
+/***/ }),
+/* 77 */
+/***/ ((module) => {
+
+module.exports = require("bull");
+
+/***/ }),
+/* 78 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var VideoDurationCalculatorService_1;
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VideoDurationCalculatorService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(9);
+const ai_caller_service_1 = __webpack_require__(17);
+let VideoDurationCalculatorService = VideoDurationCalculatorService_1 = class VideoDurationCalculatorService {
+    constructor(prisma, aiCaller) {
+        this.prisma = prisma;
+        this.aiCaller = aiCaller;
+        this.logger = new common_1.Logger(VideoDurationCalculatorService_1.name);
+        this.AVG_WORDS_PER_SECOND = 4;
+        this.AVG_SCENE_DURATION = 3;
+        this.MIN_SCENES_PER_CHAPTER = 3;
+        this.MAX_SCENES_PER_CHAPTER = 8;
+    }
+    async calculateChapterGroupForTargetDuration(novelId, startChapter, targetDuration, maxChapters) {
+        this.logger.log(`计算视频时长，小说ID: ${novelId}, 目标时长: ${targetDuration}秒`);
+        const maxChaptersToCheck = maxChapters || 10;
+        const chapters = await this.prisma.chapter.findMany({
+            where: {
+                novelId,
+                chapterNumber: {
+                    gte: startChapter,
+                    lte: startChapter + maxChaptersToCheck - 1,
+                },
+            },
+            orderBy: { chapterNumber: 'asc' },
+            select: {
+                id: true,
+                chapterNumber: true,
+                title: true,
+                content: true,
+                wordCount: true,
+            },
+        });
+        if (chapters.length === 0) {
+            throw new Error('没有找到可用的章节');
+        }
+        const breakdown = [];
+        let accumulatedDuration = 0;
+        let selectedChapters = [];
+        for (const chapter of chapters) {
+            const estimatedScenesByWords = Math.ceil(chapter.wordCount / (this.AVG_WORDS_PER_SECOND * this.AVG_SCENE_DURATION * 50));
+            const aiEstimation = await this.analyzeChapterForSceneCount(chapter.content);
+            const estimatedScenes = Math.max(this.MIN_SCENES_PER_CHAPTER, Math.min(this.MAX_SCENES_PER_CHAPTER, Math.round((estimatedScenesByWords + aiEstimation.sceneCount) / 2)));
+            const estimatedDuration = estimatedScenes * this.AVG_SCENE_DURATION;
+            breakdown.push({
+                chapterNumber: chapter.chapterNumber,
+                chapterTitle: chapter.title,
+                wordCount: chapter.wordCount,
+                estimatedScenes,
+                estimatedDuration,
+                aiReasoning: aiEstimation.reasoning,
+            });
+            accumulatedDuration += estimatedDuration;
+            selectedChapters.push(chapter.chapterNumber);
+            if (accumulatedDuration >= targetDuration) {
+                break;
+            }
+        }
+        const reasoning = this.generateReasoning(selectedChapters, accumulatedDuration, targetDuration, breakdown);
+        return {
+            recommendedChapters: selectedChapters,
+            totalDuration: accumulatedDuration,
+            totalScenes: breakdown.reduce((sum, b) => sum + b.estimatedScenes, 0),
+            breakdown,
+            reasoning,
+        };
+    }
+    async analyzeChapterForSceneCount(content) {
+        const contentPreview = content.length > 2000
+            ? content.substring(0, 2000) + '...'
+            : content;
+        const prompt = `
+请分析以下章节内容，估算需要多少个分镜场景才能完整呈现这个章节。
+
+【章节内容】
+${contentPreview}
+
+【评估标准】
+- 每个关键场景转换需要1个分镜
+- 每个主要情节点需要1个分镜
+- 重要的对话场景需要1个分镜
+- 动作场景可能需要2-3个分镜
+- 环境描写需要1个分镜
+
+【限制】
+- 最少3个分镜
+- 最多8个分镜
+- 优先选择最关键、最有视觉冲击力的场景
+
+请以JSON格式返回：
+{
+  "sceneCount": 5,
+  "reasoning": "简要说明为什么需要这么多分镜"
+}
+`;
+        try {
+            const response = await this.aiCaller.callAI({
+                userId: 'system',
+                messages: [
+                    {
+                        role: 'system',
+                        content: '你是一个专业的视频分镜规划专家，擅长分析文本内容并规划视频分镜。',
+                    },
+                    {
+                        role: 'user',
+                        content: prompt,
+                    },
+                ],
+                parameters: {
+                    temperature: 0.3,
+                    maxTokens: 500,
+                },
+            });
+            const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                const result = JSON.parse(jsonMatch[0]);
+                return {
+                    sceneCount: Math.max(this.MIN_SCENES_PER_CHAPTER, Math.min(this.MAX_SCENES_PER_CHAPTER, result.sceneCount)),
+                    reasoning: result.reasoning || '基于AI分析',
+                };
+            }
+        }
+        catch (error) {
+            this.logger.warn(`AI分析章节分镜数失败: ${error.message}`);
+        }
+        return {
+            sceneCount: this.MIN_SCENES_PER_CHAPTER,
+            reasoning: '使用默认估算',
+        };
+    }
+    generateReasoning(selectedChapters, totalDuration, targetDuration, breakdown) {
+        const chapterCount = selectedChapters.length;
+        const totalScenes = breakdown.reduce((sum, b) => sum + b.estimatedScenes, 0);
+        const avgScenesPerChapter = (totalScenes / chapterCount).toFixed(1);
+        let reasoning = `根据智能分析，推荐使用第${selectedChapters[0]}-${selectedChapters[selectedChapters.length - 1]}章（共${chapterCount}章）生成视频。\n\n`;
+        reasoning += `预估信息：\n`;
+        reasoning += `- 总分镜数：${totalScenes}个\n`;
+        reasoning += `- 预估总时长：${totalDuration}秒（约${(totalDuration / 60).toFixed(1)}分钟）\n`;
+        reasoning += `- 平均每章：${avgScenesPerChapter}个分镜\n\n`;
+        if (totalDuration < targetDuration * 0.8) {
+            reasoning += `⚠️ 注意：预估时长略低于目标时长${(targetDuration / 60).toFixed(1)}分钟，但已达到${(totalDuration / targetDuration * 100).toFixed(0)}%。\n`;
+        }
+        else if (totalDuration > targetDuration * 1.2) {
+            reasoning += `⚠️ 注意：预估时长略高于目标时长${(targetDuration / 60).toFixed(1)}分钟，达到${(totalDuration / targetDuration * 100).toFixed(0)}%。\n`;
+        }
+        else {
+            reasoning += `✅ 预估时长符合目标（目标：${(targetDuration / 60).toFixed(1)}分钟）。\n`;
+        }
+        return reasoning;
+    }
+    async quickEstimate(novelId, chapterIds) {
+        const chapters = await this.prisma.chapter.findMany({
+            where: { id: { in: chapterIds } },
+            select: {
+                id: true,
+                chapterNumber: true,
+                wordCount: true,
+            },
+        });
+        const perChapter = chapters.map(chapter => {
+            const estimatedScenes = Math.max(this.MIN_SCENES_PER_CHAPTER, Math.min(this.MAX_SCENES_PER_CHAPTER, Math.ceil(chapter.wordCount / 600)));
+            return {
+                chapterId: chapter.id,
+                chapterNumber: chapter.chapterNumber,
+                estimatedScenes,
+                estimatedDuration: estimatedScenes * this.AVG_SCENE_DURATION,
+            };
+        });
+        return {
+            totalDuration: perChapter.reduce((sum, c) => sum + c.estimatedDuration, 0),
+            totalScenes: perChapter.reduce((sum, c) => sum + c.estimatedScenes, 0),
+            perChapter,
+        };
+    }
+    calculateMergedVideoDuration(chapterVideos) {
+        const transitionDuration = 0.3;
+        const totalContentDuration = chapterVideos.reduce((sum, v) => sum + v.duration, 0);
+        const totalTransitionDuration = (chapterVideos.length - 1) * transitionDuration;
+        const titleDuration = 2;
+        return totalContentDuration + totalTransitionDuration + titleDuration;
+    }
+};
+exports.VideoDurationCalculatorService = VideoDurationCalculatorService;
+exports.VideoDurationCalculatorService = VideoDurationCalculatorService = VideoDurationCalculatorService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof ai_caller_service_1.AICallerService !== "undefined" && ai_caller_service_1.AICallerService) === "function" ? _b : Object])
+], VideoDurationCalculatorService);
+
+
+/***/ }),
+/* 79 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var LongVideoMergerService_1;
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LongVideoMergerService = void 0;
+const common_1 = __webpack_require__(2);
+const database_1 = __webpack_require__(9);
+const ffmpeg_service_1 = __webpack_require__(71);
+const path = __webpack_require__(68);
+const fs = __webpack_require__(67);
+let LongVideoMergerService = LongVideoMergerService_1 = class LongVideoMergerService {
+    constructor(prisma, ffmpegService) {
+        this.prisma = prisma;
+        this.ffmpegService = ffmpegService;
+        this.logger = new common_1.Logger(LongVideoMergerService_1.name);
+        this.videoStoragePath = process.env.VIDEO_STORAGE_PATH || '/data/videos';
+        if (!fs.existsSync(this.videoStoragePath)) {
+            fs.mkdirSync(this.videoStoragePath, { recursive: true });
+        }
+    }
+    async mergeBatchVideos(batchId, options) {
+        this.logger.log(`开始合并批量视频，批次ID: ${batchId}`);
+        const batch = await this.prisma.videoBatchGeneration.findUnique({
+            where: { id: batchId },
+        });
+        if (!batch) {
+            throw new Error('批量任务不存在');
+        }
+        if (batch.status !== 'COMPLETED' && batch.status !== 'PROCESSING') {
+            throw new Error(`批量任务状态为${batch.status}，无法合并视频`);
+        }
+        const chapters = await this.prisma.chapter.findMany({
+            where: {
+                id: { in: batch.chapterIds },
+                videoStatus: 'COMPLETED',
+            },
+            select: {
+                id: true,
+                chapterNumber: true,
+                title: true,
+                videoUrl: true,
+                videoMetadata: true,
+            },
+            orderBy: { chapterNumber: 'asc' },
+        });
+        if (chapters.length === 0) {
+            throw new Error('没有已完成的章节视频');
+        }
+        this.logger.log(`找到${chapters.length}个已完成的章节视频`);
+        const videoSegments = [];
+        const defaultTitleDuration = options?.titleDuration || 2;
+        const defaultTransitionDuration = options?.transitionDuration || 0.3;
+        for (let i = 0; i < chapters.length; i++) {
+            const chapter = chapters[i];
+            if (options?.addChapterTitles !== false) {
+                videoSegments.push({
+                    type: 'chapter-title',
+                    title: `第${chapter.chapterNumber}章 ${chapter.title}`,
+                    duration: defaultTitleDuration,
+                });
+            }
+            const videoPath = this.convertUrlToPath(chapter.videoUrl);
+            if (!fs.existsSync(videoPath)) {
+                this.logger.warn(`章节${chapter.chapterNumber}的视频文件不存在: ${videoPath}`);
+                continue;
+            }
+            videoSegments.push({
+                type: 'video',
+                path: videoPath,
+            });
+            if (i < chapters.length - 1) {
+                videoSegments.push({
+                    type: 'transition',
+                    duration: defaultTransitionDuration,
+                });
+            }
+        }
+        const tempVideos = [];
+        for (let i = 0; i < videoSegments.length; i++) {
+            const segment = videoSegments[i];
+            if (segment.type === 'chapter-title') {
+                const titleVideoPath = path.join(this.videoStoragePath, `${batchId}-title-${i}.mp4`);
+                await this.ffmpegService.createTitleVideo(segment.title, segment.duration, titleVideoPath, { width: 1920, height: 1080 });
+                tempVideos.push(titleVideoPath);
+            }
+            else if (segment.type === 'video') {
+                tempVideos.push(segment.path);
+            }
+        }
+        const mergedPath = path.join(this.videoStoragePath, `${batchId}-merged.mp4`);
+        await this.ffmpegService.mergeVideosWithTransitions(tempVideos, mergedPath, options?.transitionDuration || 0.3);
+        let finalPath = mergedPath;
+        if (options?.addOpening) {
+            const withOpeningPath = path.join(this.videoStoragePath, `${batchId}-with-opening.mp4`);
+            await this.addOpening(mergedPath, withOpeningPath, batch.novelId);
+            finalPath = withOpeningPath;
+        }
+        if (options?.addEnding) {
+            const withEndingPath = path.join(this.videoStoragePath, `${batchId}-with-ending.mp4`);
+            await this.addEnding(finalPath, withEndingPath);
+            finalPath = withEndingPath;
+        }
+        const compressedPath = path.join(this.videoStoragePath, `${batchId}-final.mp4`);
+        await this.ffmpegService.compressVideo(finalPath, compressedPath, options?.quality || 'medium');
+        const metadata = await this.ffmpegService.getVideoMetadata(compressedPath);
+        const videoUrl = this.getVideoUrl(compressedPath);
+        const fileStats = fs.statSync(compressedPath);
+        const fileSize = fileStats.size;
+        await this.prisma.videoBatchGeneration.update({
+            where: { id: batchId },
+            data: {
+                status: 'COMPLETED',
+                mergedVideoUrl: videoUrl,
+                actualDuration: metadata.duration,
+                completedAt: new Date(),
+            },
+        });
+        this.cleanupTempFiles([
+            ...tempVideos.filter(p => p.includes(batchId)),
+            mergedPath,
+            ...(options?.addOpening ? [finalPath] : []),
+        ]);
+        this.logger.log(`长视频合成完成: ${videoUrl}, 时长: ${metadata.duration}秒`);
+        return {
+            mergedVideoUrl: videoUrl,
+            totalDuration: metadata.duration,
+            fileSize,
+            resolution: `${metadata.width}x${metadata.height}`,
+            chapterCount: chapters.length,
+        };
+    }
+    async addOpening(inputPath, outputPath, novelId) {
+        const novel = await this.prisma.novel.findUnique({
+            where: { id: novelId },
+            select: { title: true, description: true },
+        });
+        const openingPath = path.join(this.videoStoragePath, `opening-${novelId}.mp4`);
+        const openingText = `
+《${novel?.title || '未知小说'}》
+
+${novel?.description?.substring(0, 100) || ''}
+
+————————————————
+`;
+        await this.ffmpegService.createTitleVideo(openingText, 5, openingPath, { width: 1920, height: 1080, fontSize: 48 });
+        await this.ffmpegService.mergeVideosWithTransitions([openingPath, inputPath], outputPath, 0.5);
+        if (fs.existsSync(openingPath)) {
+            fs.unlinkSync(openingPath);
+        }
+    }
+    async addEnding(inputPath, outputPath) {
+        const endingPath = path.join(this.videoStoragePath, `ending-${Date.now()}.mp4`);
+        const endingText = `
+————————————————
+
+感谢观看
+
+更多精彩内容，敬请期待
+`;
+        await this.ffmpegService.createTitleVideo(endingText, 3, endingPath, { width: 1920, height: 1080, fontSize: 40 });
+        await this.ffmpegService.mergeVideosWithTransitions([inputPath, endingPath], outputPath, 0.5);
+        if (fs.existsSync(endingPath)) {
+            fs.unlinkSync(endingPath);
+        }
+    }
+    convertUrlToPath(url) {
+        const filename = path.basename(url);
+        return path.join(this.videoStoragePath, filename);
+    }
+    getVideoUrl(localPath) {
+        const cdnUrl = process.env.VIDEO_CDN_URL || 'http://localhost:3000/videos';
+        const filename = path.basename(localPath);
+        return `${cdnUrl}/${filename}`;
+    }
+    cleanupTempFiles(files) {
+        files.forEach(file => {
+            try {
+                if (fs.existsSync(file)) {
+                    fs.unlinkSync(file);
+                    this.logger.debug(`已删除临时文件: ${file}`);
+                }
+            }
+            catch (error) {
+                this.logger.warn(`删除临时文件失败: ${file}`, error.message);
+            }
+        });
+    }
+    async getMergeStatus(batchId) {
+        const batch = await this.prisma.videoBatchGeneration.findUnique({
+            where: { id: batchId },
+            select: {
+                status: true,
+                mergedVideoUrl: true,
+            },
+        });
+        if (!batch) {
+            throw new Error('批量任务不存在');
+        }
+        let progress = 0;
+        if (batch.status === 'COMPLETED')
+            progress = 100;
+        else if (batch.status === 'PROCESSING')
+            progress = 50;
+        else if (batch.status === 'FAILED')
+            progress = 0;
+        return {
+            status: batch.status,
+            progress,
+            mergedVideoUrl: batch.mergedVideoUrl || undefined,
+        };
+    }
+};
+exports.LongVideoMergerService = LongVideoMergerService;
+exports.LongVideoMergerService = LongVideoMergerService = LongVideoMergerService_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof database_1.PrismaService !== "undefined" && database_1.PrismaService) === "function" ? _a : Object, typeof (_b = typeof ffmpeg_service_1.FFmpegService !== "undefined" && ffmpeg_service_1.FFmpegService) === "function" ? _b : Object])
+], LongVideoMergerService);
+
+
+/***/ }),
+/* 80 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MergeBatchVideosDto = exports.VideoMergeOptionsDto = exports.SmartGenerateVideoDto = exports.SmartGenerationOptionsDto = exports.BatchGenerateByChaptersDto = exports.BatchGenerationOptionsDto = exports.VideoSettingsDto = void 0;
+const swagger_1 = __webpack_require__(3);
+const class_validator_1 = __webpack_require__(16);
+const class_transformer_1 = __webpack_require__(50);
+class VideoSettingsDto {
+}
+exports.VideoSettingsDto = VideoSettingsDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '每章分镜数',
+        example: 5,
+        minimum: 3,
+        maximum: 8,
+        default: 5
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '分镜数必须是数字' }),
+    (0, class_validator_1.Min)(3, { message: '分镜数最少3个' }),
+    (0, class_validator_1.Max)(8, { message: '分镜数最多8个' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], VideoSettingsDto.prototype, "sceneCount", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '每章预期时长(秒)',
+        example: 15,
+        minimum: 5,
+        maximum: 30,
+        default: 15
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '时长必须是数字' }),
+    (0, class_validator_1.Min)(5, { message: '时长最少5秒' }),
+    (0, class_validator_1.Max)(30, { message: '时长最多30秒' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], VideoSettingsDto.prototype, "videoDuration", void 0);
+class BatchGenerationOptionsDto {
+}
+exports.BatchGenerationOptionsDto = BatchGenerationOptionsDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '并发任务数',
+        example: 2,
+        minimum: 1,
+        maximum: 5,
+        default: 2
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '并发数必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '并发数最少1个' }),
+    (0, class_validator_1.Max)(5, { message: '并发数最多5个' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], BatchGenerationOptionsDto.prototype, "parallelTasks", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否合并为一个长视频',
+        example: true,
+        default: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)({ message: '合并选项必须是布尔值' }),
+    __metadata("design:type", Boolean)
+], BatchGenerationOptionsDto.prototype, "mergeIntoOne", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '视频生成设置',
+        type: VideoSettingsDto
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => VideoSettingsDto),
+    __metadata("design:type", VideoSettingsDto)
+], BatchGenerationOptionsDto.prototype, "videoSettings", void 0);
+class BatchGenerateByChaptersDto {
+}
+exports.BatchGenerateByChaptersDto = BatchGenerateByChaptersDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'clxxxxx'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    __metadata("design:type", String)
+], BatchGenerateByChaptersDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '章节ID数组',
+        example: ['ch-1', 'ch-2', 'ch-3'],
+        type: [String]
+    }),
+    (0, class_validator_1.IsArray)({ message: '章节ID必须是数组' }),
+    (0, class_validator_1.ArrayMinSize)(1, { message: '至少选择1个章节' }),
+    (0, class_validator_1.IsString)({ each: true, message: '章节ID必须是字符串' }),
+    __metadata("design:type", Array)
+], BatchGenerateByChaptersDto.prototype, "chapterIds", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '批量生成选项',
+        type: BatchGenerationOptionsDto
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => BatchGenerationOptionsDto),
+    __metadata("design:type", BatchGenerationOptionsDto)
+], BatchGenerateByChaptersDto.prototype, "options", void 0);
+class SmartGenerationOptionsDto {
+}
+exports.SmartGenerationOptionsDto = SmartGenerationOptionsDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '最多使用多少章节',
+        example: 10,
+        minimum: 1,
+        maximum: 20,
+        default: 10
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '最大章节数必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '最少1个章节' }),
+    (0, class_validator_1.Max)(20, { message: '最多20个章节' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], SmartGenerationOptionsDto.prototype, "maxChapters", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否自动合并为长视频',
+        example: true,
+        default: true
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)({ message: '自动合并选项必须是布尔值' }),
+    __metadata("design:type", Boolean)
+], SmartGenerationOptionsDto.prototype, "autoMerge", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '视频生成设置',
+        type: VideoSettingsDto
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => VideoSettingsDto),
+    __metadata("design:type", VideoSettingsDto)
+], SmartGenerationOptionsDto.prototype, "videoSettings", void 0);
+class SmartGenerateVideoDto {
+}
+exports.SmartGenerateVideoDto = SmartGenerateVideoDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '小说ID',
+        example: 'clxxxxx'
+    }),
+    (0, class_validator_1.IsString)({ message: '小说ID必须是字符串' }),
+    __metadata("design:type", String)
+], SmartGenerateVideoDto.prototype, "novelId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '起始章节号',
+        example: 1,
+        minimum: 1
+    }),
+    (0, class_validator_1.IsNumber)({}, { message: '起始章节号必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '起始章节号最少为1' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], SmartGenerateVideoDto.prototype, "startChapter", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '目标视频时长(秒)',
+        example: 600,
+        minimum: 60,
+        maximum: 1800
+    }),
+    (0, class_validator_1.IsNumber)({}, { message: '目标时长必须是数字' }),
+    (0, class_validator_1.Min)(60, { message: '目标时长最少60秒(1分钟)' }),
+    (0, class_validator_1.Max)(1800, { message: '目标时长最多1800秒(30分钟)' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], SmartGenerateVideoDto.prototype, "targetDuration", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'AI智能规划选项',
+        type: SmartGenerationOptionsDto
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => SmartGenerationOptionsDto),
+    __metadata("design:type", SmartGenerationOptionsDto)
+], SmartGenerateVideoDto.prototype, "options", void 0);
+class VideoMergeOptionsDto {
+}
+exports.VideoMergeOptionsDto = VideoMergeOptionsDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否添加章节标题',
+        example: true,
+        default: true
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)({ message: '章节标题选项必须是布尔值' }),
+    __metadata("design:type", Boolean)
+], VideoMergeOptionsDto.prototype, "addChapterTitles", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否添加片头',
+        example: true,
+        default: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)({ message: '片头选项必须是布尔值' }),
+    __metadata("design:type", Boolean)
+], VideoMergeOptionsDto.prototype, "addOpening", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '是否添加片尾',
+        example: true,
+        default: false
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)({ message: '片尾选项必须是布尔值' }),
+    __metadata("design:type", Boolean)
+], VideoMergeOptionsDto.prototype, "addEnding", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '章节标题显示时长(秒)',
+        example: 2,
+        minimum: 1,
+        maximum: 5,
+        default: 2
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '标题时长必须是数字' }),
+    (0, class_validator_1.Min)(1, { message: '标题时长最少1秒' }),
+    (0, class_validator_1.Max)(5, { message: '标题时长最多5秒' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], VideoMergeOptionsDto.prototype, "titleDuration", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '转场时长(秒)',
+        example: 0.3,
+        minimum: 0.1,
+        maximum: 2,
+        default: 0.3
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)({}, { message: '转场时长必须是数字' }),
+    (0, class_validator_1.Min)(0.1, { message: '转场时长最少0.1秒' }),
+    (0, class_validator_1.Max)(2, { message: '转场时长最多2秒' }),
+    (0, class_transformer_1.Type)(() => Number),
+    __metadata("design:type", Number)
+], VideoMergeOptionsDto.prototype, "transitionDuration", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '压缩质量',
+        example: 'medium',
+        enum: ['low', 'medium', 'high'],
+        default: 'medium'
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(['low', 'medium', 'high'], { message: '质量必须是 low, medium 或 high' }),
+    __metadata("design:type", String)
+], VideoMergeOptionsDto.prototype, "quality", void 0);
+class MergeBatchVideosDto {
+}
+exports.MergeBatchVideosDto = MergeBatchVideosDto;
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: '视频合并选项',
+        type: VideoMergeOptionsDto
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)(),
+    (0, class_transformer_1.Type)(() => VideoMergeOptionsDto),
+    __metadata("design:type", VideoMergeOptionsDto)
+], MergeBatchVideosDto.prototype, "options", void 0);
+
+
+/***/ }),
+/* 81 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var VideoGenerationQueue_1;
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VideoGenerationQueue = void 0;
 const common_1 = __webpack_require__(2);
-const bull_1 = __webpack_require__(76);
+const bull_1 = __webpack_require__(77);
 const bull_2 = __webpack_require__(60);
 let VideoGenerationQueue = VideoGenerationQueue_1 = class VideoGenerationQueue {
     constructor(videoQueue) {
@@ -7530,13 +9008,7 @@ exports.VideoGenerationQueue = VideoGenerationQueue = VideoGenerationQueue_1 = _
 
 
 /***/ }),
-/* 76 */
-/***/ ((module) => {
-
-module.exports = require("bull");
-
-/***/ }),
-/* 77 */
+/* 82 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7555,7 +9027,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VideoGenerationProcessor = void 0;
 const bull_1 = __webpack_require__(60);
 const common_1 = __webpack_require__(2);
-const bull_2 = __webpack_require__(76);
+const bull_2 = __webpack_require__(77);
 const video_generation_service_1 = __webpack_require__(62);
 let VideoGenerationProcessor = VideoGenerationProcessor_1 = class VideoGenerationProcessor {
     constructor(videoGenerationService) {
@@ -7619,7 +9091,7 @@ exports.VideoGenerationProcessor = VideoGenerationProcessor = VideoGenerationPro
 
 
 /***/ }),
-/* 78 */
+/* 83 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -7638,7 +9110,7 @@ exports.JwtStrategy = void 0;
 const common_1 = __webpack_require__(2);
 const config_1 = __webpack_require__(5);
 const passport_1 = __webpack_require__(7);
-const passport_jwt_1 = __webpack_require__(79);
+const passport_jwt_1 = __webpack_require__(84);
 let JwtStrategy = class JwtStrategy extends (0, passport_1.PassportStrategy)(passport_jwt_1.Strategy) {
     constructor(configService) {
         super({
@@ -7667,7 +9139,7 @@ exports.JwtStrategy = JwtStrategy = __decorate([
 
 
 /***/ }),
-/* 79 */
+/* 84 */
 /***/ ((module) => {
 
 module.exports = require("passport-jwt");

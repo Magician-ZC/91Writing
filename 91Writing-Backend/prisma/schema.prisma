@@ -60,6 +60,9 @@ model User {
   // AI配置
   aiConfigs UserAIConfig[]
 
+  // 批量视频生成
+  videoBatchGenerations VideoBatchGeneration[]
+
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -186,6 +189,7 @@ model Novel {
   characterAppearances   CharacterAppearance[]
   worldSettings          WorldSetting[]
   consistencyProfile     ConsistencyProfile? // 视频一致性配置
+  videoBatchGenerations  VideoBatchGeneration[] // 批量视频生成记录
 
   // 时间戳
   createdAt DateTime @default(now()) @map("created_at")
@@ -1263,6 +1267,38 @@ model VideoGenerationLog {
   @@map("video_generation_logs")
 }
 
+// 批量视频生成表
+model VideoBatchGeneration {
+  id                String           @id @default(cuid())
+  novelId           String           @map("novel_id")
+  userId            String           @map("user_id")
+  chapterIds        Json             @map("chapter_ids") // 章节ID数组
+  totalChapters     Int              @map("total_chapters")
+  estimatedDuration Int              @map("estimated_duration") // 预估总时长(秒)
+  estimatedScenes   Int              @map("estimated_scenes") // 预估总分镜数
+  actualDuration    Int?             @map("actual_duration") // 实际总时长(秒)
+  status            BatchVideoStatus @default(PENDING)
+  mergeIntoOne      Boolean          @default(false) @map("merge_into_one") // 是否合并为一个长视频
+  mergedVideoUrl    String?          @map("merged_video_url") @db.VarChar(500)
+  settings          Json? // 视频生成设置
+  aiReasoning       String?          @map("ai_reasoning") @db.Text // AI规划说明
+
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // 关联
+  novel Novel @relation(fields: [novelId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([novelId])
+  @@index([userId])
+  @@index([status])
+  @@map("video_batch_generations")
+}
+
 // Agent提示词配置表
 model AgentPromptConfig {
   id             String    @id @default(cuid())
@@ -1317,6 +1353,15 @@ enum VideoGenLogStatus {
   COMPLETED // 已完成
   FAILED // 失败
   SKIPPED // 跳过
+}
+
+// 批量视频生成状态
+enum BatchVideoStatus {
+  PENDING // 待处理
+  PROCESSING // 处理中
+  COMPLETED // 已完成
+  FAILED // 失败
+  CANCELLED // 已取消
 }
 
 // Agent类型

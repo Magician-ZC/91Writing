@@ -280,9 +280,76 @@ export class FFmpegService {
   }
 
   /**
-   * 获取视频元数据
+   * 检查FFmpeg是否可用
    */
-  async getVideoMetadata(videoPath: string): Promise<any> {
+  async checkFFmpegAvailability(): Promise<boolean> {
+    try {
+      const { stdout } = await execAsync(`${this.ffmpegPath} -version`);
+      this.logger.log(`FFmpeg版本: ${stdout.split('\n')[0]}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`FFmpeg不可用: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * 创建标题视频
+   */
+  async createTitleVideo(
+    title: string,
+    duration: number,
+    outputPath: string,
+    options?: {
+      width?: number;
+      height?: number;
+      fontSize?: number;
+      fontColor?: string;
+      backgroundColor?: string;
+    },
+  ): Promise<string> {
+    const width = options?.width || 1920;
+    const height = options?.height || 1080;
+    const fontSize = options?.fontSize || 60;
+    const fontColor = options?.fontColor || 'white';
+    const backgroundColor = options?.backgroundColor || 'black';
+
+    this.logger.log(`创建标题视频: ${title}, 时长: ${duration}秒`);
+
+    try {
+      // 转义标题中的特殊字符
+      const escapedTitle = title.replace(/'/g, "'\\''").replace(/:/g, '\\:');
+
+      // 使用FFmpeg生成标题视频
+      const command = `${this.ffmpegPath} -f lavfi -i color=c=${backgroundColor}:s=${width}x${height}:d=${duration} -vf "drawtext=text='${escapedTitle}':fontsize=${fontSize}:fontcolor=${fontColor}:x=(w-text_w)/2:y=(h-text_h)/2" -c:v libx264 -pix_fmt yuv420p "${outputPath}"`;
+
+      await execAsync(command);
+
+      if (!fs.existsSync(outputPath)) {
+        throw new Error('标题视频创建失败');
+      }
+
+      this.logger.log(`标题视频创建成功: ${outputPath}`);
+      return outputPath;
+    } catch (error) {
+      this.logger.error(`创建标题视频失败: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 获取视频的宽高
+   */
+  async getVideoMetadata(videoPath: string): Promise<{
+    duration: number;
+    width: number;
+    height: number;
+    fps: number;
+    bitrate: number;
+    resolution: string;
+    fileSize: number;
+    format: string;
+  }> {
     try {
       const command = `${this.ffmpegPath} -i "${videoPath}" -f ffmetadata - 2>&1`;
       const { stdout, stderr } = await execAsync(command);
@@ -303,8 +370,13 @@ export class FFmpegService {
         duration = hours * 3600 + minutes * 60 + seconds;
       }
 
+      const width = resolutionMatch ? parseInt(resolutionMatch[1]) : 0;
+      const height = resolutionMatch ? parseInt(resolutionMatch[2]) : 0;
+
       return {
         duration,
+        width,
+        height,
         resolution: resolutionMatch ? `${resolutionMatch[1]}x${resolutionMatch[2]}` : 'unknown',
         fps: fpsMatch ? parseFloat(fpsMatch[1]) : 0,
         bitrate: bitrateMatch ? parseInt(bitrateMatch[1]) : 0,
@@ -313,21 +385,16 @@ export class FFmpegService {
       };
     } catch (error) {
       this.logger.error(`获取视频元数据失败: ${error.message}`);
-      return null;
-    }
-  }
-
-  /**
-   * 检查FFmpeg是否可用
-   */
-  async checkFFmpegAvailability(): Promise<boolean> {
-    try {
-      const { stdout } = await execAsync(`${this.ffmpegPath} -version`);
-      this.logger.log(`FFmpeg版本: ${stdout.split('\n')[0]}`);
-      return true;
-    } catch (error) {
-      this.logger.error(`FFmpeg不可用: ${error.message}`);
-      return false;
+      return {
+        duration: 0,
+        width: 0,
+        height: 0,
+        resolution: 'unknown',
+        fps: 0,
+        bitrate: 0,
+        fileSize: 0,
+        format: 'unknown',
+      };
     }
   }
 }

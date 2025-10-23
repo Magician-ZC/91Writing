@@ -1,0 +1,155 @@
+# Prometheus 告警规则配置
+
+groups:
+  # Shannon 服务告警
+  - name: shannon_alerts
+    interval: 30s
+    rules:
+      # 服务宕机告警
+      - alert: ShannonServiceDown
+        expr: up{job=~"shannon.*"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Shannon 服务不可用"
+          description: "{{ $labels.job }} 服务已宕机超过 1 分钟"
+
+      # 高错误率告警
+      - alert: HighErrorRate
+        expr: rate(shannon_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: reliability
+        annotations:
+          summary: "Shannon 错误率过高"
+          description: "错误率: {{ $value | humanizePercentage }}"
+
+      # 响应时间过长
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(shannon_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Shannon 响应时间过长"
+          description: "P95 响应时间: {{ $value | humanizeDuration }}"
+
+      # CPU 使用率过高
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total{job=~"shannon.*"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "Shannon 服务 CPU 使用率过高"
+          description: "{{ $labels.job }} CPU 使用率: {{ $value | humanize }}%"
+
+      # 内存使用率过高
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes{job=~"shannon.*"} / 1024 / 1024 / 1024 > 3
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "Shannon 服务内存使用过高"
+          description: "{{ $labels.job }} 内存使用: {{ $value | humanize }} GB"
+
+  # AI 成本告警
+  - name: ai_cost_alerts
+    interval: 60s
+    rules:
+      # 成本超预算
+      - alert: CostOverBudget
+        expr: sum(rate(shannon_ai_cost_total[1h])) * 24 > 100
+        for: 1h
+        labels:
+          severity: critical
+          category: cost
+        annotations:
+          summary: "AI 成本超预算"
+          description: "预计日成本: ${{ $value | humanize }}"
+
+      # Token 消耗异常
+      - alert: AbnormalTokenUsage
+        expr: rate(shannon_tokens_used_total[10m]) > 10000
+        for: 10m
+        labels:
+          severity: warning
+          category: cost
+        annotations:
+          summary: "Token 消耗异常"
+          description: "Token 消耗速率: {{ $value | humanize }}/s"
+
+  # 数据库告警
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # PostgreSQL 连接数过高
+      - alert: HighDatabaseConnections
+        expr: pg_stat_database_numbackends{datname="shannon_db"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "数据库连接数过高"
+          description: "当前连接数: {{ $value }}"
+
+      # Redis 内存使用过高
+      - alert: HighRedisMemory
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Redis 内存使用率过高"
+          description: "内存使用率: {{ $value | humanizePercentage }}"
+
+  # 任务队列告警
+  - name: queue_alerts
+    interval: 30s
+    rules:
+      # 任务队列积压
+      - alert: TaskQueueBacklog
+        expr: shannon_task_queue_length > 1000
+        for: 10m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "任务队列积压"
+          description: "队列长度: {{ $value }}"
+
+      # 任务失败率过高
+      - alert: HighTaskFailureRate
+        expr: rate(shannon_tasks_failed_total[10m]) / rate(shannon_tasks_total[10m]) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          category: reliability
+        annotations:
+          summary: "任务失败率过高"
+          description: "失败率: {{ $value | humanizePercentage }}"
+
+  # 工作流告警
+  - name: workflow_alerts
+    interval: 30s
+    rules:
+      # 工作流执行时间过长
+      - alert: LongWorkflowExecution
+        expr: histogram_quantile(0.95, rate(shannon_workflow_duration_seconds_bucket[10m])) > 300
+        for: 10m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "工作流执行时间过长"
+          description: "P95 执行时间: {{ $value | humanizeDuration }}"
+
