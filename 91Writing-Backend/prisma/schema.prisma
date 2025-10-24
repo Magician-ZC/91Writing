@@ -1380,6 +1380,7 @@ model VideoAPIConfig {
   // API密钥（加密存储）
   volcengineAccessKeyId     String?  @map("volcengine_access_key_id") @db.Text
   volcengineSecretAccessKey String?  @map("volcengine_secret_access_key") @db.Text  // 加密
+  volcengineImageApiKey     String?  @map("volcengine_image_api_key") @db.Text  // 文生图API Key（加密）
   jimengApiKey              String?  @map("jimeng_api_key") @db.Text  // 加密
   klingApiKey               String?  @map("kling_api_key") @db.Text  // 加密
   

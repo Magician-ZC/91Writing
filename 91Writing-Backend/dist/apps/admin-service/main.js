@@ -4639,7 +4639,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e, _f, _g, _h;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.VideoAPIConfigController = void 0;
 const common_1 = __webpack_require__(2);
@@ -4668,8 +4668,8 @@ let VideoAPIConfigController = class VideoAPIConfigController {
     async getStatisticsRange(startDate, endDate) {
         return this.configService.getCostStatistics(new Date(startDate), new Date(endDate));
     }
-    async testProvider(provider) {
-        return this.configService.testProviderConnection(provider);
+    async testProvider(provider, tempConfig) {
+        return this.configService.testProviderConnection(provider, tempConfig);
     }
     async getUserQuota(userId) {
         return this.configService.checkUserQuota(userId);
@@ -4719,12 +4719,13 @@ __decorate([
 __decorate([
     (0, common_1.Post)('test/:provider'),
     (0, roles_decorator_1.Roles)('ADMIN'),
-    (0, swagger_1.ApiOperation)({ summary: '测试Provider连接' }),
+    (0, swagger_1.ApiOperation)({ summary: '测试Provider连接（可选传入临时配置）' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: '返回测试结果' }),
     __param(0, (0, common_1.Param)('provider')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+    __metadata("design:paramtypes", [String, typeof (_g = typeof update_video_api_config_dto_1.UpdateVideoAPIConfigDto !== "undefined" && update_video_api_config_dto_1.UpdateVideoAPIConfigDto) === "function" ? _g : Object]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
 ], VideoAPIConfigController.prototype, "testProvider", null);
 __decorate([
     (0, common_1.Get)('quota/:userId'),
@@ -4734,7 +4735,7 @@ __decorate([
     __param(0, (0, common_1.Param)('userId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
 ], VideoAPIConfigController.prototype, "getUserQuota", null);
 exports.VideoAPIConfigController = VideoAPIConfigController = __decorate([
     (0, swagger_1.ApiTags)('视频API配置管理'),
@@ -4841,6 +4842,9 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
             volcengineSecretAccessKey: config.volcengineSecretAccessKey
                 ? this.decrypt(config.volcengineSecretAccessKey)
                 : null,
+            volcengineImageApiKey: config.volcengineImageApiKey
+                ? this.decrypt(config.volcengineImageApiKey)
+                : null,
             jimengApiKey: config.jimengApiKey ? this.decrypt(config.jimengApiKey) : null,
             klingApiKey: config.klingApiKey ? this.decrypt(config.klingApiKey) : null,
         };
@@ -4852,6 +4856,9 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
         };
         if (data.volcengineSecretAccessKey) {
             encrypted.volcengineSecretAccessKey = this.encrypt(data.volcengineSecretAccessKey);
+        }
+        if (data.volcengineImageApiKey) {
+            encrypted.volcengineImageApiKey = this.encrypt(data.volcengineImageApiKey);
         }
         if (data.jimengApiKey) {
             encrypted.jimengApiKey = this.encrypt(data.jimengApiKey);
@@ -4970,20 +4977,36 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
             budgetUsagePercentage: Math.round(budgetUsagePercentage * 100) / 100,
         };
     }
-    async testProviderConnection(provider) {
-        const config = await this.getFullConfig();
+    async testProviderConnection(provider, tempConfig) {
+        let config;
+        if (tempConfig) {
+            config = tempConfig;
+            this.logger.log(`使用临时配置测试 ${provider} 连接`);
+        }
+        else {
+            config = await this.getFullConfig();
+            this.logger.log(`使用数据库配置测试 ${provider} 连接`);
+        }
         try {
             switch (provider) {
                 case 'volcengine':
                     if (!config.volcengineAccessKeyId || !config.volcengineSecretAccessKey) {
                         return {
                             success: false,
-                            message: '火山引擎API密钥未配置',
+                            message: '火山引擎API密钥未配置（缺少Access Key ID或Secret Access Key）',
+                        };
+                    }
+                    if (!config.volcengineImageApiKey) {
+                        return {
+                            success: false,
+                            message: '火山引擎文生图API Key未配置',
                         };
                     }
                     return {
                         success: true,
-                        message: '火山引擎连接正常（模拟）',
+                        message: tempConfig
+                            ? '火山引擎连接正常（临时配置验证通过，请保存配置以永久生效）'
+                            : '火山引擎连接正常（已配置Access Key、Secret Key和文生图API Key）',
                     };
                 case 'jimeng':
                     if (!config.jimengApiKey) {
@@ -4994,7 +5017,9 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
                     }
                     return {
                         success: true,
-                        message: '即梦连接正常（模拟）',
+                        message: tempConfig
+                            ? '即梦连接正常（临时配置验证通过，请保存配置以永久生效）'
+                            : '即梦连接正常',
                     };
                 case 'kling':
                     if (!config.klingApiKey) {
@@ -5005,7 +5030,9 @@ let VideoAPIConfigService = VideoAPIConfigService_1 = class VideoAPIConfigServic
                     }
                     return {
                         success: true,
-                        message: '可灵连接正常（模拟）',
+                        message: tempConfig
+                            ? '可灵连接正常（临时配置验证通过，请保存配置以永久生效）'
+                            : '可灵连接正常',
                     };
                 default:
                     return {
@@ -5106,6 +5133,12 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateVideoAPIConfigDto.prototype, "volcengineSecretAccessKey", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: '火山引擎文生图 API Key（将被加密存储）' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateVideoAPIConfigDto.prototype, "volcengineImageApiKey", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: '即梦 API Key（将被加密存储）' }),
     (0, class_validator_1.IsOptional)(),

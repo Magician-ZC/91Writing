@@ -13,6 +13,7 @@ import {
 interface VolcengineVisualConfig {
   accessKeyId: string;
   secretAccessKey: string;
+  imageApiKey?: string; // 文生图专用API Key
   region: string;
   endpoint?: string;
   model?: string; // general-v2, anime-v1等
@@ -21,22 +22,29 @@ interface VolcengineVisualConfig {
 /**
  * 火山引擎文生图Provider
  * 
- * 注意：这是一个基础实现框架，实际使用时需要根据火山引擎的具体API文档调整
+ * 支持两种认证方式：
+ * 1. Access Key + Secret Key（签名认证）
+ * 2. API Key（直接认证，用于文生图）
  */
 @Injectable()
 export class VolcengineVisualProvider implements ITextToImageProvider {
   private readonly logger = new Logger(VolcengineVisualProvider.name);
   private readonly client: AxiosInstance;
   private readonly config: VolcengineVisualConfig;
+  private readonly useApiKey: boolean; // 是否使用API Key认证
 
   constructor() {
     this.config = {
       accessKeyId: process.env.VOLCENGINE_ACCESS_KEY_ID || '',
       secretAccessKey: process.env.VOLCENGINE_SECRET_ACCESS_KEY || '',
+      imageApiKey: process.env.VOLCENGINE_IMAGE_API_KEY || '',
       region: process.env.VOLCENGINE_VISUAL_REGION || 'cn-beijing',
       endpoint: process.env.VOLCENGINE_VISUAL_ENDPOINT || 'https://visual.volcengineapi.com',
       model: process.env.VOLCENGINE_VISUAL_MODEL || 'general-v2',
     };
+
+    // 优先使用API Key认证（文生图推荐）
+    this.useApiKey = !!this.config.imageApiKey;
 
     this.client = axios.create({
       baseURL: this.config.endpoint,
@@ -46,10 +54,16 @@ export class VolcengineVisualProvider implements ITextToImageProvider {
       },
     });
 
-    // 添加请求拦截器用于签名
+    // 添加请求拦截器用于认证
     this.client.interceptors.request.use((config) => {
-      const signature = this.generateSignature(config);
-      config.headers['Authorization'] = signature;
+      if (this.useApiKey) {
+        // 使用API Key认证（文生图）
+        config.headers['X-API-Key'] = this.config.imageApiKey;
+      } else {
+        // 使用Access Key签名认证
+        const signature = this.generateSignature(config);
+        config.headers['Authorization'] = signature;
+      }
       config.headers['X-Date'] = new Date().toISOString();
       return config;
     });

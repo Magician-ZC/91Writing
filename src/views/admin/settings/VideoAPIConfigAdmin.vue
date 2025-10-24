@@ -39,6 +39,17 @@
               />
               <div class="form-tip">注意：密钥将使用AES-256加密后存储</div>
             </el-form-item>
+            
+            <el-form-item label="文生图 API Key">
+              <el-input 
+                v-model="configForm.volcengineImageApiKey" 
+                type="password" 
+                show-password
+                placeholder="请输入文生图专用 API Key（加密存储）"
+                clearable
+              />
+              <div class="form-tip">火山引擎文生图需要单独的API Key</div>
+            </el-form-item>
 
             <el-form-item>
               <el-button 
@@ -413,7 +424,32 @@ const loadConfig = async () => {
 const saveConfig = async () => {
   saving.value = true
   try {
-    await apiManager.put('/api/v1/admin/video-api-config', configForm)
+    // 过滤只读字段，只提交允许修改的字段
+    const allowedFields = [
+      'volcengineAccessKeyId',
+      'volcengineSecretAccessKey',
+      'volcengineImageApiKey',
+      'jimengApiKey',
+      'klingApiKey',
+      'videoProvider',
+      'ffmpegPath',
+      'videoStoragePath',
+      'tempStoragePath',
+      'userDailyQuota',
+      'userMonthlyQuota',
+      'monthlyBudget',
+      'costAlertThreshold',
+      'isActive'
+    ]
+    
+    const updateData = {}
+    allowedFields.forEach(field => {
+      if (configForm[field] !== undefined) {
+        updateData[field] = configForm[field]
+      }
+    })
+    
+    await apiManager.put('/api/v1/admin/video-api-config', updateData)
     ElMessage.success('配置保存成功')
     await loadConfig()
   } catch (error) {
@@ -463,7 +499,44 @@ const loadLogs = async () => {
 const testConnection = async (provider) => {
   testingConnection.value = provider
   try {
-    const response = await apiManager.post(`/api/v1/admin/video-api-config/test/${provider}`)
+    // 检查前端表单是否填写了必要的配置
+    if (provider === 'volcengine') {
+      if (!configForm.volcengineAccessKeyId || !configForm.volcengineSecretAccessKey) {
+        ElMessage.warning('请先填写火山引擎的 Access Key ID 和 Secret Access Key')
+        testingConnection.value = null
+        return
+      }
+      if (!configForm.volcengineImageApiKey) {
+        ElMessage.warning('请先填写火山引擎的文生图 API Key')
+        testingConnection.value = null
+        return
+      }
+    } else if (provider === 'jimeng') {
+      if (!configForm.jimengApiKey) {
+        ElMessage.warning('请先填写即梦的 API Key')
+        testingConnection.value = null
+        return
+      }
+    } else if (provider === 'kling') {
+      if (!configForm.klingApiKey) {
+        ElMessage.warning('请先填写可灵的 API Key')
+        testingConnection.value = null
+        return
+      }
+    }
+    
+    // 准备测试配置（只提交当前Provider需要的字段）
+    const testConfig = {
+      volcengineAccessKeyId: configForm.volcengineAccessKeyId,
+      volcengineSecretAccessKey: configForm.volcengineSecretAccessKey,
+      volcengineImageApiKey: configForm.volcengineImageApiKey,
+      jimengApiKey: configForm.jimengApiKey,
+      klingApiKey: configForm.klingApiKey,
+    }
+    
+    // 提交当前表单配置进行测试（不需要先保存）
+    const response = await apiManager.post(`/api/v1/admin/video-api-config/test/${provider}`, testConfig)
+    
     // apiManager的拦截器已经返回了数据对象，不需要再访问.data
     if (response.success) {
       ElMessage.success(response.message)

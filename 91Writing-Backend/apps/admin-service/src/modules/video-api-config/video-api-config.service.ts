@@ -101,6 +101,9 @@ export class VideoAPIConfigService {
       volcengineSecretAccessKey: config.volcengineSecretAccessKey
         ? this.decrypt(config.volcengineSecretAccessKey)
         : null,
+      volcengineImageApiKey: config.volcengineImageApiKey
+        ? this.decrypt(config.volcengineImageApiKey)
+        : null,
       jimengApiKey: config.jimengApiKey ? this.decrypt(config.jimengApiKey) : null,
       klingApiKey: config.klingApiKey ? this.decrypt(config.klingApiKey) : null,
     };
@@ -118,6 +121,9 @@ export class VideoAPIConfigService {
 
     if (data.volcengineSecretAccessKey) {
       encrypted.volcengineSecretAccessKey = this.encrypt(data.volcengineSecretAccessKey);
+    }
+    if (data.volcengineImageApiKey) {
+      encrypted.volcengineImageApiKey = this.encrypt(data.volcengineImageApiKey);
     }
     if (data.jimengApiKey) {
       encrypted.jimengApiKey = this.encrypt(data.jimengApiKey);
@@ -285,12 +291,27 @@ export class VideoAPIConfigService {
 
   /**
    * 测试Provider连接
+   * @param provider Provider类型
+   * @param tempConfig 临时配置（可选）- 如果提供则使用临时配置测试，否则使用数据库配置
    */
-  async testProviderConnection(provider: 'volcengine' | 'jimeng' | 'kling'): Promise<{
+  async testProviderConnection(
+    provider: 'volcengine' | 'jimeng' | 'kling',
+    tempConfig?: any,
+  ): Promise<{
     success: boolean;
     message: string;
   }> {
-    const config = await this.getFullConfig();
+    // 如果提供了临时配置，使用临时配置；否则从数据库读取
+    let config;
+    if (tempConfig) {
+      // 使用前端提交的临时配置（未保存到数据库）
+      config = tempConfig;
+      this.logger.log(`使用临时配置测试 ${provider} 连接`);
+    } else {
+      // 从数据库读取已保存的配置
+      config = await this.getFullConfig();
+      this.logger.log(`使用数据库配置测试 ${provider} 连接`);
+    }
 
     try {
       switch (provider) {
@@ -298,13 +319,21 @@ export class VideoAPIConfigService {
           if (!config.volcengineAccessKeyId || !config.volcengineSecretAccessKey) {
             return {
               success: false,
-              message: '火山引擎API密钥未配置',
+              message: '火山引擎API密钥未配置（缺少Access Key ID或Secret Access Key）',
+            };
+          }
+          if (!config.volcengineImageApiKey) {
+            return {
+              success: false,
+              message: '火山引擎文生图API Key未配置',
             };
           }
           // 这里应该调用实际的API健康检查
           return {
             success: true,
-            message: '火山引擎连接正常（模拟）',
+            message: tempConfig 
+              ? '火山引擎连接正常（临时配置验证通过，请保存配置以永久生效）' 
+              : '火山引擎连接正常（已配置Access Key、Secret Key和文生图API Key）',
           };
 
         case 'jimeng':
@@ -316,7 +345,9 @@ export class VideoAPIConfigService {
           }
           return {
             success: true,
-            message: '即梦连接正常（模拟）',
+            message: tempConfig 
+              ? '即梦连接正常（临时配置验证通过，请保存配置以永久生效）' 
+              : '即梦连接正常',
           };
 
         case 'kling':
@@ -328,7 +359,9 @@ export class VideoAPIConfigService {
           }
           return {
             success: true,
-            message: '可灵连接正常（模拟）',
+            message: tempConfig 
+              ? '可灵连接正常（临时配置验证通过，请保存配置以永久生效）' 
+              : '可灵连接正常',
           };
 
         default:

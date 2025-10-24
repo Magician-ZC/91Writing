@@ -12,6 +12,11 @@ export class UpdateVideoAPIConfigDto {
   @IsString()
   volcengineSecretAccessKey?: string;
 
+  @ApiPropertyOptional({ description: '火山引擎文生图 API Key（将被加密存储）' })
+  @IsOptional()
+  @IsString()
+  volcengineImageApiKey?: string;
+
   @ApiPropertyOptional({ description: '即梦 API Key（将被加密存储）' })
   @IsOptional()
   @IsString()

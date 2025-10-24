@@ -59,12 +59,13 @@ export class VideoAPIConfigController {
 
   @Post('test/:provider')
   @Roles('ADMIN')
-  @ApiOperation({ summary: '测试Provider连接' })
+  @ApiOperation({ summary: '测试Provider连接（可选传入临时配置）' })
   @ApiResponse({ status: 200, description: '返回测试结果' })
   async testProvider(
-    @Param('provider') provider: 'volcengine' | 'jimeng' | 'kling'
+    @Param('provider') provider: 'volcengine' | 'jimeng' | 'kling',
+    @Body() tempConfig?: UpdateVideoAPIConfigDto,
   ): Promise<{ success: boolean; message: string }> {
-    return this.configService.testProviderConnection(provider);
+    return this.configService.testProviderConnection(provider, tempConfig);
   }
 
   @Get('quota/:userId')

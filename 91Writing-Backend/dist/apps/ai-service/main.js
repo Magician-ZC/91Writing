@@ -6402,10 +6402,12 @@ let VolcengineVisualProvider = VolcengineVisualProvider_1 = class VolcengineVisu
         this.config = {
             accessKeyId: process.env.VOLCENGINE_ACCESS_KEY_ID || '',
             secretAccessKey: process.env.VOLCENGINE_SECRET_ACCESS_KEY || '',
+            imageApiKey: process.env.VOLCENGINE_IMAGE_API_KEY || '',
             region: process.env.VOLCENGINE_VISUAL_REGION || 'cn-beijing',
             endpoint: process.env.VOLCENGINE_VISUAL_ENDPOINT || 'https://visual.volcengineapi.com',
             model: process.env.VOLCENGINE_VISUAL_MODEL || 'general-v2',
         };
+        this.useApiKey = !!this.config.imageApiKey;
         this.client = axios_1.default.create({
             baseURL: this.config.endpoint,
             timeout: 120000,
@@ -6414,8 +6416,13 @@ let VolcengineVisualProvider = VolcengineVisualProvider_1 = class VolcengineVisu
             },
         });
         this.client.interceptors.request.use((config) => {
-            const signature = this.generateSignature(config);
-            config.headers['Authorization'] = signature;
+            if (this.useApiKey) {
+                config.headers['X-API-Key'] = this.config.imageApiKey;
+            }
+            else {
+                const signature = this.generateSignature(config);
+                config.headers['Authorization'] = signature;
+            }
             config.headers['X-Date'] = new Date().toISOString();
             return config;
         });
